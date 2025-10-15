@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B.Nunes - Consulta de Cargas</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+</head>
+<body>
+    <header>
+        <h1>Consulta de Cargas</h1>
+        <div>
+            <a href="/" class="btn-navegacao">Voltar ao Painel</a>
+            <a href="/logout" class="btn-navegacao-secundario">Sair</a>
+        </div>
+    </header>
+
+    <main class="container-clientes">
+        <div class="card-importacao">
+            <h2>Filtros de Busca</h2>
+            <form id="form-consulta">
+                <div class="detalhes-form-grid-4">
+                    <input type="text" id="filtro-codigo" placeholder="Código da Carga">
+                    <input type="text" id="filtro-motorista" placeholder="Nome do Motorista">
+                    <input type="text" id="filtro-origem" placeholder="Origem">
+                    <select id="filtro-status">
+                        <option value="">Todos os Status</option>
+                        <option value="Pendente">Pendente</option>
+                        <option value="Agendada">Agendada</option>
+                        <option value="Em Trânsito">Em Trânsito</option>
+                        <option value="Finalizada">Finalizada</option>
+                    </select>
+                </div>
+                 <div class="form-acao" style="margin-top: 20px;">
+                    <label>Data de Finalização entre:</label>
+                    <input type="date" id="filtro-data-inicio">
+                    <label>e</label>
+                    <input type="date" id="filtro-data-fim">
+                </div>
+                <div class="form-acao">
+                    <button type="submit">Buscar</button>
+                    <button type="reset" class="btn-navegacao-secundario" style="margin-right: 0;">Limpar Filtros</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-lista-clientes">
+            <h2>Resultados da Busca</h2>
+            <div id="mensagem-busca" class="mensagem"></div>
+            <div class="tabela-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Status</th>
+                            <th>Origem</th>
+                            <th>Motorista</th>
+                            <th>Nº Entregas</th>
+                            <th>Peso Total</th>
+                            <th>Data Finalização</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-resultados-corpo">
+                        <tr><td colspan="7">Utilize os filtros acima para buscar as cargas.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="paginacao-container"></div>
+        </div>
+    </main>
+
+    <div id="modal-detalhes-carga" class="modal">
+        <div class="modal-conteudo-grande">
+            <span id="fechar-modal-detalhes" class="fechar-modal">&times;</span>
+            <div id="detalhes-conteudo"></div>
+        </div>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="consulta.js"></script>
+</body>
+</html>
