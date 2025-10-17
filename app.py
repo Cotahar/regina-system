@@ -1,38 +1,29 @@
-import sqlite3
 import time
 import pandas as pd
-import math
 import os
 from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for
-from flask_sqlalchemy import SQLAlchemy  # <-- ADICIONE ESTA LINHA
-from flask_migrate import Migrate      # <-- ADICIONE ESTA LINHA
+from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
+# Importa a instância 'db' da nossa "ponte"
+from database import db
+# Agora podemos importar os modelos com segurança
+from models import Carga, Cliente, Entrega, Usuario
+
+# --- INICIALIZAÇÃO E CONFIGURAÇÃO PRINCIPAL ---
 app = Flask(__name__)
 app.secret_key = 'sua-chave-secreta-muito-segura-aqui-12345'
-
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'cargas.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db_sqlalchemy = SQLAlchemy(app)
-migrate = Migrate(app, db_sqlalchemy)
+# --- INICIALIZAÇÃO DO DB COM O APP ---
+# Conectamos a instância 'db' com a nossa aplicação 'app'
+db.init_app(app)
+migrate = Migrate(app, db)
 
-if os.name == 'nt':
-    # Estamos no ambiente local (Windows)
-    DATABASE = 'cargas.db'
-else:
-    # Estamos no ambiente de produção (Linux/PythonAnywhere)
-    DATABASE = '/home/ruanbnunes/cargas.db'
-
-# --- Funções de Banco de Dados e Autenticação ---
-
-def get_db():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
-
+# --- DECORATORS DE AUTENTICAÇÃO ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -53,8 +44,7 @@ def permission_required(permissions):
         return decorated_view
     return wrapper
 
-# --- Rotas de Páginas e Arquivos Estáticos ---
-
+# --- ROTAS DE PÁGINAS ESTÁTICAS ---
 @app.route('/login')
 def login_page():
     return send_from_directory('.', 'login.html')
@@ -71,7 +61,7 @@ def clientes_page():
 
 @app.route('/usuarios.html')
 @login_required
-@permission_required(['admin', 'operador'])
+@permission_required(['admin'])
 def usuarios_page():
     return send_from_directory('.', 'usuarios.html')
 
@@ -86,19 +76,16 @@ def serve_static(filename):
         return send_from_directory('.', filename)
     return "File not found", 404
 
-# --- API de Autenticação ---
-
+# --- API DE AUTENTICAÇÃO ---
 @app.route('/api/login', methods=['POST'])
 def login_api():
     dados = request.json
-    db = get_db()
-    user = db.execute('SELECT * FROM usuarios WHERE nome_usuario = ?', (dados.get('nome_usuario'),)).fetchone()
-    db.close()
-    if user and check_password_hash(user['senha_hash'], dados.get('senha')):
+    user = Usuario.query.filter_by(nome_usuario=dados.get('nome_usuario')).first()
+    if user and check_password_hash(user.senha_hash, dados.get('senha')):
         session.clear()
-        session['user_id'] = user['id']
-        session['user_name'] = user['nome_usuario']
-        session['user_permission'] = user['permissao']
+        session['user_id'] = user.id
+        session['user_name'] = user.nome_usuario
+        session['user_permission'] = user.permissao
         return jsonify({"message": "Login bem-sucedido"})
     return jsonify({"error": "Usuário ou senha inválidos"}), 401
 
@@ -116,26 +103,22 @@ def get_session_info():
 @login_required
 def verify_password():
     password_to_check = request.json.get('password')
-    db = get_db()
-    user = db.execute('SELECT senha_hash FROM usuarios WHERE id = ?', (session['user_id'],)).fetchone()
-    db.close()
-    if user and check_password_hash(user['senha_hash'], password_to_check):
+    user = Usuario.query.get(session['user_id'])
+    if user and check_password_hash(user.senha_hash, password_to_check):
         return jsonify({"success": True})
     return jsonify({"success": False}), 401
 
-# --- API de Clientes ---
-
+# --- API DE CLIENTES ---
 @app.route('/api/clientes', methods=['GET'])
 @login_required
 def get_clientes():
-    db = get_db()
-    clientes = [dict(row) for row in db.execute('SELECT * FROM clientes ORDER BY razao_social').fetchall()]
-    db.close()
-    return jsonify(clientes)
+    clientes_db = Cliente.query.order_by(Cliente.razao_social).all()
+    clientes_lista = [{c.name: getattr(cliente, c.name) for c in cliente.__table__.columns} for cliente in clientes_db]
+    return jsonify(clientes_lista)
 
 @app.route('/api/clientes/import', methods=['POST'])
 @login_required
-@permission_required(['admin', 'operador'])
+@permission_required(['admin'])
 def importar_clientes():
     if 'arquivo' not in request.files: return jsonify({"error": "Nenhum arquivo enviado"}), 400
     arquivo = request.files['arquivo']
@@ -147,313 +130,234 @@ def importar_clientes():
             df = pd.read_excel(arquivo, header=None, skiprows=1)
         if len(df.columns) != 6: return jsonify({"error": f"Formato inválido. Esperado 6 colunas, mas tem {len(df.columns)}."}), 400
         df.columns = ['codigo_cliente', 'razao_social', 'ddd', 'telefone', 'cidade', 'estado']
-        db = get_db()
-        cursor = db.cursor()
         novos_clientes = 0
         for _, row in df.iterrows():
             if pd.isna(row['codigo_cliente']): continue
             codigo_str = str(int(row['codigo_cliente']))
-            ddd_str = ''
-            if not pd.isna(row['ddd']):
-                try: ddd_str = str(int(row['ddd']))
-                except (ValueError, TypeError): ddd_str = str(row['ddd'])
-            cursor.execute("SELECT id FROM clientes WHERE codigo_cliente = ?", (codigo_str,))
-            if cursor.fetchone() is None:
-                cursor.execute(
-                    "INSERT INTO clientes (codigo_cliente, razao_social, ddd, telefone, cidade, estado, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (codigo_str, row['razao_social'], ddd_str, str(row['telefone']), row['cidade'], row['estado'], None)
+            if not Cliente.query.filter_by(codigo_cliente=codigo_str).first():
+                ddd_str = ''
+                if not pd.isna(row['ddd']):
+                    try: ddd_str = str(int(row['ddd']))
+                    except (ValueError, TypeError): ddd_str = str(row['ddd'])
+                novo_cliente = Cliente(
+                    codigo_cliente=codigo_str, razao_social=row['razao_social'], ddd=ddd_str, 
+                    telefone=str(row['telefone']), cidade=row['cidade'], estado=row['estado']
                 )
+                db.session.add(novo_cliente)
                 novos_clientes += 1
-        db.commit()
-        db.close()
+        db.session.commit()
         return jsonify({"message": f"{novos_clientes} novos clientes importados!"}), 200
     except Exception as e:
+        db.session.rollback()
         return jsonify({"error": f"Ocorreu um erro inesperado: {e}"}), 500
 
 @app.route('/api/clientes/<int:cliente_id>', methods=['PUT'])
 @login_required
 @permission_required(['admin', 'operador'])
 def atualizar_cliente(cliente_id):
+    cliente = Cliente.query.get_or_404(cliente_id)
     dados = request.json
-    if not dados.get('razao_social') or not dados.get('cidade'): return jsonify({"error": "Razão Social e Cidade são obrigatórios"}), 400
-    db = get_db()
-    db.execute(
-        'UPDATE clientes SET razao_social = ?, ddd = ?, telefone = ?, cidade = ?, estado = ?, observacoes = ? WHERE id = ?',
-        (dados['razao_social'], dados.get('ddd'), dados.get('telefone'), dados['cidade'], dados.get('estado'), dados.get('observacoes'), cliente_id)
-    )
-    db.commit()
-    db.close()
+    if not dados.get('razao_social') or not dados.get('cidade'): 
+        return jsonify({"error": "Razão Social e Cidade são obrigatórios"}), 400
+    cliente.razao_social = dados['razao_social']
+    cliente.cidade = dados['cidade']
+    cliente.estado = dados.get('estado')
+    cliente.ddd = dados.get('ddd')
+    cliente.telefone = dados.get('telefone')
+    cliente.observacoes = dados.get('observacoes')
+    db.session.commit()
     return jsonify({"message": "Cliente atualizado com sucesso"}), 200
 
-# --- API de Cargas ---
-
+# --- API DE CARGAS E ENTREGAS ---
 @app.route('/api/cargas', methods=['GET', 'POST'])
 @login_required
 def gerenciar_cargas():
     if request.method == 'POST':
-        if session['user_permission'] not in ['admin', 'operador']: return jsonify({"error": "Permissão negada"}), 403
+        if session['user_permission'] not in ['admin', 'operador']: 
+            return jsonify({"error": "Permissão negada"}), 403
         dados = request.json
-        codigo_carga = f"CARGA-{int(time.time())}"
-        db = get_db()
-        db.execute('INSERT INTO cargas (codigo_carga, origem) VALUES (?, ?)', (codigo_carga, dados['origem']))
-        db.commit()
-        nova_carga = dict(db.execute('SELECT * FROM cargas WHERE codigo_carga = ?', (codigo_carga,)).fetchone())
-        db.close()
-        return jsonify(nova_carga), 201
+        nova_carga = Carga(codigo_carga=f"CARGA-{int(time.time())}", origem=dados['origem'].upper())
+        db.session.add(nova_carga)
+        db.session.commit()
+        return jsonify({
+            'id': nova_carga.id, 'codigo_carga': nova_carga.codigo_carga, 'origem': nova_carga.origem, 
+            'status': nova_carga.status, 'num_entregas': 0, 'peso_total': 0, 'frete_total': 0
+        }), 201
+    
+    cargas_ativas = Carga.query.filter(Carga.status != 'Finalizada').order_by(Carga.id.desc()).all()
+    cargas_lista = []
+    for carga in cargas_ativas:
+        peso_total = sum(e.peso_bruto for e in carga.entregas if e.peso_bruto)
+        frete_total = sum(e.valor_frete for e in carga.entregas if e.valor_frete)
+        cargas_lista.append({
+            'id': carga.id, 'codigo_carga': carga.codigo_carga, 'origem': carga.origem, 'status': carga.status, 
+            'motorista': carga.motorista, 'placa': carga.placa, 'data_agendamento': carga.data_agendamento, 
+            'data_carregamento': carga.data_carregamento, 'previsao_entrega': carga.previsao_entrega, 
+            'observacoes': carga.observacoes, 'data_finalizacao': carga.data_finalizacao, 
+            'num_entregas': len(carga.entregas), 'peso_total': peso_total, 'frete_total': frete_total
+        })
+    return jsonify(cargas_lista)
 
-    db = get_db()
-    cargas = [dict(row) for row in db.execute('''
-        SELECT c.*, COUNT(e.id) as num_entregas, SUM(e.peso_bruto) as peso_total, SUM(e.valor_frete) as frete_total
-        FROM cargas c LEFT JOIN entregas e ON c.id = e.carga_id
-        WHERE c.status != 'Finalizada'
-        GROUP BY c.id ORDER BY c.id DESC
-    ''').fetchall()]
-    db.close()
-    return jsonify(cargas)
-
-# <<<< ROTA DE CONSULTA ATUALIZADA COM PAGINAÇÃO >>>>
 @app.route('/api/cargas/consulta', methods=['GET'])
 @login_required
 def consultar_cargas():
     args = request.args
     page = args.get('page', 1, type=int)
     per_page = 10
-    offset = (page - 1) * per_page
-
-    base_query = "FROM cargas c"
-    count_query = "SELECT COUNT(DISTINCT c.id) as total "
-
-    conditions = []
-    params = []
+    query = Carga.query
 
     if args.get('codigo_carga'):
-        conditions.append("c.codigo_carga LIKE ?")
-        params.append(f"%{args.get('codigo_carga').upper()}%")
+        query = query.filter(Carga.codigo_carga.like(f"%{args.get('codigo_carga').upper()}%"))
     if args.get('status'):
-        conditions.append("c.status = ?")
-        params.append(args.get('status'))
+        query = query.filter(Carga.status == args.get('status'))
     if args.get('motorista'):
-        conditions.append("c.motorista LIKE ?")
-        params.append(f"%{args.get('motorista').upper()}%")
+        query = query.filter(Carga.motorista.like(f"%{args.get('motorista').upper()}%"))
     if args.get('origem'):
-        conditions.append("c.origem LIKE ?")
-        params.append(f"%{args.get('origem').upper()}%")
+        query = query.filter(Carga.origem.like(f"%{args.get('origem').upper()}%"))
     if args.get('data_inicio') and args.get('data_fim'):
-        conditions.append("date(c.data_finalizacao) BETWEEN ? AND ?")
-        params.extend([args.get('data_inicio'), args.get('data_fim')])
+        query = query.filter(Carga.data_finalizacao.between(args.get('data_inicio'), args.get('data_fim')))
+    if args.get('data_carregamento_inicio') and args.get('data_carregamento_fim'):
+        query = query.filter(Carga.data_carregamento.between(args.get('data_carregamento_inicio'), args.get('data_carregamento_fim')))
 
-    if conditions:
-        base_query += " WHERE " + " AND ".join(conditions)
-
-    db = get_db()
-
-    # Executa a query para contar o total de resultados
-    total_results = db.execute(count_query + base_query, params).fetchone()['total']
-    total_paginas = math.ceil(total_results / per_page)
-
-    # Executa a query principal com JOIN, GROUP BY e paginação
-    main_query = f"""
-        SELECT c.*, COUNT(e.id) as num_entregas, SUM(e.peso_bruto) as peso_total
-        {base_query}
-        LEFT JOIN entregas e ON c.id = e.carga_id
-        GROUP BY c.id ORDER BY c.id DESC
-        LIMIT ? OFFSET ?
-    """
-
-    paginated_params = params + [per_page, offset]
-    cargas = [dict(row) for row in db.execute(main_query, paginated_params).fetchall()]
-
-    db.close()
-
-    return jsonify({
-        'cargas': cargas,
-        'total_paginas': total_paginas,
-        'pagina_atual': page
-    })
-
+    pagination = query.order_by(Carga.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    cargas = pagination.items
+    cargas_lista = []
+    for carga in cargas:
+        destino_entrega = Entrega.query.filter_by(carga_id=carga.id, is_last_delivery=1).first()
+        destino = destino_entrega.cliente.cidade if destino_entrega and destino_entrega.cliente else None
+        peso_total = sum(e.peso_bruto for e in carga.entregas if e.peso_bruto)
+        cargas_lista.append({
+            'id': carga.id, 'codigo_carga': carga.codigo_carga, 'origem': carga.origem,
+            'status': carga.status, 'motorista': carga.motorista, 'data_finalizacao': carga.data_finalizacao,
+            'num_entregas': len(carga.entregas), 'peso_total': peso_total, 'destino': destino
+        })
+    return jsonify({'cargas': cargas_lista, 'total_paginas': pagination.pages, 'pagina_atual': page, 'total_resultados': pagination.total})
 
 @app.route('/api/cargas/<int:carga_id>', methods=['GET'])
 @login_required
 def get_detalhes_carga(carga_id):
-    db = get_db()
-    carga_info = db.execute('SELECT * FROM cargas WHERE id = ?', (carga_id,)).fetchone()
-    if carga_info is None: db.close(); return jsonify({"error": "Carga não encontrada"}), 404
-    entregas_lista = [dict(row) for row in db.execute('''
-        SELECT e.*, cl.razao_social, cl.cidade, cl.estado, cl.ddd, cl.telefone, cl.observacoes as obs_cliente
-        FROM entregas e JOIN clientes cl ON e.cliente_id = cl.id WHERE e.carga_id = ?
-    ''', (carga_id,)).fetchall()]
-    db.close()
-    return jsonify({"detalhes_carga": dict(carga_info), "entregas": entregas_lista})
+    carga = Carga.query.get_or_404(carga_id)
+    detalhes_carga = {c.name: getattr(carga, c.name) for c in carga.__table__.columns}
+    entregas_lista = []
+    for e in carga.entregas:
+        entregas_lista.append({
+            'id': e.id, 'carga_id': e.carga_id, 'cliente_id': e.cliente_id,
+            'peso_bruto': e.peso_bruto, 'valor_frete': e.valor_frete, 'peso_cobrado': e.peso_cobrado, 
+            'is_last_delivery': e.is_last_delivery, 'razao_social': e.cliente.razao_social, 
+            'cidade': e.cliente.cidade, 'estado': e.cliente.estado, 'ddd': e.cliente.ddd, 
+            'telefone': e.cliente.telefone, 'obs_cliente': e.cliente.observacoes
+        })
+    return jsonify({"detalhes_carga": detalhes_carga, "entregas": entregas_lista})
 
 @app.route('/api/cargas/<int:carga_id>/entregas', methods=['POST', 'DELETE'])
 @login_required
 @permission_required(['admin', 'operador'])
 def gerenciar_entregas(carga_id):
-    db = get_db()
     if request.method == 'POST':
         dados = request.json
-        if not dados.get('cliente_id') or dados.get('peso_bruto') is None:
-            db.close()
+        if not dados.get('cliente_id') or dados.get('peso_bruto') is None: 
             return jsonify({"error": "Cliente e Peso Bruto são obrigatórios"}), 400
-        db.execute(
-            'INSERT INTO entregas (carga_id, cliente_id, peso_bruto, valor_frete, peso_cobrado) VALUES (?, ?, ?, ?, ?)',
-            (carga_id, dados['cliente_id'], dados['peso_bruto'], dados.get('valor_frete'), dados.get('peso_cobrado'))
+        nova_entrega = Entrega(
+            carga_id=carga_id, cliente_id=dados['cliente_id'], peso_bruto=dados.get('peso_bruto'), 
+            valor_frete=dados.get('valor_frete'), peso_cobrado=dados.get('peso_cobrado')
         )
-        db.commit()
-        db.close()
+        db.session.add(nova_entrega)
+        db.session.commit()
         return jsonify({"message": "Entrega adicionada com sucesso"}), 201
-
+    
     if request.method == 'DELETE':
-        entrega_id = request.json.get('entrega_id')
-        db.execute('DELETE FROM entregas WHERE id = ? AND carga_id = ?', (entrega_id, carga_id))
-        db.commit()
-        db.close()
-        return jsonify({"message": "Entrega excluída com sucesso"}), 200
+        entrega = Entrega.query.get(request.json.get('entrega_id'))
+        if entrega and entrega.carga_id == carga_id:
+            db.session.delete(entrega)
+            db.session.commit()
+            return jsonify({"message": "Entrega excluída com sucesso"}), 200
+        return jsonify({"error": "Entrega não encontrada"}), 404
 
 @app.route('/api/cargas/<int:carga_id>/status', methods=['PUT'])
 @login_required
 def atualizar_status_carga(carga_id):
+    carga = Carga.query.get_or_404(carga_id)
     dados = request.json
-    novo_status = dados.get('status')
     permissao_usuario = session['user_permission']
-
-    if novo_status:
-        permissoes_necessarias = {
-            'Agendada': ['admin', 'operador'], 'Em Trânsito': ['admin', 'operador'],
-            'Finalizada': ['admin', 'operador', 'rastreador'], 'Pendente': ['admin', 'operador']
-        }
-        if permissao_usuario not in permissoes_necessarias.get(novo_status, []):
+    
+    if 'status' in dados:
+        permissoes = {'Agendada': ['admin', 'operador'], 'Em Trânsito': ['admin', 'operador'],
+                      'Finalizada': ['admin', 'operador', 'rastreador'], 'Pendente': ['admin', 'operador']}
+        if permissao_usuario not in permissoes.get(dados['status'], []):
             return jsonify({"error": "Permissão negada para esta ação"}), 403
 
-    motorista = dados.get('motorista')
-    if motorista is not None: motorista = motorista.upper()
-    placa = dados.get('placa')
-    if placa is not None: placa = placa.upper()
-
-    db = get_db()
-    campos_para_atualizar = {}
-    if novo_status: campos_para_atualizar['status'] = novo_status
-    if 'origem' in dados: campos_para_atualizar['origem'] = dados['origem']
-    if 'data_agendamento' in dados: campos_para_atualizar['data_agendamento'] = dados.get('data_agendamento')
-    if 'motorista' in dados: campos_para_atualizar['motorista'] = motorista
-    if 'placa' in dados: campos_para_atualizar['placa'] = placa
-    if 'data_carregamento' in dados: campos_para_atualizar['data_carregamento'] = dados.get('data_carregamento')
-    if 'previsao_entrega' in dados: campos_para_atualizar['previsao_entrega'] = dados.get('previsao_entrega')
-    if 'observacoes' in dados: campos_para_atualizar['observacoes'] = dados.get('observacoes')
-    if 'data_finalizacao' in dados: campos_para_atualizar['data_finalizacao'] = dados.get('data_finalizacao')
-
-    if not campos_para_atualizar: return jsonify({"error": "Nenhum dado para atualizar"}), 400
-
-    query_set = ", ".join([f"{campo} = ?" for campo in campos_para_atualizar])
-    valores = list(campos_para_atualizar.values())
-    valores.append(carga_id)
-
-    db.execute(f'UPDATE cargas SET {query_set} WHERE id = ?', valores)
-    db.commit()
-    db.close()
+    for key, value in dados.items():
+        if hasattr(carga, key):
+            if key in ['motorista', 'placa', 'origem'] and value is not None:
+                value = value.upper()
+            setattr(carga, key, value)
+    db.session.commit()
     return jsonify({"message": "Carga atualizada com sucesso"}), 200
 
-# --- API de Usuários ---
-
-@app.route('/api/usuarios', methods=['GET'])
+@app.route('/api/entregas/<int:entrega_id>', methods=['PUT'])
 @login_required
 @permission_required(['admin', 'operador'])
+def atualizar_entrega(entrega_id):
+    entrega = Entrega.query.get_or_404(entrega_id)
+    dados = request.json
+    if dados.get('peso_bruto') is None or dados.get('peso_bruto') == '':
+        return jsonify({"error": "Peso Bruto é um campo obrigatório"}), 400
+    if 'is_last_delivery' in dados and dados['is_last_delivery'] == 1:
+        Entrega.query.filter_by(carga_id=entrega.carga_id).update({'is_last_delivery': 0})
+    for key, value in dados.items():
+        if hasattr(entrega, key): setattr(entrega, key, value)
+    db.session.commit()
+    return jsonify({"message": "Entrega atualizada com sucesso"}), 200
+
+# --- API DE USUÁRIOS ---
+@app.route('/api/usuarios', methods=['GET'])
+@login_required
+@permission_required(['admin'])
 def get_usuarios():
-    db = get_db()
-    usuarios = [dict(row) for row in db.execute('SELECT id, nome_usuario, permissao FROM usuarios ORDER BY nome_usuario').fetchall()]
-    db.close()
-    return jsonify(usuarios)
+    usuarios = Usuario.query.order_by(Usuario.nome_usuario).all()
+    return jsonify([{'id': u.id, 'nome_usuario': u.nome_usuario, 'permissao': u.permissao} for u in usuarios])
 
 @app.route('/api/usuarios', methods=['POST'])
 @login_required
-@permission_required(['admin', 'operador'])
+@permission_required(['admin'])
 def criar_usuario():
     dados = request.json
-    nome_usuario = dados.get('nome_usuario')
-    senha = dados.get('senha')
-    permissao = dados.get('permissao')
-
-    if not nome_usuario or not senha or not permissao:
+    if not all(k in dados for k in ['nome_usuario', 'senha', 'permissao']):
         return jsonify({"error": "Todos os campos são obrigatórios"}), 400
-    db = get_db()
-    cursor = db.cursor()
-    existente = cursor.execute('SELECT id FROM usuarios WHERE nome_usuario = ?', (nome_usuario,)).fetchone()
-    if existente:
-        db.close()
+    if Usuario.query.filter_by(nome_usuario=dados['nome_usuario']).first():
         return jsonify({"error": "Este nome de usuário já está em uso"}), 409
-    senha_hash = generate_password_hash(senha)
-    cursor.execute(
-        "INSERT INTO usuarios (nome_usuario, senha_hash, permissao) VALUES (?, ?, ?)",
-        (nome_usuario, senha_hash, permissao)
+    novo_usuario = Usuario(
+        nome_usuario=dados['nome_usuario'],
+        senha_hash=generate_password_hash(dados['senha']),
+        permissao=dados['permissao']
     )
-    db.commit()
-    db.close()
+    db.session.add(novo_usuario)
+    db.session.commit()
     return jsonify({"message": "Usuário criado com sucesso"}), 201
 
 @app.route('/api/usuarios/<int:user_id>', methods=['PUT', 'DELETE'])
 @login_required
 @permission_required(['admin'])
 def gerenciar_usuario_especifico(user_id):
-    db = get_db()
-    cursor = db.cursor()
-    if user_id == 1:
-        db.close()
-        return jsonify({"error": "O administrador principal não pode ser modificado ou excluído"}), 403
-
+    if user_id == 1: return jsonify({"error": "O administrador principal não pode ser modificado"}), 403
+    usuario = Usuario.query.get_or_404(user_id)
     if request.method == 'PUT':
         dados = request.json
-        nome_usuario = dados.get('nome_usuario')
-        permissao = dados.get('permissao')
-        senha = dados.get('senha')
-
-        if not nome_usuario or not permissao:
-            db.close()
+        if not all(k in dados for k in ['nome_usuario', 'permissao']):
             return jsonify({"error": "Nome de usuário e permissão são obrigatórios"}), 400
-
-        # Verifica se o novo nome de usuário já está em uso por outro usuário
-        existente = cursor.execute('SELECT id FROM usuarios WHERE nome_usuario = ? AND id != ?', (nome_usuario, user_id)).fetchone()
-        if existente:
-            db.close()
+        if Usuario.query.filter(Usuario.nome_usuario == dados['nome_usuario'], Usuario.id != user_id).first():
             return jsonify({"error": "Este nome de usuário já está em uso"}), 409
-
-        if senha:
-            senha_hash = generate_password_hash(senha)
-            cursor.execute('UPDATE usuarios SET nome_usuario = ?, permissao = ?, senha_hash = ? WHERE id = ?', (nome_usuario, permissao, senha_hash, user_id))
-        else:
-            cursor.execute('UPDATE usuarios SET nome_usuario = ?, permissao = ? WHERE id = ?', (nome_usuario, permissao, user_id))
-
-        db.commit()
-        db.close()
+        usuario.nome_usuario = dados['nome_usuario']
+        usuario.permissao = dados['permissao']
+        if 'senha' in dados and dados['senha']:
+            usuario.senha_hash = generate_password_hash(dados['senha'])
+        db.session.commit()
         return jsonify({"message": "Usuário atualizado com sucesso"})
-
     elif request.method == 'DELETE':
-        cursor.execute('DELETE FROM usuarios WHERE id = ?', (user_id,))
-        db.commit()
-        db.close()
+        db.session.delete(usuario)
+        db.session.commit()
         return jsonify({"message": "Usuário excluído com sucesso"})
-        
-        # --- API para Entregas (NOVA ROTA DE EDIÇÃO) ---
 
-@app.route('/api/entregas/<int:entrega_id>', methods=['PUT'])
-@login_required
-@permission_required(['admin', 'operador'])
-def atualizar_entrega(entrega_id):
-    dados = request.json
-    peso_bruto = dados.get('peso_bruto')
-    valor_frete = dados.get('valor_frete')
-    peso_cobrado = dados.get('peso_cobrado')
-
-    if peso_bruto is None or peso_bruto == '':
-        return jsonify({"error": "Peso Bruto é um campo obrigatório"}), 400
-
-    db = get_db()
-    db.execute(
-        'UPDATE entregas SET peso_bruto = ?, valor_frete = ?, peso_cobrado = ? WHERE id = ?',
-        (peso_bruto, valor_frete, peso_cobrado, entrega_id)
-    )
-    db.commit()
-    db.close()
-    return jsonify({"message": "Entrega atualizada com sucesso"})
-    
+# --- PONTO DE ENTRADA ---
 if __name__ == '__main__':
     app.run(debug=True, port=5001)
