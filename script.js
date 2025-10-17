@@ -15,9 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const getHojeFormatado = () => new Date().toISOString().split('T')[0];
     const mascaraDecimal = (input) => {
         if (!input) return;
-        input.addEventListener('input', () => {
-            input.value = input.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
-        });
+        input.addEventListener('input', () => { input.value = input.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'); });
     };
 
     const fecharModais = () => {
@@ -32,11 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function carregarDadosIniciais() {
         try {
-            const [sessionRes, clientesRes, cargasRes] = await Promise.all([
-                fetch('/api/session'),
-                fetch('/api/clientes'),
-                fetch('/api/cargas')
-            ]);
+            const [sessionRes, clientesRes, cargasRes] = await Promise.all([ fetch('/api/session'), fetch('/api/clientes'), fetch('/api/cargas') ]);
             if (!sessionRes.ok) { window.location.href = '/login.html'; return; }
             sessaoUsuario = await sessionRes.json();
             if (sessaoUsuario.user_permission === 'admin') {
@@ -61,8 +55,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         conteudoCartao += `<li><strong>Origem:</strong> ${carga.origem}</li><li><strong>Nº Entregas:</strong> ${carga.num_entregas || 0}</li><li><strong>Peso Total:</strong> ${formatarPeso(carga.peso_total)}</li></ul>`;
         cartao.innerHTML = conteudoCartao;
-        const colunaId = carga.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
-        document.getElementById(colunaId)?.appendChild(cartao);
+
+        // CORREÇÃO DO BUG APLICADA AQUI
+        let colunaId = carga.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+        if (colunaId === 'pendente') {
+            colunaId = 'pendentes'; // Ajuste para corresponder ao ID do HTML
+        }
+
+        const coluna = document.getElementById(colunaId);
+        if (coluna) {
+            coluna.appendChild(cartao);
+        } else {
+            console.error(`Coluna com ID '${colunaId}' não encontrada para o status '${carga.status}'`);
+        }
     }
 
     async function abrirModalDetalhes(id) {

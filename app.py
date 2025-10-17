@@ -6,20 +6,16 @@ from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
-# Importa a instância 'db' da nossa "ponte"
 from database import db
-# Agora podemos importar os modelos com segurança
 from models import Carga, Cliente, Entrega, Usuario
 
-# --- INICIALIZAÇÃO E CONFIGURAÇÃO PRINCIPAL ---
+# --- INICIALIZAÇÃO E CONFIGURAÇÃO ---
 app = Flask(__name__)
 app.secret_key = 'sua-chave-secreta-muito-segura-aqui-12345'
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'cargas.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# --- INICIALIZAÇÃO DO DB COM O APP ---
-# Conectamos a instância 'db' com a nossa aplicação 'app'
 db.init_app(app)
 migrate = Migrate(app, db)
 
@@ -168,11 +164,11 @@ def atualizar_cliente(cliente_id):
     db.session.commit()
     return jsonify({"message": "Cliente atualizado com sucesso"}), 200
 
-# --- API DE CARGAS E ENTREGAS ---
 @app.route('/api/cargas', methods=['GET', 'POST'])
 @login_required
 def gerenciar_cargas():
     if request.method == 'POST':
+        # A lógica de POST continua usando SQLAlchemy, que está correta
         if session['user_permission'] not in ['admin', 'operador']: 
             return jsonify({"error": "Permissão negada"}), 403
         dados = request.json
@@ -183,21 +179,21 @@ def gerenciar_cargas():
             'id': nova_carga.id, 'codigo_carga': nova_carga.codigo_carga, 'origem': nova_carga.origem, 
             'status': nova_carga.status, 'num_entregas': 0, 'peso_total': 0, 'frete_total': 0
         }), 201
-    
-    cargas_ativas = Carga.query.filter(Carga.status != 'Finalizada').order_by(Carga.id.desc()).all()
-    cargas_lista = []
-    for carga in cargas_ativas:
-        peso_total = sum(e.peso_bruto for e in carga.entregas if e.peso_bruto)
-        frete_total = sum(e.valor_frete for e in carga.entregas if e.valor_frete)
-        cargas_lista.append({
-            'id': carga.id, 'codigo_carga': carga.codigo_carga, 'origem': carga.origem, 'status': carga.status, 
-            'motorista': carga.motorista, 'placa': carga.placa, 'data_agendamento': carga.data_agendamento, 
-            'data_carregamento': carga.data_carregamento, 'previsao_entrega': carga.previsao_entrega, 
-            'observacoes': carga.observacoes, 'data_finalizacao': carga.data_finalizacao, 
-            'num_entregas': len(carga.entregas), 'peso_total': peso_total, 'frete_total': frete_total
-        })
-    return jsonify(cargas_lista)
 
+    # GET (LÓGICA REVERTIDA PARA SQLITE3 DIRETO - MAIS ESTÁVEL)
+    # Esta é a correção para as cargas não aparecerem na lista
+    conn = db.engine.raw_connection()
+    conn.row_factory = db.Row
+    cursor = conn.cursor()
+    cargas = [dict(row) for row in cursor.execute('''
+        SELECT c.*, COUNT(e.id) as num_entregas, SUM(e.peso_bruto) as peso_total, SUM(e.valor_frete) as frete_total
+        FROM cargas c LEFT JOIN entregas e ON c.id = e.carga_id
+        WHERE c.status != 'Finalizada'
+        GROUP BY c.id ORDER BY c.id DESC
+    ''').fetchall()]
+    conn.close()
+    return jsonify(cargas)
+    
 @app.route('/api/cargas/consulta', methods=['GET'])
 @login_required
 def consultar_cargas():
