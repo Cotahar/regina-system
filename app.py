@@ -1,14 +1,23 @@
 import sqlite3
 import time
 import pandas as pd
-import math # Importamos a biblioteca math para o cálculo de páginas
+import math
 import os
 from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy  # <-- ADICIONE ESTA LINHA
+from flask_migrate import Migrate      # <-- ADICIONE ESTA LINHA
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = 'sua-chave-secreta-muito-segura-aqui-12345'
+
+basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'cargas.db')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db_sqlalchemy = SQLAlchemy(app)
+migrate = Migrate(app, db_sqlalchemy)
 
 if os.name == 'nt':
     # Estamos no ambiente local (Windows)
