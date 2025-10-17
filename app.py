@@ -2,13 +2,20 @@ import sqlite3
 import time
 import pandas as pd
 import math # Importamos a biblioteca math para o cálculo de páginas
+import os
 from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = 'sua-chave-secreta-muito-segura-aqui-12345'
-DATABASE = '/home/ruanbnunes/cargas.db'
+
+if os.name == 'nt':
+    # Estamos no ambiente local (Windows)
+    DATABASE = 'cargas.db'
+else:
+    # Estamos no ambiente de produção (Linux/PythonAnywhere)
+    DATABASE = '/home/ruanbnunes/cargas.db'
 
 # --- Funções de Banco de Dados e Autenticação ---
 
@@ -55,7 +62,7 @@ def clientes_page():
 
 @app.route('/usuarios.html')
 @login_required
-@permission_required(['admin'])
+@permission_required(['admin', 'operador'])
 def usuarios_page():
     return send_from_directory('.', 'usuarios.html')
 
@@ -119,7 +126,7 @@ def get_clientes():
 
 @app.route('/api/clientes/import', methods=['POST'])
 @login_required
-@permission_required(['admin'])
+@permission_required(['admin', 'operador'])
 def importar_clientes():
     if 'arquivo' not in request.files: return jsonify({"error": "Nenhum arquivo enviado"}), 400
     arquivo = request.files['arquivo']
@@ -156,7 +163,7 @@ def importar_clientes():
 
 @app.route('/api/clientes/<int:cliente_id>', methods=['PUT'])
 @login_required
-@permission_required(['admin'])
+@permission_required(['admin', 'operador'])
 def atualizar_cliente(cliente_id):
     dados = request.json
     if not dados.get('razao_social') or not dados.get('cidade'): return jsonify({"error": "Razão Social e Cidade são obrigatórios"}), 400
@@ -341,7 +348,7 @@ def atualizar_status_carga(carga_id):
 
 @app.route('/api/usuarios', methods=['GET'])
 @login_required
-@permission_required(['admin'])
+@permission_required(['admin', 'operador'])
 def get_usuarios():
     db = get_db()
     usuarios = [dict(row) for row in db.execute('SELECT id, nome_usuario, permissao FROM usuarios ORDER BY nome_usuario').fetchall()]
@@ -350,7 +357,7 @@ def get_usuarios():
 
 @app.route('/api/usuarios', methods=['POST'])
 @login_required
-@permission_required(['admin'])
+@permission_required(['admin', 'operador'])
 def criar_usuario():
     dados = request.json
     nome_usuario = dados.get('nome_usuario')
@@ -383,18 +390,29 @@ def gerenciar_usuario_especifico(user_id):
     if user_id == 1:
         db.close()
         return jsonify({"error": "O administrador principal não pode ser modificado ou excluído"}), 403
+
     if request.method == 'PUT':
         dados = request.json
+        nome_usuario = dados.get('nome_usuario')
         permissao = dados.get('permissao')
         senha = dados.get('senha')
-        if not permissao:
+
+        if not nome_usuario or not permissao:
             db.close()
-            return jsonify({"error": "O campo 'permissao' é obrigatório"}), 400
+            return jsonify({"error": "Nome de usuário e permissão são obrigatórios"}), 400
+
+        # Verifica se o novo nome de usuário já está em uso por outro usuário
+        existente = cursor.execute('SELECT id FROM usuarios WHERE nome_usuario = ? AND id != ?', (nome_usuario, user_id)).fetchone()
+        if existente:
+            db.close()
+            return jsonify({"error": "Este nome de usuário já está em uso"}), 409
+
         if senha:
             senha_hash = generate_password_hash(senha)
-            cursor.execute('UPDATE usuarios SET permissao = ?, senha_hash = ? WHERE id = ?', (permissao, senha_hash, user_id))
+            cursor.execute('UPDATE usuarios SET nome_usuario = ?, permissao = ?, senha_hash = ? WHERE id = ?', (nome_usuario, permissao, senha_hash, user_id))
         else:
-            cursor.execute('UPDATE usuarios SET permissao = ? WHERE id = ?', (permissao, user_id))
+            cursor.execute('UPDATE usuarios SET nome_usuario = ?, permissao = ? WHERE id = ?', (nome_usuario, permissao, user_id))
+
         db.commit()
         db.close()
         return jsonify({"message": "Usuário atualizado com sucesso"})
@@ -404,6 +422,29 @@ def gerenciar_usuario_especifico(user_id):
         db.commit()
         db.close()
         return jsonify({"message": "Usuário excluído com sucesso"})
+        
+        # --- API para Entregas (NOVA ROTA DE EDIÇÃO) ---
 
+@app.route('/api/entregas/<int:entrega_id>', methods=['PUT'])
+@login_required
+@permission_required(['admin', 'operador'])
+def atualizar_entrega(entrega_id):
+    dados = request.json
+    peso_bruto = dados.get('peso_bruto')
+    valor_frete = dados.get('valor_frete')
+    peso_cobrado = dados.get('peso_cobrado')
+
+    if peso_bruto is None or peso_bruto == '':
+        return jsonify({"error": "Peso Bruto é um campo obrigatório"}), 400
+
+    db = get_db()
+    db.execute(
+        'UPDATE entregas SET peso_bruto = ?, valor_frete = ?, peso_cobrado = ? WHERE id = ?',
+        (peso_bruto, valor_frete, peso_cobrado, entrega_id)
+    )
+    db.commit()
+    db.close()
+    return jsonify({"message": "Entrega atualizada com sucesso"})
+    
 if __name__ == '__main__':
     app.run(debug=True, port=5001)

@@ -56,7 +56,32 @@
             </div>
         </div>
     </main>
-    
-    <script src="usuarios.js"></script>
+</table>
+        </div>
+    </div>
+</main>
+
+<div id="modal-editar-usuario" class="modal">
+    <div class="modal-conteudo">
+        <span id="fechar-modal-editar" class="fechar-modal">&times;</span>
+        <h2>Editar Usuário</h2>
+        <form id="form-editar-usuario">
+            <input type="hidden" id="edit-user-id">
+            <label for="edit_nome_usuario">Nome de Usuário:</label>
+            <input type="text" id="edit_nome_usuario" required>
+            <label for="edit_senha">Nova Senha (deixe em branco para não alterar):</label>
+            <input type="password" id="edit_senha">
+            <label for="edit_permissao">Permissão:</label>
+            <select id="edit_permissao" required>
+                <option value="admin">Administrador (Master)</option>
+                <option value="operador">Operador</option>
+                <option value="consulta">Consulta</option>
+            </select>
+            <button type="submit">Salvar Alterações</button>
+        </form>
+    </div>
+</div>
+
+<script src="usuarios.js"></script>
 </body>
 </html>

@@ -77,9 +77,29 @@
             <div id="detalhes-conteudo"></div>
         </div>
     </div>
-    
+    <div id="modal-editar-entrega" class="modal">
+    <div class="modal-conteudo">
+        <span id="fechar-modal-editar-entrega" class="fechar-modal">&times;</span>
+        <h2>Editar Entrega</h2>
+        <form id="form-editar-entrega">
+            <input type="hidden" id="edit-entrega-id">
+
+            <label for="edit-peso-bruto">Peso Bruto *</label>
+            <input type="number" id="edit-peso-bruto" step="0.01" required>
+
+            <label for="edit-valor-frete">Valor Frete</label>
+            <input type="number" id="edit-valor-frete" step="0.01">
+
+            <label for="edit-peso-cobrado">Peso Cobrado</label>
+            <input type="number" id="edit-peso-cobrado" step="0.01">
+
+            <button type="submit">Salvar Alterações</button>
+        </form>
+    </div>
+</div>
+
+	<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="consulta.js"></script>
 </body>
 </html>

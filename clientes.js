@@ -6,7 +6,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalEditar = document.getElementById('modal-editar-cliente');
     const formEditar = document.getElementById('form-editar-cliente');
     const botaoFecharEditar = document.getElementById('fechar-modal-editar');
+    const inputPesquisa = document.getElementById('pesquisa-cliente');
 
+    // --- MÁSCARAS E FUNÇÕES UTILITÁRIAS ---
+    const mascaraApenasNumeros = (input) => {
+        if (!input) return;
+        input.addEventListener('input', () => {
+            input.value = input.value.replace(/[^0-9]/g, '');
+        });
+    };
+
+    // --- FUNÇÃO PRINCIPAL PARA CARREGAR DADOS ---
     async function carregarClientes() {
         try {
             const response = await fetch('/api/clientes');
@@ -18,7 +28,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 clientes.forEach(cliente => {
                     const tr = document.createElement('tr');
-                    // Adiciona os dados como atributos para fácil acesso
                     tr.dataset.id = cliente.id;
                     tr.dataset.codigo = cliente.codigo_cliente;
                     tr.dataset.razao = cliente.razao_social;
@@ -44,6 +53,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- EVENT LISTENERS ---
+
+    // 1. Lógica da Pesquisa de Clientes
+    inputPesquisa.addEventListener('keyup', () => {
+        const termo = inputPesquisa.value.toUpperCase();
+        const linhas = tabelaCorpo.getElementsByTagName('tr');
+        
+        for (let i = 0; i < linhas.length; i++) {
+            const celulaRazao = linhas[i].getElementsByTagName('td')[1];
+            const celulaCodigo = linhas[i].getElementsByTagName('td')[0];
+            
+            if (celulaRazao && celulaCodigo) {
+                const textoRazao = celulaRazao.textContent || celulaRazao.innerText;
+                const textoCodigo = celulaCodigo.textContent || celulaCodigo.innerText;
+                
+                if (textoRazao.toUpperCase().indexOf(termo) > -1 || textoCodigo.toUpperCase().indexOf(termo) > -1) {
+                    linhas[i].style.display = "";
+                } else {
+                    linhas[i].style.display = "none";
+                }
+            }
+        }
+    });
+    
+    // 2. Lógica de Importação de Arquivo
     formImportar.addEventListener('submit', async (event) => {
         event.preventDefault();
         const arquivo = arquivoInput.files[0];
@@ -65,6 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // 3. Lógica para Abrir Modal de Edição
     tabelaCorpo.addEventListener('click', (event) => {
         if (event.target.classList.contains('btn-editar')) {
             const linha = event.target.closest('tr');
@@ -79,11 +114,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // 4. Lógica para Fechar Modal
     botaoFecharEditar.addEventListener('click', () => modalEditar.style.display = 'none');
     window.addEventListener('click', (event) => {
         if (event.target == modalEditar) modalEditar.style.display = 'none';
     });
 
+    // 5. Lógica para Salvar Edição
     formEditar.addEventListener('submit', async (event) => {
         event.preventDefault();
         const clienteId = document.getElementById('edit-cliente-id').value;
@@ -110,5 +147,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // --- APLICAÇÃO DAS MÁSCARAS ---
+    mascaraApenasNumeros(document.getElementById('edit-ddd'));
+    mascaraApenasNumeros(document.getElementById('edit-telefone'));
+
+    // --- CARREGAMENTO INICIAL ---
     carregarClientes();
 });
