@@ -168,7 +168,6 @@ def atualizar_cliente(cliente_id):
 @login_required
 def gerenciar_cargas():
     if request.method == 'POST':
-        # A lógica de POST continua usando SQLAlchemy, que está correta
         if session['user_permission'] not in ['admin', 'operador']: 
             return jsonify({"error": "Permissão negada"}), 403
         dados = request.json
@@ -180,19 +179,23 @@ def gerenciar_cargas():
             'status': nova_carga.status, 'num_entregas': 0, 'peso_total': 0, 'frete_total': 0
         }), 201
 
-    # GET (LÓGICA REVERTIDA PARA SQLITE3 DIRETO - MAIS ESTÁVEL)
-    # Esta é a correção para as cargas não aparecerem na lista
+    # GET (CORREÇÃO APLICADA AQUI)
+    # Revertendo a lógica para usar a conexão raw do engine, que é mais estável para joins complexos
+    # com o driver padrão do sqlite3.
     conn = db.engine.raw_connection()
-    conn.row_factory = db.Row
+    conn.row_factory = type('Row', (object,), {'keys': lambda self: [d[0] for d in cursor.description]})
+
     cursor = conn.cursor()
-    cargas = [dict(row) for row in cursor.execute('''
+    cargas_db = cursor.execute('''
         SELECT c.*, COUNT(e.id) as num_entregas, SUM(e.peso_bruto) as peso_total, SUM(e.valor_frete) as frete_total
         FROM cargas c LEFT JOIN entregas e ON c.id = e.carga_id
         WHERE c.status != 'Finalizada'
         GROUP BY c.id ORDER BY c.id DESC
-    ''').fetchall()]
+    ''').fetchall()
+
+    cargas_lista = [dict(zip(row.keys(), row)) for row in cargas_db]
     conn.close()
-    return jsonify(cargas)
+    return jsonify(cargas_lista)
     
 @app.route('/api/cargas/consulta', methods=['GET'])
 @login_required

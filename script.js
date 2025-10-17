@@ -55,13 +55,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         conteudoCartao += `<li><strong>Origem:</strong> ${carga.origem}</li><li><strong>Nº Entregas:</strong> ${carga.num_entregas || 0}</li><li><strong>Peso Total:</strong> ${formatarPeso(carga.peso_total)}</li></ul>`;
         cartao.innerHTML = conteudoCartao;
-
+        
         // CORREÇÃO DO BUG APLICADA AQUI
         let colunaId = carga.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
         if (colunaId === 'pendente') {
             colunaId = 'pendentes'; // Ajuste para corresponder ao ID do HTML
         }
-
+        
         const coluna = document.getElementById(colunaId);
         if (coluna) {
             coluna.appendChild(cartao);
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(`Coluna com ID '${colunaId}' não encontrada para o status '${carga.status}'`);
         }
     }
-
+    
     async function abrirModalDetalhes(id) {
         try {
             const response = await fetch(`/api/cargas/${id}`);
@@ -91,7 +91,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const podeEditarEntregas = podeEditarGeral && ['Pendente', 'Agendada'].includes(detalhes_carga.status);
         const pesoTotal = entregas.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
         const freteTotal = entregas.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
-        
         let secaoDados, secaoAcoes;
 
         if (detalhes_carga.status === 'Pendente') {
@@ -124,11 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const tabelaCorpoEntregas = document.getElementById('tabela-entregas-corpo');
         tabelaCorpoEntregas.innerHTML = entregas.length > 0 ? entregas.map(e => `
             <tr>
-                <td>${e.razao_social}</td>
-                <td>${e.cidade}-${e.estado}</td>
-                <td>${formatarPeso(e.peso_bruto)}</td>
-                <td>(${e.ddd||''}) ${e.telefone||''}</td>
-                <td title="${e.obs_cliente || ''}">${(e.obs_cliente || 'Nenhuma').substring(0, 20)}</td>
+                <td>${e.razao_social}</td><td>${e.cidade}-${e.estado}</td><td>${formatarPeso(e.peso_bruto)}</td><td>(${e.ddd||''}) ${e.telefone||''}</td><td title="${e.obs_cliente || ''}">${(e.obs_cliente || 'Nenhuma').substring(0, 20)}</td>
                 ${podeEditarEntregas ? `
                 <td>
                     <button class="btn-editar btn-editar-entrega" data-id="${e.id}" data-peso="${e.peso_bruto}" data-valor="${e.valor_frete || ''}" data-pesocobrado="${e.peso_cobrado || ''}">Editar</button>
@@ -152,26 +147,17 @@ document.addEventListener('DOMContentLoaded', () => {
             container.innerHTML = `<form id="form-nova-entrega" class="form-acao"><select id="select-cliente" style="width: 250px;"></select><input type="number" id="entrega-peso-bruto" placeholder="Peso Bruto *" step="0.01" required><input type="number" id="entrega-valor-frete" placeholder="Valor Frete" step="0.01"><input type="number" id="entrega-peso-cobrado" placeholder="Peso Cobrado" step="0.01"><button type="submit">Salvar</button></form>`;
             $('#select-cliente').select2({ placeholder: 'Selecione um cliente', dropdownParent: $('#form-add-entrega-container'), data: listaDeClientes.map(c => ({ id: c.id, text: `${c.razao_social} (${c.cidade})` })) });
             document.getElementById('form-nova-entrega').addEventListener('submit', salvarNovaEntrega);
-            
             mascaraDecimal(document.getElementById('entrega-peso-bruto'));
             mascaraDecimal(document.getElementById('entrega-valor-frete'));
             mascaraDecimal(document.getElementById('entrega-peso-cobrado'));
         });
-        document.querySelectorAll('.btn-excluir-entrega').forEach(btn => btn.addEventListener('click', (e) => {
-            if(confirm('Tem certeza que deseja excluir esta entrega?')) handleExcluirEntrega(e.target.dataset.id);
-        }));
-
+        document.querySelectorAll('.btn-excluir-entrega').forEach(btn => btn.addEventListener('click', (e) => { if(confirm('Tem certeza?')) handleExcluirEntrega(e.target.dataset.id); }));
         document.querySelectorAll('.btn-editar-entrega').forEach(btn => btn.addEventListener('click', (e) => {
-            const id = e.target.dataset.id;
-            const peso = e.target.dataset.peso;
-            const valor = e.target.dataset.valor;
-            const pesoCobrado = e.target.dataset.pesocobrado;
-
+            const { id, peso, valor, pesocobrado } = e.target.dataset;
             document.getElementById('edit-entrega-id').value = id;
             document.getElementById('edit-peso-bruto').value = peso;
             document.getElementById('edit-valor-frete').value = valor;
-            document.getElementById('edit-peso-cobrado').value = pesoCobrado;
-            
+            document.getElementById('edit-peso-cobrado').value = pesocobrado;
             modalEditarEntrega.style.display = 'block';
         }));
     }
