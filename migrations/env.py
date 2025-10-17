@@ -9,9 +9,10 @@ from alembic import context
 # access to the values within the .ini file in use.
 config = context.config
 
-# --- INÍCIO DA CONFIGURAÇÃO PARA O FLASK ---
-from app import db_sqlalchemy
-target_metadata = db_sqlalchemy.metadata
+# --- INÍCIO DA CONFIGURAÇÃO CORRETA ---
+from database import db
+target_metadata = db.metadata
+# --- FIM DA CONFIGURAÇÃO ---
 # --- FIM DA CONFIGURAÇÃO ---
 
 # Interpret the config file for Python logging.
