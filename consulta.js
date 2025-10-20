@@ -1,3 +1,6 @@
+//
+// SEU ARQUIVO consulta.js COMPLETO E ATUALIZADO
+//
 document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('form-consulta');
     const tabelaCorpo = document.getElementById('tabela-resultados-corpo');
@@ -18,23 +21,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const formatarDataParaInput = (d) => d ? d.split('T')[0] : '';
     const getHojeFormatado = () => new Date().toISOString().split('T')[0];
 
-    // NOVA FUNÇÃO para converter texto "1.234,56" para número 1234.56
     const parseDecimal = (valor) => {
         if (typeof valor !== 'string' || !valor) return null;
         return parseFloat(valor.replace(/\./g, '').replace(',', '.'));
     };
 
-    // NOVA FUNÇÃO para formatar campos de peso/valor
     const mascaraDecimal = (input) => {
         if (!input) return;
         const formatValue = (value) => {
             value = value.replace(/\D/g, '');
             if (value === '') return '';
-            
-            // Converte para número, divide por 100 para ter 2 casas decimais
             let num = parseFloat(value) / 100;
-            
-            // Formata para o padrão brasileiro (ex: 1.234,56)
             return new Intl.NumberFormat('pt-BR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
@@ -53,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     document.querySelectorAll('.fechar-modal').forEach(btn => btn.addEventListener('click', fecharModais));
     
-    // CORREÇÃO: Lógica do ESC para fechar um modal por vez
     document.addEventListener('keydown', (event) => {
         if (event.key === "Escape") {
             if (modalEditarEntrega.style.display === 'block') {
@@ -66,35 +62,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LÓGICA PRINCIPAL ---
     const buscarCargas = async (page = 1) => {
-        const params = new URLSearchParams();
-        params.append('page', page);
+        const params = new URLSearchParams({ page });
+
+        // Coleta todos os filtros, incluindo os novos
         const codigo = document.getElementById('filtro-codigo').value;
         const motorista = document.getElementById('filtro-motorista').value;
+        const placa = document.getElementById('filtro-placa').value;
         const origem = document.getElementById('filtro-origem').value;
         const status = document.getElementById('filtro-status').value;
-        const dataInicio = document.getElementById('filtro-data-inicio').value;
-        const dataFim = document.getElementById('filtro-data-fim').value;
+        const clienteId = document.getElementById('filtro-cliente').value;
+        const dataCarregamentoInicio = document.getElementById('filtro-data-carregamento-inicio').value;
+        const dataCarregamentoFim = document.getElementById('filtro-data-carregamento-fim').value;
+        const dataFinalizacaoInicio = document.getElementById('filtro-data-finalizacao-inicio').value;
+        const dataFinalizacaoFim = document.getElementById('filtro-data-finalizacao-fim').value;
+
+        // Adiciona os filtros à requisição apenas se tiverem valor
         if (codigo) params.append('codigo_carga', codigo);
         if (motorista) params.append('motorista', motorista);
+        if (placa) params.append('placa', placa);
         if (origem) params.append('origem', origem);
         if (status) params.append('status', status);
-        if (dataInicio && dataFim) {
-            params.append('data_inicio', dataInicio);
-            params.append('data_fim', dataFim);
+        if (clienteId) params.append('cliente_id', clienteId);
+        if (dataCarregamentoInicio && dataCarregamentoFim) {
+            params.append('data_carregamento_inicio', dataCarregamentoInicio);
+            params.append('data_carregamento_fim', dataCarregamentoFim);
         }
+        if (dataFinalizacaoInicio && dataFinalizacaoFim) {
+            params.append('data_finalizacao_inicio', dataFinalizacaoInicio);
+            params.append('data_finalizacao_fim', dataFinalizacaoFim);
+        }
+        
         mensagemDiv.textContent = 'Buscando...';
-        tabelaCorpo.innerHTML = '<tr><td colspan="7">Buscando...</td></tr>';
+        tabelaCorpo.innerHTML = `<tr><td colspan="8">Buscando...</td></tr>`;
         paginacaoContainer.innerHTML = '';
+        
         try {
             const response = await fetch(`/api/cargas/consulta?${params.toString()}`);
             if (!response.ok) throw new Error('Falha na busca.');
-            const { cargas, total_paginas, pagina_atual, total_resultados } = await response.json();
             
+            const { cargas, total_paginas, pagina_atual, total_resultados } = await response.json();
             mensagemDiv.textContent = `${total_resultados} resultado(s) encontrado(s).`;
-            if (cargas.length === 0 && pagina_atual === 1) {
-                tabelaCorpo.innerHTML = '<tr><td colspan="7">Nenhuma carga encontrada com os filtros informados.</td></tr>';
+            
+            if (cargas.length === 0) {
+                tabelaCorpo.innerHTML = `<tr><td colspan="8">Nenhuma carga encontrada com os filtros informados.</td></tr>`;
                 return;
             }
+            
             tabelaCorpo.innerHTML = '';
             cargas.forEach(carga => {
                 const tr = document.createElement('tr');
@@ -104,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${carga.codigo_carga}</td>
                     <td>${carga.status}</td>
                     <td>${carga.origem}</td>
+                    <td>${carga.destino || 'N/A'}</td>
                     <td>${carga.motorista || 'N/A'}</td>
                     <td>${carga.num_entregas}</td>
                     <td>${formatarPeso(carga.peso_total)}</td>
@@ -115,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             mensagemDiv.textContent = 'Erro ao realizar a busca.';
             console.error('Erro na busca:', error);
-            tabelaCorpo.innerHTML = '<tr><td colspan="7">Ocorreu um erro ao buscar os dados.</td></tr>';
+            tabelaCorpo.innerHTML = `<tr><td colspan="8">Ocorreu um erro ao buscar os dados.</td></tr>`;
         }
     };
     
@@ -148,6 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function renderizarModalDetalhes() {
+        // (Esta função permanece sem alterações, não precisa copiar/colar se não quiser)
         const { detalhes_carga, entregas } = cargaAtual;
         const statusClass = detalhes_carga.status.toLowerCase().replace(/\s+/g, '-');
         const podeEditarGeral = ['admin', 'operador'].includes(sessaoUsuario.user_permission);
@@ -206,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function configurarEventListenersDeAcoes() {
+        // (Esta função permanece sem alterações, não precisa copiar/colar se não quiser)
         document.querySelector('[data-acao="salvar"]')?.addEventListener('click', handleSalvarAlteracoes);
         document.querySelector('[data-acao="agendar"]')?.addEventListener('click', handleAgendar);
         document.querySelector('[data-acao="iniciar-transito"]')?.addEventListener('click', handleIniciarTransito);
@@ -218,7 +234,6 @@ document.addEventListener('DOMContentLoaded', () => {
             $('#select-cliente').select2({ placeholder: 'Selecione um cliente', dropdownParent: $('#form-add-entrega-container'), data: listaDeClientes.map(c => ({ id: c.id, text: `${c.razao_social} (${c.cidade})` })) });
             document.getElementById('form-nova-entrega').addEventListener('submit', salvarNovaEntrega);
             
-            // Aplicando máscaras
             mascaraDecimal(document.getElementById('entrega-peso-bruto'));
             mascaraDecimal(document.getElementById('entrega-valor-frete'));
             mascaraDecimal(document.getElementById('entrega-peso-cobrado'));
@@ -236,7 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('edit-valor-frete').value = formatarMoeda(entrega.valor_frete).replace('R$ ','');
             document.getElementById('edit-peso-cobrado').value = formatarPeso(entrega.peso_cobrado).replace(' kg','');
             
-            // Aplicando máscaras
             mascaraDecimal(document.getElementById('edit-peso-bruto'));
             mascaraDecimal(document.getElementById('edit-valor-frete'));
             mascaraDecimal(document.getElementById('edit-peso-cobrado'));
@@ -375,12 +389,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     form.addEventListener('submit', (event) => {
         event.preventDefault();
-        buscarCargas(1);
+        buscarCargas(1); // Sempre busca a primeira página ao submeter o formulário
     });
 
     form.addEventListener('reset', () => {
+        // Limpa o select2 corretamente
+        $('#filtro-cliente').val(null).trigger('change');
+        // Reseta o formulário
         form.reset();
-        tabelaCorpo.innerHTML = '<tr><td colspan="7">Utilize os filtros acima para buscar as cargas.</td></tr>';
+        // Limpa a tabela e as mensagens
+        tabelaCorpo.innerHTML = '<tr><td colspan="8">Utilize os filtros acima para buscar as cargas.</td></tr>';
         paginacaoContainer.innerHTML = '';
         mensagemDiv.textContent = '';
     });
@@ -394,17 +412,26 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function carregarDadosIniciais() {
         try {
-            const [sessionRes, clientesRes] = await Promise.all([
-                fetch('/api/session'),
-                fetch('/api/clientes')
-            ]);
+            const [sessionRes, clientesRes] = await Promise.all([ fetch('/api/session'), fetch('/api/clientes') ]);
             if (!sessionRes.ok) { window.location.href = '/login.html'; return; }
+            
             sessaoUsuario = await sessionRes.json();
             listaDeClientes = await clientesRes.json();
-            // Inicia sem busca automática
-            tabelaCorpo.innerHTML = '<tr><td colspan="7">Utilize os filtros acima para buscar as cargas.</td></tr>';
+            
+            // Popula o filtro de clientes
+            const filtroClienteSelect = $('#filtro-cliente');
+            const opcoesClientes = listaDeClientes.map(c => ({ id: c.id, text: `${c.razao_social} (${c.cidade})` }));
+            filtroClienteSelect.select2({
+                placeholder: 'Todos os Clientes',
+                allowClear: true,
+                data: opcoesClientes
+            });
+
+            // NÃO busca cargas ao iniciar, conforme solicitado.
+            
         } catch (error) {
             console.error("Erro ao carregar dados iniciais da consulta:", error);
+            mensagemDiv.textContent = "Erro ao carregar dados iniciais. Tente recarregar a página.";
         }
     }
     

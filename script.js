@@ -15,13 +15,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const formatarDataParaInput = (d) => d ? d.split('T')[0] : '';
     const getHojeFormatado = () => new Date().toISOString().split('T')[0];
     
-    // NOVA FUNÇÃO para converter texto "1.234,56" para número 1234.56
     const parseDecimal = (valor) => {
         if (typeof valor !== 'string' || !valor) return null;
         return parseFloat(valor.replace(/\./g, '').replace(',', '.'));
     };
 
-    // NOVA FUNÇÃO para formatar campos de peso/valor
     const mascaraDecimal = (input) => {
         if (!input) return;
         const formatValue = (value) => {
@@ -47,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     document.querySelectorAll('.fechar-modal').forEach(btn => btn.addEventListener('click', fecharModais));
     
-    // CORREÇÃO: Lógica do ESC para fechar um modal por vez
     document.addEventListener('keydown', (event) => {
         if (event.key === "Escape") {
             if (modalEditarEntrega.style.display === 'block') {
@@ -78,21 +75,47 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { console.error("Erro ao carregar dados iniciais:", error); }
     }
 
+    // --- FUNÇÃO ATUALIZADA PARA ESTÉTICA ---
     function adicionarCartaoNaTela(carga) {
         const cartao = document.createElement('div');
         cartao.className = 'cartao-carga';
         cartao.dataset.id = carga.id;
-        let conteudoCartao = `<h3>${carga.codigo_carga}</h3><ul>`;
-        if (carga.status === 'Agendada') {
-            conteudoCartao += `<li><strong>Agendado para:</strong> ${formatarData(carga.data_agendamento)}</li>`;
-        } else if (carga.status === 'Em Trânsito') {
-            conteudoCartao += `<li><strong>Motorista:</strong> ${carga.motorista || 'N/A'}</li>`;
+
+        // 1. Prepara a data extra que vai no canto direito
+        let dataExtraHtml = '';
+        if (carga.status === 'Agendada' && carga.data_agendamento) {
+            dataExtraHtml = `<span class="cartao-data">Ag: ${formatarData(carga.data_agendamento)}</span>`;
+        } else if (carga.status === 'Em Trânsito' && carga.previsao_entrega) {
+            dataExtraHtml = `<span class="cartao-data">Prev: ${formatarData(carga.previsao_entrega)}</span>`;
         }
-        conteudoCartao += `<li><strong>Origem:</strong> ${carga.origem}</li><li><strong>Nº Entregas:</strong> ${carga.num_entregas || 0}</li><li><strong>Peso Total:</strong> ${formatarPeso(carga.peso_total)}</li></ul>`;
-        cartao.innerHTML = conteudoCartao;
+        
+        // 2. Monta o cabeçalho do card
+        const cabecalhoCartao = `
+            <div class="cartao-header">
+                <h3>${carga.codigo_carga}</h3>
+                ${dataExtraHtml}
+            </div>
+        `;
+        
+        // 3. Monta a lista de informações
+        let listaInfo = '<ul>';
+        listaInfo += `<li><strong>Origem:</strong> ${carga.origem}</li>`;
+        if (carga.destino) {
+            listaInfo += `<li><strong>Destino:</strong> ${carga.destino}</li>`;
+        }
+        if (carga.status === 'Agendada' || carga.status === 'Em Trânsito') {
+            if (carga.motorista) {
+                listaInfo += `<li><strong>Motorista:</strong> ${carga.motorista} (${carga.placa || 'N/A'})</li>`;
+            }
+        }
+        listaInfo += `<li><strong>Nº Entregas:</strong> ${carga.num_entregas || 0}</li>`;
+        listaInfo += `<li><strong>Peso Total:</strong> ${formatarPeso(carga.peso_total)}</li>`;
+        listaInfo += '</ul>';
+
+        // 4. Junta tudo e insere no card
+        cartao.innerHTML = cabecalhoCartao + listaInfo;
         
         const colunaId = carga.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
-        
         const coluna = document.getElementById(colunaId);
         if (coluna) {
             coluna.appendChild(cartao);
@@ -147,12 +170,16 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="detalhes-secao" id="detalhes-entregas">
                 <div class="entregas-header"><h3>Entregas (${entregas.length})</h3>${podeEditarEntregas ? '<button id="btn-add-entrega" class="btn-acao">+ Adicionar Entrega</button>' : ''}</div>
                 <div id="form-add-entrega-container"></div>
-                <div class="tabela-wrapper"><table id="tabela-entregas"><thead><tr><th>Cliente</th><th>Cidade/UF</th><th>Peso</th><th>Frete</th><th>Telefone</th><th>Observações</th>${podeEditarGeral ? '<th>Ações</th>': ''}</tr></thead><tbody id="tabela-entregas-corpo"></tbody></table></div>
+                <div class="tabela-wrapper"><table id="tabela-entregas"><thead><tr>${podeEditarEntregas ? '<th>Destino</th>': ''}<th>Cliente</th><th>Cidade/UF</th><th>Peso</th><th>Frete</th><th>Telefone</th><th>Observações</th>${podeEditarGeral ? '<th>Ações</th>': ''}</tr></thead><tbody id="tabela-entregas-corpo"></tbody></table></div>
             </div>`;
         
         const tabelaCorpoEntregas = document.getElementById('tabela-entregas-corpo');
         tabelaCorpoEntregas.innerHTML = entregas.length > 0 ? entregas.map(e => `
             <tr>
+                ${podeEditarEntregas ? `
+                <td class="col-destino">
+                    <input type="radio" name="ultima-entrega" class="radio-ultima-entrega" data-id="${e.id}" ${e.is_last_delivery ? 'checked' : ''}>
+                </td>` : ''}
                 <td>${e.razao_social}</td><td>${e.cidade}-${e.estado}</td><td>${formatarPeso(e.peso_bruto)}</td><td>${formatarMoeda(e.valor_frete)}</td><td>(${e.ddd||''}) ${e.telefone||''}</td><td title="${e.obs_cliente || ''}">${(e.obs_cliente || 'Nenhuma').substring(0, 20)}</td>
                 ${podeEditarGeral ? `
                 <td>
@@ -162,7 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     ` : 'N/A'}
                 </td>` : ''}
             </tr>
-        `).join('') : `<tr><td colspan="${podeEditarGeral ? 7 : 6}">Nenhuma entrega.</td></tr>`;
+        `).join('') : `<tr><td colspan="${podeEditarGeral ? (podeEditarEntregas ? 8 : 7) : 6}">Nenhuma entrega.</td></tr>`;
         
         configurarEventListenersDeAcoes();
     }
@@ -180,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
             $('#select-cliente').select2({ placeholder: 'Selecione um cliente', dropdownParent: $('#form-add-entrega-container'), data: listaDeClientes.map(c => ({ id: c.id, text: `${c.razao_social} (${c.cidade})` })) });
             document.getElementById('form-nova-entrega').addEventListener('submit', salvarNovaEntrega);
             
-            // Aplicando máscaras
             mascaraDecimal(document.getElementById('entrega-peso-bruto'));
             mascaraDecimal(document.getElementById('entrega-valor-frete'));
             mascaraDecimal(document.getElementById('entrega-peso-cobrado'));
@@ -195,13 +221,38 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('edit-valor-frete').value = formatarMoeda(entrega.valor_frete).replace('R$ ', '');
             document.getElementById('edit-peso-cobrado').value = formatarPeso(entrega.peso_cobrado).replace(' kg', '');
             
-            // Aplicando máscaras
             mascaraDecimal(document.getElementById('edit-peso-bruto'));
             mascaraDecimal(document.getElementById('edit-valor-frete'));
             mascaraDecimal(document.getElementById('edit-peso-cobrado'));
 
             modalEditarEntrega.style.display = 'block';
         }));
+
+        document.querySelectorAll('.radio-ultima-entrega').forEach(radio => {
+            radio.addEventListener('change', handleMarcarUltimaEntrega);
+        });
+    }
+
+    async function handleMarcarUltimaEntrega(event) {
+        const entregaId = event.target.dataset.id;
+        try {
+            const response = await fetch(`/api/entregas/${entregaId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_last_delivery: 1 })
+            });
+            if (!response.ok) throw new Error('Falha ao marcar como destino.');
+            
+            await carregarDadosIniciais();
+            const cargaId = cargaAtual.detalhes_carga.id;
+            const detalhesResponse = await fetch(`/api/cargas/${cargaId}`);
+            cargaAtual = await detalhesResponse.json();
+            renderizarModalDetalhes();
+
+        } catch (error) {
+            alert(`Erro: ${error.message}`);
+            event.target.checked = false;
+        }
     }
 
     async function handleExcluirEntrega(entregaId) {

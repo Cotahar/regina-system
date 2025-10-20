@@ -1,3 +1,6 @@
+#
+# SEU ARQUIVO app.py COMPLETO E ATUALIZADO
+#
 import time
 import pandas as pd
 import os
@@ -13,10 +16,8 @@ from models import Carga, Cliente, Entrega, Usuario
 app = Flask(__name__)
 app.secret_key = 'sua-chave-secreta-muito-segura-aqui-12345'
 
-# --- CORREÇÃO APLICADA AQUI: A LINHA 'basedir' FOI ADICIONADA DE VOLTA ---
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# --- CONFIGURAÇÃO INTELIGENTE DA DATABASE_URI ---
 database_url = os.environ.get('DATABASE_URL')
 if database_url and database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
@@ -187,7 +188,8 @@ def gerenciar_cargas():
         db.session.commit()
         return jsonify({
             'id': nova_carga.id, 'codigo_carga': nova_carga.codigo_carga, 'origem': nova_carga.origem, 
-            'status': nova_carga.status, 'num_entregas': 0, 'peso_total': 0, 'frete_total': 0
+            'status': nova_carga.status, 'num_entregas': 0, 'peso_total': 0, 'frete_total': 0,
+            'motorista': None, 'placa': None, 'destino': None
         }), 201
     
     # GET
@@ -196,15 +198,21 @@ def gerenciar_cargas():
     for carga in cargas_ativas:
         peso_total = sum(e.peso_bruto for e in carga.entregas if e.peso_bruto)
         frete_total = sum(e.valor_frete for e in carga.entregas if e.valor_frete)
+        
+        destino_entrega = Entrega.query.filter_by(carga_id=carga.id, is_last_delivery=1).first()
+        destino = destino_entrega.cliente.cidade if destino_entrega and destino_entrega.cliente else None
+
         cargas_lista.append({
             'id': carga.id, 'codigo_carga': carga.codigo_carga, 'origem': carga.origem, 'status': carga.status, 
             'motorista': carga.motorista, 'placa': carga.placa, 'data_agendamento': carga.data_agendamento, 
             'data_carregamento': carga.data_carregamento, 'previsao_entrega': carga.previsao_entrega, 
             'observacoes': carga.observacoes, 'data_finalizacao': carga.data_finalizacao, 
-            'num_entregas': len(carga.entregas), 'peso_total': peso_total, 'frete_total': frete_total
+            'num_entregas': len(carga.entregas), 'peso_total': peso_total, 'frete_total': frete_total,
+            'destino': destino
         })
     return jsonify(cargas_lista)
 
+# --- FUNÇÃO ATUALIZADA ---
 @app.route('/api/cargas/consulta', methods=['GET'])
 @login_required
 def consultar_cargas():
@@ -213,6 +221,7 @@ def consultar_cargas():
     per_page = 10
     query = Carga.query
 
+    # --- NOVOS FILTROS APLICADOS AQUI ---
     if args.get('codigo_carga'):
         query = query.filter(Carga.codigo_carga.like(f"%{args.get('codigo_carga').upper()}%"))
     if args.get('status'):
@@ -221,13 +230,18 @@ def consultar_cargas():
         query = query.filter(Carga.motorista.like(f"%{args.get('motorista').upper()}%"))
     if args.get('origem'):
         query = query.filter(Carga.origem.like(f"%{args.get('origem').upper()}%"))
-    if args.get('data_inicio') and args.get('data_fim'):
-        query = query.filter(Carga.data_finalizacao.between(args.get('data_inicio'), args.get('data_fim')))
+    if args.get('placa'):
+        query = query.filter(Carga.placa.like(f"%{args.get('placa').upper()}%"))
+    if args.get('data_finalizacao_inicio') and args.get('data_finalizacao_fim'):
+        query = query.filter(Carga.data_finalizacao.between(args.get('data_finalizacao_inicio'), args.get('data_finalizacao_fim')))
     if args.get('data_carregamento_inicio') and args.get('data_carregamento_fim'):
         query = query.filter(Carga.data_carregamento.between(args.get('data_carregamento_inicio'), args.get('data_carregamento_fim')))
+    if args.get('cliente_id'):
+        query = query.join(Entrega).filter(Entrega.cliente_id == args.get('cliente_id'))
 
     pagination = query.order_by(Carga.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
     cargas = pagination.items
+    
     cargas_lista = []
     for carga in cargas:
         destino_entrega = Entrega.query.filter_by(carga_id=carga.id, is_last_delivery=1).first()
@@ -239,6 +253,7 @@ def consultar_cargas():
             'num_entregas': len(carga.entregas), 'peso_total': peso_total, 'destino': destino
         })
     return jsonify({'cargas': cargas_lista, 'total_paginas': pagination.pages, 'pagina_atual': page, 'total_resultados': pagination.total})
+
 
 @app.route('/api/cargas/<int:carga_id>', methods=['GET'])
 @login_required
@@ -254,7 +269,8 @@ def get_detalhes_carga(carga_id):
             'cidade': e.cliente.cidade, 'estado': e.cliente.estado, 'ddd': e.cliente.ddd, 
             'telefone': e.cliente.telefone, 'obs_cliente': e.cliente.observacoes
         })
-    return jsonify({"detalhes_carga": detalhes_carga, "entregas": entregas_lista})
+    return jsonify({"detalhes_carga": detalhes_carga, "entregas": sorted(entregas_lista, key=lambda x: x['razao_social'])})
+
 
 @app.route('/api/cargas/<int:carga_id>/entregas', methods=['POST', 'DELETE'])
 @login_required
@@ -289,7 +305,7 @@ def atualizar_status_carga(carga_id):
     
     if 'status' in dados:
         permissoes = {'Agendada': ['admin', 'operador'], 'Em Trânsito': ['admin', 'operador'],
-                      'Finalizada': ['admin', 'operador', 'rastreador'], 'Pendente': ['admin', 'operador']}
+                      'Finalizada': ['admin', 'operador'], 'Pendente': ['admin', 'operador']}
         if permissao_usuario not in permissoes.get(dados['status'], []):
             return jsonify({"error": "Permissão negada para esta ação"}), 403
 
@@ -307,12 +323,18 @@ def atualizar_status_carga(carga_id):
 def atualizar_entrega(entrega_id):
     entrega = Entrega.query.get_or_404(entrega_id)
     dados = request.json
-    if dados.get('peso_bruto') is None or dados.get('peso_bruto') == '':
-        return jsonify({"error": "Peso Bruto é um campo obrigatório"}), 400
+
     if 'is_last_delivery' in dados and dados['is_last_delivery'] == 1:
         Entrega.query.filter_by(carga_id=entrega.carga_id).update({'is_last_delivery': 0})
+        db.session.flush()
+
     for key, value in dados.items():
-        if hasattr(entrega, key): setattr(entrega, key, value)
+        if hasattr(entrega, key): 
+            setattr(entrega, key, value)
+            
+    if 'peso_bruto' not in dados and (entrega.peso_bruto is None or entrega.peso_bruto == ''):
+        return jsonify({"error": "Peso Bruto é um campo obrigatório"}), 400
+        
     db.session.commit()
     return jsonify({"message": "Entrega atualizada com sucesso"}), 200
 
