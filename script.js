@@ -1,3 +1,4 @@
+// SUBSTITUA TODO O CONTEÚDO DO SEU script.js POR ESTE CÓDIGO COMPLETO
 document.addEventListener('DOMContentLoaded', () => {
     const painelContainer = document.querySelector('.container');
     const modalNovaCarga = document.getElementById('modal-nova-carga');
@@ -56,11 +57,7 @@ document.addEventListener('DOMContentLoaded', () => {
         conteudoCartao += `<li><strong>Origem:</strong> ${carga.origem}</li><li><strong>Nº Entregas:</strong> ${carga.num_entregas || 0}</li><li><strong>Peso Total:</strong> ${formatarPeso(carga.peso_total)}</li></ul>`;
         cartao.innerHTML = conteudoCartao;
         
-        // CORREÇÃO DO BUG APLICADA AQUI
-        let colunaId = carga.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
-        if (colunaId === 'pendente') {
-            colunaId = 'pendentes'; // Ajuste para corresponder ao ID do HTML
-        }
+        const colunaId = carga.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
         
         const coluna = document.getElementById(colunaId);
         if (coluna) {
@@ -202,12 +199,9 @@ document.addEventListener('DOMContentLoaded', () => {
             valor_frete: parseFloat(document.getElementById('edit-valor-frete').value) || null,
             peso_cobrado: parseFloat(document.getElementById('edit-peso-cobrado').value) || null
         };
-
         if (isNaN(dados.peso_bruto) || dados.peso_bruto <= 0) {
-            alert('Peso bruto é obrigatório e deve ser maior que zero.');
-            return;
+            alert('Peso bruto é obrigatório e deve ser maior que zero.'); return;
         }
-
         try {
             const response = await fetch(`/api/entregas/${entregaId}`, {
                 method: 'PUT',
@@ -216,15 +210,11 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const resultado = await response.json();
             if (!response.ok) throw new Error(resultado.error || 'Falha ao atualizar entrega.');
-            
             fecharModais();
             await abrirModalDetalhes(cargaAtual.detalhes_carga.id);
             await carregarDadosIniciais();
-        } catch (error) {
-            alert(`Erro: ${error.message}`);
-        }
+        } catch (error) { alert(`Erro: ${error.message}`); }
     });
-
     mascaraDecimal(document.getElementById('edit-peso-bruto'));
     mascaraDecimal(document.getElementById('edit-valor-frete'));
     mascaraDecimal(document.getElementById('edit-peso-cobrado'));

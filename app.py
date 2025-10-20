@@ -12,7 +12,18 @@ from models import Carga, Cliente, Entrega, Usuario
 # --- INICIALIZAÇÃO E CONFIGURAÇÃO ---
 app = Flask(__name__)
 app.secret_key = 'sua-chave-secreta-muito-segura-aqui-12345'
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+
+# --- CORREÇÃO APLICADA AQUI: A LINHA 'basedir' FOI ADICIONADA DE VOLTA ---
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+# --- CONFIGURAÇÃO INTELIGENTE DA DATABASE_URI ---
+database_url = os.environ.get('DATABASE_URL')
+if database_url and database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or \
+    'sqlite:///' + os.path.join(basedir, 'cargas.db')
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -163,6 +174,7 @@ def atualizar_cliente(cliente_id):
     db.session.commit()
     return jsonify({"message": "Cliente atualizado com sucesso"}), 200
 
+# --- API DE CARGAS E ENTREGAS ---
 @app.route('/api/cargas', methods=['GET', 'POST'])
 @login_required
 def gerenciar_cargas():
@@ -177,25 +189,22 @@ def gerenciar_cargas():
             'id': nova_carga.id, 'codigo_carga': nova_carga.codigo_carga, 'origem': nova_carga.origem, 
             'status': nova_carga.status, 'num_entregas': 0, 'peso_total': 0, 'frete_total': 0
         }), 201
-
-    # GET (CORREÇÃO APLICADA AQUI)
-    # Revertendo a lógica para usar a conexão raw do engine, que é mais estável para joins complexos
-    # com o driver padrão do sqlite3.
-    conn = db.engine.raw_connection()
-    conn.row_factory = type('Row', (object,), {'keys': lambda self: [d[0] for d in cursor.description]})
-
-    cursor = conn.cursor()
-    cargas_db = cursor.execute('''
-        SELECT c.*, COUNT(e.id) as num_entregas, SUM(e.peso_bruto) as peso_total, SUM(e.valor_frete) as frete_total
-        FROM cargas c LEFT JOIN entregas e ON c.id = e.carga_id
-        WHERE c.status != 'Finalizada'
-        GROUP BY c.id ORDER BY c.id DESC
-    ''').fetchall()
-
-    cargas_lista = [dict(zip(row.keys(), row)) for row in cargas_db]
-    conn.close()
-    return jsonify(cargas_lista)
     
+    # GET
+    cargas_ativas = Carga.query.filter(Carga.status != 'Finalizada').order_by(Carga.id.desc()).all()
+    cargas_lista = []
+    for carga in cargas_ativas:
+        peso_total = sum(e.peso_bruto for e in carga.entregas if e.peso_bruto)
+        frete_total = sum(e.valor_frete for e in carga.entregas if e.valor_frete)
+        cargas_lista.append({
+            'id': carga.id, 'codigo_carga': carga.codigo_carga, 'origem': carga.origem, 'status': carga.status, 
+            'motorista': carga.motorista, 'placa': carga.placa, 'data_agendamento': carga.data_agendamento, 
+            'data_carregamento': carga.data_carregamento, 'previsao_entrega': carga.previsao_entrega, 
+            'observacoes': carga.observacoes, 'data_finalizacao': carga.data_finalizacao, 
+            'num_entregas': len(carga.entregas), 'peso_total': peso_total, 'frete_total': frete_total
+        })
+    return jsonify(cargas_lista)
+
 @app.route('/api/cargas/consulta', methods=['GET'])
 @login_required
 def consultar_cargas():
