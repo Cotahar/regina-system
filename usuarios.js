@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+	document.addEventListener('DOMContentLoaded', () => {
     const tabelaCorpo = document.getElementById('tabela-usuarios-corpo');
     const formNovoUsuario = document.getElementById('form-novo-usuario');
     const mensagemDiv = document.getElementById('mensagem-cadastro');
@@ -42,7 +42,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('fechar-modal-editar').addEventListener('click', () => modalEditar.style.display = 'none');
+	document.getElementById('fechar-modal-editar').addEventListener('click', () => modalEditar.style.display = 'none');
+    document.addEventListener('keydown', (event) => {
+        if (event.key === "Escape" && modalEditar.style.display === 'block') {
+            modalEditar.style.display = 'none';
+        }
+    });
 
     formEditar.addEventListener('submit', async (event) => {
         event.preventDefault();

@@ -1,4 +1,3 @@
-// SUBSTITUA TODO O CONTEÚDO DO SEU script.js POR ESTE CÓDIGO COMPLETO
 document.addEventListener('DOMContentLoaded', () => {
     const painelContainer = document.querySelector('.container');
     const modalNovaCarga = document.getElementById('modal-nova-carga');
@@ -9,26 +8,61 @@ document.addEventListener('DOMContentLoaded', () => {
     let cargaAtual = null;
     let sessaoUsuario = null;
 
+    // --- FUNÇÕES DE FORMATAÇÃO ---
     const formatarMoeda = (v) => (v === null || v === undefined) ? 'R$ 0,00' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
     const formatarPeso = (v) => (v === null || v === undefined || v == 0) ? '0,00 kg' : `${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)} kg`;
     const formatarData = (d) => d ? new Date(d).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'N/A';
     const formatarDataParaInput = (d) => d ? d.split('T')[0] : '';
     const getHojeFormatado = () => new Date().toISOString().split('T')[0];
-    const mascaraDecimal = (input) => {
-        if (!input) return;
-        input.addEventListener('input', () => { input.value = input.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1'); });
+    
+    // NOVA FUNÇÃO para converter texto "1.234,56" para número 1234.56
+    const parseDecimal = (valor) => {
+        if (typeof valor !== 'string' || !valor) return null;
+        return parseFloat(valor.replace(/\./g, '').replace(',', '.'));
     };
 
+    // NOVA FUNÇÃO para formatar campos de peso/valor
+    const mascaraDecimal = (input) => {
+        if (!input) return;
+        const formatValue = (value) => {
+            value = value.replace(/\D/g, '');
+            if (value === '') return '';
+            let num = parseFloat(value) / 100;
+            return new Intl.NumberFormat('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(num);
+        };
+        
+        input.addEventListener('input', (e) => {
+            e.target.value = formatValue(e.target.value);
+        });
+    };
+
+    // --- LÓGICA DE MODAIS ---
     const fecharModais = () => {
         modalNovaCarga.style.display = 'none';
         modalDetalhes.style.display = 'none';
         modalEditarEntrega.style.display = 'none';
     };
     document.querySelectorAll('.fechar-modal').forEach(btn => btn.addEventListener('click', fecharModais));
-    document.addEventListener('keydown', (event) => { if (event.key === "Escape") fecharModais(); });
+    
+    // CORREÇÃO: Lógica do ESC para fechar um modal por vez
+    document.addEventListener('keydown', (event) => {
+        if (event.key === "Escape") {
+            if (modalEditarEntrega.style.display === 'block') {
+                modalEditarEntrega.style.display = 'none';
+            } else if (modalDetalhes.style.display === 'block') {
+                modalDetalhes.style.display = 'none';
+            } else if (modalNovaCarga.style.display === 'block') {
+                modalNovaCarga.style.display = 'none';
+            }
+        }
+    });
 
     document.getElementById('nova-carga-btn').addEventListener('click', () => modalNovaCarga.style.display = 'block');
 
+    // --- LÓGICA PRINCIPAL ---
     async function carregarDadosIniciais() {
         try {
             const [sessionRes, clientesRes, cargasRes] = await Promise.all([ fetch('/api/session'), fetch('/api/clientes'), fetch('/api/cargas') ]);
@@ -83,8 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderizarModalDetalhes() {
         const { detalhes_carga, entregas } = cargaAtual;
         const statusClass = detalhes_carga.status.toLowerCase().replace(/\s+/g, '-');
-        const isFinalizada = detalhes_carga.status === 'Finalizada';
-        const podeEditarGeral = !isFinalizada && ['admin', 'operador'].includes(sessaoUsuario.user_permission);
+        const podeEditarGeral = ['admin', 'operador'].includes(sessaoUsuario.user_permission);
         const podeEditarEntregas = podeEditarGeral && ['Pendente', 'Agendada'].includes(detalhes_carga.status);
         const pesoTotal = entregas.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
         const freteTotal = entregas.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
@@ -95,11 +128,11 @@ document.addEventListener('DOMContentLoaded', () => {
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao-agendar"><label for="detalhe-agendamento">Data do Agendamento:</label><input type="date" id="detalhe-agendamento" value="${formatarDataParaInput(detalhes_carga.data_agendamento)}"><button class="btn-acao" data-acao="agendar">Agendar Carga</button><button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button></div></div>`;
         } else if (detalhes_carga.status === 'Agendada') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4"><div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div><div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotal)}</p></div><div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotal)}</p></div><div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div><div class="campo-form"><label for="detalhe-motorista">Motorista</label><input type="text" id="detalhe-motorista" value="${detalhes_carga.motorista || ''}"></div><div class="campo-form"><label for="detalhe-placa">Placa</label><input type="text" id="detalhe-placa" value="${detalhes_carga.placa || ''}" maxlength="7"></div></div></div>`;
-            secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao"><div class="campo-form"><label>Agendamento</label><p>${formatarData(detalhes_carga.data_agendamento)}</p></div><div class="campo-form"><label for="detalhe-carregamento">Carregamento</label><input type="date" id="detalhe-carregamento" value="${formatarDataParaInput(detalhes_carga.data_carregamento || new Date().toISOString())}"></div><div class="campo-form"><label for="detalhe-previsao">Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div></div><div class="acoes-container"><button class="btn-acao" data-acao="iniciar-transito">Iniciar Trânsito</button><button class="btn-acao-secundario" data-acao="cancelar-agendamento">Cancelar Agendamento</button><button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button></div></div>`;
+            secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao"><div class="campo-form"><label>Agendamento</label><p>${formatarData(detalhes_carga.data_agendamento)}</p></div><div class="campo-form"><label for="detalhe-carregamento">Carregamento</label><input type="date" id="detalhe-carregamento" value="${formatarDataParaInput(detalhes_carga.data_carregamento) || getHojeFormatado()}"></div><div class="campo-form"><label for="detalhe-previsao">Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div></div><div class="acoes-container"><button class="btn-acao" data-acao="iniciar-transito">Iniciar Trânsito</button><button class="btn-acao-secundario" data-acao="cancelar-agendamento">Cancelar Agendamento</button><button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button></div></div>`;
         } else if (detalhes_carga.status === 'Em Trânsito') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4"><div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div><div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotal)}</p></div><div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotal)}</p></div><div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div><div class="campo-form"><label>Motorista</label><p>${detalhes_carga.motorista || ''}</p></div><div class="campo-form"><label>Placa</label><p>${detalhes_carga.placa || ''}</p></div><div class="campo-form"><label>Carregamento</label><p>${formatarData(detalhes_carga.data_carregamento)}</p></div><div class="campo-form"><label>Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div></div></div>`;
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="acoes-container"><button class="btn-acao-finalizar" data-acao="finalizar">Finalizar Carga</button><button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button></div></div>`;
-        } else {
+        } else { // Finalizada
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4"><div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div><div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotal)}</p></div><div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotal)}</p></div><div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div></div></div>`;
             secaoAcoes = '';
         }
@@ -109,25 +142,27 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="modal-body-grid">
                 ${secaoDados}
                 <div class="detalhes-secao secao-full-width"><h4>Observações da Viagem</h4><div class="form-acao"><textarea id="obs-carga" rows="4" ${!podeEditarGeral ? 'disabled' : ''}>${detalhes_carga.observacoes || ''}</textarea></div></div>
-                ${secaoAcoes}
+                ${podeEditarGeral ? secaoAcoes : ''}
             </div>
             <div class="detalhes-secao" id="detalhes-entregas">
                 <div class="entregas-header"><h3>Entregas (${entregas.length})</h3>${podeEditarEntregas ? '<button id="btn-add-entrega" class="btn-acao">+ Adicionar Entrega</button>' : ''}</div>
                 <div id="form-add-entrega-container"></div>
-                <div class="tabela-wrapper"><table id="tabela-entregas"><thead><tr><th>Cliente</th><th>Cidade/UF</th><th>Peso</th><th>Telefone</th><th>Observações</th>${podeEditarEntregas ? '<th>Ações</th>': ''}</tr></thead><tbody id="tabela-entregas-corpo"></tbody></table></div>
+                <div class="tabela-wrapper"><table id="tabela-entregas"><thead><tr><th>Cliente</th><th>Cidade/UF</th><th>Peso</th><th>Frete</th><th>Telefone</th><th>Observações</th>${podeEditarGeral ? '<th>Ações</th>': ''}</tr></thead><tbody id="tabela-entregas-corpo"></tbody></table></div>
             </div>`;
         
         const tabelaCorpoEntregas = document.getElementById('tabela-entregas-corpo');
         tabelaCorpoEntregas.innerHTML = entregas.length > 0 ? entregas.map(e => `
             <tr>
-                <td>${e.razao_social}</td><td>${e.cidade}-${e.estado}</td><td>${formatarPeso(e.peso_bruto)}</td><td>(${e.ddd||''}) ${e.telefone||''}</td><td title="${e.obs_cliente || ''}">${(e.obs_cliente || 'Nenhuma').substring(0, 20)}</td>
-                ${podeEditarEntregas ? `
+                <td>${e.razao_social}</td><td>${e.cidade}-${e.estado}</td><td>${formatarPeso(e.peso_bruto)}</td><td>${formatarMoeda(e.valor_frete)}</td><td>(${e.ddd||''}) ${e.telefone||''}</td><td title="${e.obs_cliente || ''}">${(e.obs_cliente || 'Nenhuma').substring(0, 20)}</td>
+                ${podeEditarGeral ? `
                 <td>
-                    <button class="btn-editar btn-editar-entrega" data-id="${e.id}" data-peso="${e.peso_bruto}" data-valor="${e.valor_frete || ''}" data-pesocobrado="${e.peso_cobrado || ''}">Editar</button>
+                    ${podeEditarEntregas ? `
+                    <button class="btn-editar btn-editar-entrega" data-id="${e.id}">Editar</button>
                     <button class="btn-excluir-entrega" data-id="${e.id}">Excluir</button>
+                    ` : 'N/A'}
                 </td>` : ''}
             </tr>
-        `).join('') : `<tr><td colspan="${podeEditarEntregas ? 6 : 5}">Nenhuma entrega.</td></tr>`;
+        `).join('') : `<tr><td colspan="${podeEditarGeral ? 7 : 6}">Nenhuma entrega.</td></tr>`;
         
         configurarEventListenersDeAcoes();
     }
@@ -141,20 +176,30 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btn-add-entrega')?.addEventListener('click', (e) => {
             e.target.style.display = 'none';
             const container = document.getElementById('form-add-entrega-container');
-            container.innerHTML = `<form id="form-nova-entrega" class="form-acao"><select id="select-cliente" style="width: 250px;"></select><input type="number" id="entrega-peso-bruto" placeholder="Peso Bruto *" step="0.01" required><input type="number" id="entrega-valor-frete" placeholder="Valor Frete" step="0.01"><input type="number" id="entrega-peso-cobrado" placeholder="Peso Cobrado" step="0.01"><button type="submit">Salvar</button></form>`;
+            container.innerHTML = `<form id="form-nova-entrega" class="form-acao"><select id="select-cliente" style="width: 250px;"></select><input type="text" id="entrega-peso-bruto" placeholder="Peso Bruto *" inputmode="decimal" required><input type="text" id="entrega-valor-frete" placeholder="Valor Frete" inputmode="decimal"><input type="text" id="entrega-peso-cobrado" placeholder="Peso Cobrado" inputmode="decimal"><button type="submit">Salvar</button></form>`;
             $('#select-cliente').select2({ placeholder: 'Selecione um cliente', dropdownParent: $('#form-add-entrega-container'), data: listaDeClientes.map(c => ({ id: c.id, text: `${c.razao_social} (${c.cidade})` })) });
             document.getElementById('form-nova-entrega').addEventListener('submit', salvarNovaEntrega);
+            
+            // Aplicando máscaras
             mascaraDecimal(document.getElementById('entrega-peso-bruto'));
             mascaraDecimal(document.getElementById('entrega-valor-frete'));
             mascaraDecimal(document.getElementById('entrega-peso-cobrado'));
         });
         document.querySelectorAll('.btn-excluir-entrega').forEach(btn => btn.addEventListener('click', (e) => { if(confirm('Tem certeza?')) handleExcluirEntrega(e.target.dataset.id); }));
         document.querySelectorAll('.btn-editar-entrega').forEach(btn => btn.addEventListener('click', (e) => {
-            const { id, peso, valor, pesocobrado } = e.target.dataset;
-            document.getElementById('edit-entrega-id').value = id;
-            document.getElementById('edit-peso-bruto').value = peso;
-            document.getElementById('edit-valor-frete').value = valor;
-            document.getElementById('edit-peso-cobrado').value = pesocobrado;
+            const entregaId = e.target.dataset.id;
+            const entrega = cargaAtual.entregas.find(ent => ent.id == entregaId);
+
+            document.getElementById('edit-entrega-id').value = entrega.id;
+            document.getElementById('edit-peso-bruto').value = formatarPeso(entrega.peso_bruto).replace(' kg', '');
+            document.getElementById('edit-valor-frete').value = formatarMoeda(entrega.valor_frete).replace('R$ ', '');
+            document.getElementById('edit-peso-cobrado').value = formatarPeso(entrega.peso_cobrado).replace(' kg', '');
+            
+            // Aplicando máscaras
+            mascaraDecimal(document.getElementById('edit-peso-bruto'));
+            mascaraDecimal(document.getElementById('edit-valor-frete'));
+            mascaraDecimal(document.getElementById('edit-peso-cobrado'));
+
             modalEditarEntrega.style.display = 'block';
         }));
     }
@@ -166,8 +211,8 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify({ entrega_id: entregaId })
         });
         if (response.ok) {
-            await abrirModalDetalhes(cargaAtual.detalhes_carga.id);
             await carregarDadosIniciais();
+            await abrirModalDetalhes(cargaAtual.detalhes_carga.id);
         } else { alert('Erro ao excluir entrega.'); }
     }
     
@@ -175,19 +220,19 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const dados = {
             cliente_id: $('#select-cliente').val(),
-            peso_bruto: parseFloat(document.getElementById('entrega-peso-bruto').value),
-            valor_frete: parseFloat(document.getElementById('entrega-valor-frete').value) || null,
-            peso_cobrado: parseFloat(document.getElementById('entrega-peso-cobrado').value) || null
+            peso_bruto: parseDecimal(document.getElementById('entrega-peso-bruto').value),
+            valor_frete: parseDecimal(document.getElementById('entrega-valor-frete').value),
+            peso_cobrado: parseDecimal(document.getElementById('entrega-peso-cobrado').value)
         };
-        if(!dados.cliente_id || isNaN(dados.peso_bruto)) { alert("Cliente e Peso Bruto são obrigatórios."); return; }
+        if(!dados.cliente_id || !dados.peso_bruto) { alert("Cliente e Peso Bruto são obrigatórios."); return; }
         const response = await fetch(`/api/cargas/${cargaAtual.detalhes_carga.id}/entregas`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         });
         if (response.ok) {
-            await abrirModalDetalhes(cargaAtual.detalhes_carga.id);
             await carregarDadosIniciais();
+            await abrirModalDetalhes(cargaAtual.detalhes_carga.id);
         } else { alert('Erro ao salvar entrega.'); }
     }
     
@@ -195,11 +240,11 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const entregaId = document.getElementById('edit-entrega-id').value;
         const dados = {
-            peso_bruto: parseFloat(document.getElementById('edit-peso-bruto').value),
-            valor_frete: parseFloat(document.getElementById('edit-valor-frete').value) || null,
-            peso_cobrado: parseFloat(document.getElementById('edit-peso-cobrado').value) || null
+            peso_bruto: parseDecimal(document.getElementById('edit-peso-bruto').value),
+            valor_frete: parseDecimal(document.getElementById('edit-valor-frete').value),
+            peso_cobrado: parseDecimal(document.getElementById('edit-peso-cobrado').value)
         };
-        if (isNaN(dados.peso_bruto) || dados.peso_bruto <= 0) {
+        if (!dados.peso_bruto || dados.peso_bruto <= 0) {
             alert('Peso bruto é obrigatório e deve ser maior que zero.'); return;
         }
         try {
@@ -211,13 +256,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const resultado = await response.json();
             if (!response.ok) throw new Error(resultado.error || 'Falha ao atualizar entrega.');
             fecharModais();
-            await abrirModalDetalhes(cargaAtual.detalhes_carga.id);
             await carregarDadosIniciais();
+            await abrirModalDetalhes(cargaAtual.detalhes_carga.id);
         } catch (error) { alert(`Erro: ${error.message}`); }
     });
-    mascaraDecimal(document.getElementById('edit-peso-bruto'));
-    mascaraDecimal(document.getElementById('edit-valor-frete'));
-    mascaraDecimal(document.getElementById('edit-peso-cobrado'));
     
     async function handleFinalizarCarga() {
         const senha = prompt("Para finalizar a carga, insira sua senha de usuário:");
