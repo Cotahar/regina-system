@@ -38,12 +38,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // --- LÓGICA DE MODAIS ---
+    // --- ALTERAÇÃO DA TASK 1 (BUG MODAL) ---
     const fecharModais = () => {
+        // Esta função agora serve apenas como um "fechar tudo" geral, se necessário
         modalNovaCarga.style.display = 'none';
         modalDetalhes.style.display = 'none';
         modalEditarEntrega.style.display = 'none';
     };
-    document.querySelectorAll('.fechar-modal').forEach(btn => btn.addEventListener('click', fecharModais));
+    
+    // Listeners específicos para cada "X"
+    document.getElementById('fechar-modal-nova-carga').addEventListener('click', () => modalNovaCarga.style.display = 'none');
+    document.getElementById('fechar-modal-detalhes').addEventListener('click', () => modalDetalhes.style.display = 'none');
+    document.getElementById('fechar-modal-editar-entrega').addEventListener('click', () => modalEditarEntrega.style.display = 'none');
+    
+    // O listener antigo que causava o bug foi removido
+    // document.querySelectorAll('.fechar-modal').forEach(btn => btn.addEventListener('click', fecharModais));
+    // --- FIM DA ALTERAÇÃO DA TASK 1 ---
     
     document.addEventListener('keydown', (event) => {
         if (event.key === "Escape") {
@@ -100,9 +110,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // 3. Monta a lista de informações
         let listaInfo = '<ul>';
         listaInfo += `<li><strong>Origem:</strong> ${carga.origem}</li>`;
+        
+        // --- ALTERAÇÃO DA TASK 3 (DESTINO + UF) ---
         if (carga.destino) {
-            listaInfo += `<li><strong>Destino:</strong> ${carga.destino}</li>`;
+            // Usa o novo campo 'destino_uf' vindo da API
+            const destinoCompleto = carga.destino_uf ? `${carga.destino}/${carga.destino_uf}` : carga.destino;
+            listaInfo += `<li><strong>Destino:</strong> ${destinoCompleto}</li>`;
         }
+        // --- FIM DA ALTERAÇÃO DA TASK 3 ---
+        
         if (carga.status === 'Agendada' || carga.status === 'Em Trânsito') {
             if (carga.motorista) {
                 listaInfo += `<li><strong>Motorista:</strong> ${carga.motorista} (${carga.placa || 'N/A'})</li>`;
@@ -124,12 +140,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    async function abrirModalDetalhes(id) {
+    // --- ALTERAÇÃO DA TASK 2 (UX Adicionar Entrega) ---
+    // A função agora aceita um parâmetro para saber se deve reabrir o form de add entrega
+    async function abrirModalDetalhes(id, reabrirFormularioEntrega = false) {
+    // --- FIM DA ALTERAÇÃO DA TASK 2 ---
         try {
             const response = await fetch(`/api/cargas/${id}`);
             if (!response.ok) throw new Error('Carga não encontrada');
             cargaAtual = await response.json();
-            renderizarModalDetalhes();
+            // --- ALTERAÇÃO DA TASK 2 (UX Adicionar Entrega) ---
+            renderizarModalDetalhes(reabrirFormularioEntrega); // Passa o parâmetro adiante
+            // --- FIM DA ALTERAÇÃO DA TASK 2 ---
             modalDetalhes.style.display = 'block';
         } catch (error) {
             console.error("Erro ao buscar detalhes:", error);
@@ -137,7 +158,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderizarModalDetalhes() {
+    // --- ALTERAÇÃO DA TASK 2 (UX Adicionar Entrega) ---
+    // A função agora aceita o parâmetro
+    function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
+    // --- FIM DA ALTERAÇÃO DA TASK 2 ---
         const { detalhes_carga, entregas } = cargaAtual;
         const statusClass = detalhes_carga.status.toLowerCase().replace(/\s+/g, '-');
         const podeEditarGeral = ['admin', 'operador'].includes(sessaoUsuario.user_permission);
@@ -151,7 +175,38 @@ document.addEventListener('DOMContentLoaded', () => {
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao-agendar"><label for="detalhe-agendamento">Data do Agendamento:</label><input type="date" id="detalhe-agendamento" value="${formatarDataParaInput(detalhes_carga.data_agendamento)}"><button class="btn-acao" data-acao="agendar">Agendar Carga</button><button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button></div></div>`;
         } else if (detalhes_carga.status === 'Agendada') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4"><div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div><div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotal)}</p></div><div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotal)}</p></div><div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div><div class="campo-form"><label for="detalhe-motorista">Motorista</label><input type="text" id="detalhe-motorista" value="${detalhes_carga.motorista || ''}"></div><div class="campo-form"><label for="detalhe-placa">Placa</label><input type="text" id="detalhe-placa" value="${detalhes_carga.placa || ''}" maxlength="7"></div></div></div>`;
-            secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao"><div class="campo-form"><label>Agendamento</label><p>${formatarData(detalhes_carga.data_agendamento)}</p></div><div class="campo-form"><label for="detalhe-carregamento">Carregamento</label><input type="date" id="detalhe-carregamento" value="${formatarDataParaInput(detalhes_carga.data_carregamento) || getHojeFormatado()}"></div><div class="campo-form"><label for="detalhe-previsao">Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div></div><div class="acoes-container"><button class="btn-acao" data-acao="iniciar-transito">Iniciar Trânsito</button><button class="btn-acao-secundario" data-acao="cancelar-agendamento">Cancelar Agendamento</button><button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button></div></div>`;
+            
+            // --- INÍCIO DA ALTERAÇÃO DA TASK 5 (Admin Editar Agendamento) ---
+            secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao">`;
+            
+            // Verifica a permissão do usuário
+            if (sessaoUsuario.user_permission === 'admin') {
+                // Se for admin, mostra um input editável
+                secaoAcoes += `
+                <div class="campo-form">
+                    <label for="detalhe-agendamento-edit">Agendamento</label>
+                    <input type="date" id="detalhe-agendamento-edit" value="${formatarDataParaInput(detalhes_carga.data_agendamento)}">
+                </div>`;
+            } else {
+                // Se não for admin, mostra apenas o texto
+                secaoAcoes += `
+                <div class="campo-form">
+                    <label>Agendamento</label>
+                    <p>${formatarData(detalhes_carga.data_agendamento)}</p>
+                </div>`;
+            }
+            
+            secaoAcoes += `
+                <div class="campo-form"><label for="detalhe-carregamento">Carregamento</label><input type="date" id="detalhe-carregamento" value="${formatarDataParaInput(detalhes_carga.data_carregamento) || getHojeFormatado()}"></div>
+                <div class="campo-form"><label for="detalhe-previsao">Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div>
+            </div>
+            <div class="acoes-container">
+                <button class="btn-acao" data-acao="iniciar-transito">Iniciar Trânsito</button>
+                <button class="btn-acao-secundario" data-acao="cancelar-agendamento">Cancelar Agendamento</button>
+                <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
+            </div></div>`;
+            // --- FIM DA ALTERAÇÃO DA TASK 5 ---
+
         } else if (detalhes_carga.status === 'Em Trânsito') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4"><div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div><div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotal)}</p></div><div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotal)}</p></div><div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div><div class="campo-form"><label>Motorista</label><p>${detalhes_carga.motorista || ''}</p></div><div class="campo-form"><label>Placa</label><p>${detalhes_carga.placa || ''}</p></div><div class="campo-form"><label>Carregamento</label><p>${formatarData(detalhes_carga.data_carregamento)}</p></div><div class="campo-form"><label>Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div></div></div>`;
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="acoes-container"><button class="btn-acao-finalizar" data-acao="finalizar">Finalizar Carga</button><button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button></div></div>`;
@@ -192,6 +247,16 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('') : `<tr><td colspan="${podeEditarGeral ? (podeEditarEntregas ? 8 : 7) : 6}">Nenhuma entrega.</td></tr>`;
         
         configurarEventListenersDeAcoes();
+
+        // --- ALTERAÇÃO DA TASK 2 (UX Adicionar Entrega) ---
+        // Se a flag for verdadeira, clica no botão de adicionar entrega
+        if (reabrirFormularioEntrega) {
+            const btnAddEntrega = document.getElementById('btn-add-entrega');
+            if (btnAddEntrega) {
+                btnAddEntrega.click();
+            }
+        }
+        // --- FIM DA ALTERAÇÃO DA TASK 2 ---
     }
     
     function configurarEventListenersDeAcoes() {
@@ -243,11 +308,14 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (!response.ok) throw new Error('Falha ao marcar como destino.');
             
+            // Pega o estado atual do form de add entrega
+            const formAberto = !!document.getElementById('form-nova-entrega');
+            
             await carregarDadosIniciais();
             const cargaId = cargaAtual.detalhes_carga.id;
-            const detalhesResponse = await fetch(`/api/cargas/${cargaId}`);
-            cargaAtual = await detalhesResponse.json();
-            renderizarModalDetalhes();
+            
+            // Reabre o modal, mantendo o form de add entrega aberto se já estava
+            await abrirModalDetalhes(cargaId, formAberto);
 
         } catch (error) {
             alert(`Erro: ${error.message}`);
@@ -262,8 +330,11 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify({ entrega_id: entregaId })
         });
         if (response.ok) {
+            // Pega o estado atual do form de add entrega
+            const formAberto = !!document.getElementById('form-nova-entrega');
             await carregarDadosIniciais();
-            await abrirModalDetalhes(cargaAtual.detalhes_carga.id);
+            // Reabre o modal, mantendo o form de add entrega aberto se já estava
+            await abrirModalDetalhes(cargaAtual.detalhes_carga.id, formAberto);
         } else { alert('Erro ao excluir entrega.'); }
     }
     
@@ -283,7 +354,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (response.ok) {
             await carregarDadosIniciais();
-            await abrirModalDetalhes(cargaAtual.detalhes_carga.id);
+            // --- ALTERAÇÃO DA TASK 2 (UX Adicionar Entrega) ---
+            // Chama a função com a flag 'true' para reabrir o formulário
+            await abrirModalDetalhes(cargaAtual.detalhes_carga.id, true);
+            // --- FIM DA ALTERAÇÃO DA TASK 2 ---
         } else { alert('Erro ao salvar entrega.'); }
     }
     
@@ -306,9 +380,16 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const resultado = await response.json();
             if (!response.ok) throw new Error(resultado.error || 'Falha ao atualizar entrega.');
-            fecharModais();
+            
+            // Pega o estado atual do form de add entrega
+            const formAberto = !!document.getElementById('form-nova-entrega');
+            
+            fecharModais(); // Fecha todos (inclusive o de editar entrega)
+            
             await carregarDadosIniciais();
-            await abrirModalDetalhes(cargaAtual.detalhes_carga.id);
+            // Reabre o modal principal, mantendo o form de add entrega aberto se já estava
+            await abrirModalDetalhes(cargaAtual.detalhes_carga.id, formAberto);
+            
         } catch (error) { alert(`Erro: ${error.message}`); }
     });
     
@@ -355,6 +436,16 @@ document.addEventListener('DOMContentLoaded', () => {
             dados.placa = document.getElementById('detalhe-placa').value;
             dados.data_carregamento = document.getElementById('detalhe-carregamento').value || null;
             dados.previsao_entrega = document.getElementById('detalhe-previsao').value || null;
+            
+            // --- INÍCIO DA ALTERAÇÃO DA TASK 5 (Admin Editar Agendamento) ---
+            // Procura pelo campo de edição de agendamento
+            const campoAgendamentoEdit = document.getElementById('detalhe-agendamento-edit');
+            if (campoAgendamentoEdit) {
+                // Se ele existir (admin), envia o valor dele
+                dados.data_agendamento = campoAgendamentoEdit.value || null;
+            }
+            // --- FIM DA ALTERAÇÃO DA TASK 5 ---
+            
         } else if (detalhes_carga.status === 'Em Trânsito') {
             dados.previsao_entrega = document.getElementById('detalhe-previsao').value || null;
         }
@@ -378,7 +469,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     painelContainer.addEventListener('click', (e) => {
         const cartao = e.target.closest('.cartao-carga');
-        if (cartao) abrirModalDetalhes(cartao.dataset.id);
+        // --- ALTERAÇÃO DA TASK 2 (UX Adicionar Entrega) ---
+        // Chama a função com a flag 'false' (comportamento padrão)
+        if (cartao) abrirModalDetalhes(cartao.dataset.id, false);
+        // --- FIM DA ALTERAÇÃO DA TASK 2 ---
     });
     
     document.getElementById('form-nova-carga').addEventListener('submit', async (e) => {

@@ -1,6 +1,3 @@
-#
-# SEU ARQUIVO app.py COMPLETO E ATUALIZADO
-#
 import time
 import pandas as pd
 import os
@@ -189,18 +186,37 @@ def gerenciar_cargas():
         return jsonify({
             'id': nova_carga.id, 'codigo_carga': nova_carga.codigo_carga, 'origem': nova_carga.origem, 
             'status': nova_carga.status, 'num_entregas': 0, 'peso_total': 0, 'frete_total': 0,
-            'motorista': None, 'placa': None, 'destino': None
+            'motorista': None, 'placa': None, 'destino': None, 'destino_uf': None
         }), 201
     
     # GET
-    cargas_ativas = Carga.query.filter(Carga.status != 'Finalizada').order_by(Carga.id.desc()).all()
+    # --- ALTERAÇÃO DA TASK 4 (ORDENAÇÃO) ---
+    # 1. Buscar Pendentes (mais recentes primeiro)
+    cargas_pendentes_db = Carga.query.filter_by(status='Pendente').order_by(Carga.id.desc()).all()
+    
+    # 2. Buscar Agendadas (agendamento mais próximo primeiro, nulos no fim)
+    cargas_agendadas_db = Carga.query.filter_by(status='Agendada').order_by(db.func.coalesce(Carga.data_agendamento, '9999-12-31'), Carga.id.desc()).all()
+    
+    # 3. Buscar Em Trânsito (previsão mais próxima primeiro, nulos no fim)
+    cargas_em_transito_db = Carga.query.filter_by(status='Em Trânsito').order_by(db.func.coalesce(Carga.previsao_entrega, '9999-12-31'), Carga.id.desc()).all()
+
+    # Combinar as listas na ordem correta
+    cargas_ativas = cargas_pendentes_db + cargas_agendadas_db + cargas_em_transito_db
+    # --- FIM DA ALTERAÇÃO DA TASK 4 ---
+
     cargas_lista = []
     for carga in cargas_ativas:
         peso_total = sum(e.peso_bruto for e in carga.entregas if e.peso_bruto)
         frete_total = sum(e.valor_frete for e in carga.entregas if e.valor_frete)
         
+        # --- ALTERAÇÃO DA TASK 3 (DESTINO + UF) ---
         destino_entrega = Entrega.query.filter_by(carga_id=carga.id, is_last_delivery=1).first()
-        destino = destino_entrega.cliente.cidade if destino_entrega and destino_entrega.cliente else None
+        destino = None
+        destino_uf = None # Nova variável
+        if destino_entrega and destino_entrega.cliente:
+            destino = destino_entrega.cliente.cidade
+            destino_uf = destino_entrega.cliente.estado # Buscar o estado
+        # --- FIM DA ALTERAÇÃO DA TASK 3 ---
 
         cargas_lista.append({
             'id': carga.id, 'codigo_carga': carga.codigo_carga, 'origem': carga.origem, 'status': carga.status, 
@@ -208,11 +224,11 @@ def gerenciar_cargas():
             'data_carregamento': carga.data_carregamento, 'previsao_entrega': carga.previsao_entrega, 
             'observacoes': carga.observacoes, 'data_finalizacao': carga.data_finalizacao, 
             'num_entregas': len(carga.entregas), 'peso_total': peso_total, 'frete_total': frete_total,
-            'destino': destino
+            'destino': destino,
+            'destino_uf': destino_uf # Adicionado ao JSON
         })
     return jsonify(cargas_lista)
 
-# --- FUNÇÃO ATUALIZADA ---
 @app.route('/api/cargas/consulta', methods=['GET'])
 @login_required
 def consultar_cargas():
@@ -221,7 +237,6 @@ def consultar_cargas():
     per_page = 10
     query = Carga.query
 
-    # --- NOVOS FILTROS APLICADOS AQUI ---
     if args.get('codigo_carga'):
         query = query.filter(Carga.codigo_carga.like(f"%{args.get('codigo_carga').upper()}%"))
     if args.get('status'):
@@ -244,13 +259,22 @@ def consultar_cargas():
     
     cargas_lista = []
     for carga in cargas:
+        # --- ALTERAÇÃO DA TASK 3 (DESTINO + UF) ---
         destino_entrega = Entrega.query.filter_by(carga_id=carga.id, is_last_delivery=1).first()
-        destino = destino_entrega.cliente.cidade if destino_entrega and destino_entrega.cliente else None
+        destino = None
+        destino_uf = None # Nova variável
+        if destino_entrega and destino_entrega.cliente:
+            destino = destino_entrega.cliente.cidade
+            destino_uf = destino_entrega.cliente.estado # Buscar o estado
+        # --- FIM DA ALTERAÇÃO DA TASK 3 ---
+            
         peso_total = sum(e.peso_bruto for e in carga.entregas if e.peso_bruto)
         cargas_lista.append({
             'id': carga.id, 'codigo_carga': carga.codigo_carga, 'origem': carga.origem,
             'status': carga.status, 'motorista': carga.motorista, 'data_finalizacao': carga.data_finalizacao,
-            'num_entregas': len(carga.entregas), 'peso_total': peso_total, 'destino': destino
+            'num_entregas': len(carga.entregas), 'peso_total': peso_total, 
+            'destino': destino,
+            'destino_uf': destino_uf # Adicionado ao JSON
         })
     return jsonify({'cargas': cargas_lista, 'total_paginas': pagination.pages, 'pagina_atual': page, 'total_resultados': pagination.total})
 
