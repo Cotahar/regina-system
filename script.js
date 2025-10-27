@@ -1,10 +1,18 @@
+/*
+* script.js (ATUALIZADO PARA V2 - MÓDULO 4)
+*/
 document.addEventListener('DOMContentLoaded', () => {
     const painelContainer = document.querySelector('.container');
     const modalNovaCarga = document.getElementById('modal-nova-carga');
     const modalDetalhes = document.getElementById('modal-detalhes-carga');
     const modalEditarEntrega = document.getElementById('modal-editar-entrega');
     const detalhesConteudo = document.getElementById('detalhes-conteudo');
+
+    // Módulo 4: Variáveis para guardar listas de Motoristas/Veículos
     let listaDeClientes = [];
+    let listaDeMotoristas = [];
+    let listaDeVeiculos = [];
+
     let cargaAtual = null;
     let sessaoUsuario = null;
 
@@ -14,10 +22,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const formatarData = (d) => d ? new Date(d).toLocaleDateString('pt-BR', {timeZone: 'UTC'}) : 'N/A';
     const formatarDataParaInput = (d) => d ? d.split('T')[0] : '';
     const getHojeFormatado = () => new Date().toISOString().split('T')[0];
-    
+
     const parseDecimal = (valor) => {
         if (typeof valor !== 'string' || !valor) return null;
-        return parseFloat(valor.replace(/\./g, '').replace(',', '.'));
+        const valorLimpo = valor.replace('R$ ', '').replace(/\./g, '').replace(',', '.');
+        const numero = parseFloat(valorLimpo);
+        return isNaN(numero) ? null : numero;
     };
 
     const mascaraDecimal = (input) => {
@@ -31,30 +41,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 maximumFractionDigits: 2
             }).format(num);
         };
-        
+
         input.addEventListener('input', (e) => {
             e.target.value = formatValue(e.target.value);
         });
+        // Formata o valor inicial, se houver
+        input.value = formatValue(input.value);
     };
 
     // --- LÓGICA DE MODAIS ---
-    // --- ALTERAÇÃO DA TASK 1 (BUG MODAL) ---
     const fecharModais = () => {
-        // Esta função agora serve apenas como um "fechar tudo" geral, se necessário
         modalNovaCarga.style.display = 'none';
         modalDetalhes.style.display = 'none';
         modalEditarEntrega.style.display = 'none';
     };
-    
-    // Listeners específicos para cada "X"
-    document.getElementById('fechar-modal-nova-carga').addEventListener('click', () => modalNovaCarga.style.display = 'none');
-    document.getElementById('fechar-modal-detalhes').addEventListener('click', () => modalDetalhes.style.display = 'none');
-    document.getElementById('fechar-modal-editar-entrega').addEventListener('click', () => modalEditarEntrega.style.display = 'none');
-    
-    // O listener antigo que causava o bug foi removido
-    // document.querySelectorAll('.fechar-modal').forEach(btn => btn.addEventListener('click', fecharModais));
-    // --- FIM DA ALTERAÇÃO DA TASK 1 ---
-    
+
+    document.getElementById('fechar-modal-nova-carga')?.addEventListener('click', () => modalNovaCarga.style.display = 'none');
+    document.getElementById('fechar-modal-detalhes')?.addEventListener('click', () => modalDetalhes.style.display = 'none');
+    document.getElementById('fechar-modal-editar-entrega')?.addEventListener('click', () => modalEditarEntrega.style.display = 'none');
+
     document.addEventListener('keydown', (event) => {
         if (event.key === "Escape") {
             if (modalEditarEntrega.style.display === 'block') {
@@ -72,55 +77,55 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- LÓGICA PRINCIPAL ---
     async function carregarDadosIniciais() {
         try {
-            const [sessionRes, clientesRes, cargasRes] = await Promise.all([ fetch('/api/session'), fetch('/api/clientes'), fetch('/api/cargas') ]);
+            // Módulo 4: Carrega também motoristas e veículos
+            const [sessionRes, clientesRes, motoristasRes, veiculosRes, cargasRes] = await Promise.all([
+                fetch('/api/session'),
+                fetch('/api/clientes'),
+                fetch('/api/motoristas'),
+                fetch('/api/veiculos'),
+                fetch('/api/cargas')
+            ]);
             if (!sessionRes.ok) { window.location.href = '/login.html'; return; }
             sessaoUsuario = await sessionRes.json();
             if (sessaoUsuario.user_permission === 'admin') {
-                document.getElementById('nav-admin').innerHTML = `<a href="/usuarios.html" class="btn-navegacao">Gerenciar Usuários</a>`;
+                document.getElementById('nav-admin').innerHTML = `<a href="/usuarios.html" class="btn-navegacao">Usuários</a>`;
             }
             listaDeClientes = await clientesRes.json();
+            listaDeMotoristas = await motoristasRes.json(); // Módulo 4
+            listaDeVeiculos = await veiculosRes.json(); // Módulo 4
+
             const cargas = await cargasRes.json();
             document.querySelectorAll('.lista-cargas').forEach(lista => lista.innerHTML = '');
             cargas.forEach(adicionarCartaoNaTela);
         } catch (error) { console.error("Erro ao carregar dados iniciais:", error); }
     }
 
-    // --- FUNÇÃO ATUALIZADA PARA ESTÉTICA ---
+    // --- FUNÇÃO ATUALIZADA PARA V2 ---
     function adicionarCartaoNaTela(carga) {
         const cartao = document.createElement('div');
         cartao.className = 'cartao-carga';
         cartao.dataset.id = carga.id;
 
-        // 1. Prepara a data extra que vai no canto direito
         let dataExtraHtml = '';
         if (carga.status === 'Agendada' && carga.data_agendamento) {
             dataExtraHtml = `<span class="cartao-data">Ag: ${formatarData(carga.data_agendamento)}</span>`;
         } else if (carga.status === 'Em Trânsito' && carga.previsao_entrega) {
             dataExtraHtml = `<span class="cartao-data">Prev: ${formatarData(carga.previsao_entrega)}</span>`;
         }
-        
-        // 2. Monta o cabeçalho do card
-        const cabecalhoCartao = `
-            <div class="cartao-header">
-                <h3>${carga.codigo_carga}</h3>
-                ${dataExtraHtml}
-            </div>
-        `;
-        
-        // 3. Monta a lista de informações
+
+        const cabecalhoCartao = `<div class="cartao-header"><h3>${carga.codigo_carga}</h3>${dataExtraHtml}</div>`;
+
         let listaInfo = '<ul>';
         listaInfo += `<li><strong>Origem:</strong> ${carga.origem}</li>`;
-        
-        // --- ALTERAÇÃO DA TASK 3 (DESTINO + UF) ---
+
         if (carga.destino) {
-            // Usa o novo campo 'destino_uf' vindo da API
             const destinoCompleto = carga.destino_uf ? `${carga.destino}/${carga.destino_uf}` : carga.destino;
             listaInfo += `<li><strong>Destino:</strong> ${destinoCompleto}</li>`;
         }
-        // --- FIM DA ALTERAÇÃO DA TASK 3 ---
-        
+
+        // Módulo 4: Usa os campos _nome e _placa vindos da API
         if (carga.status === 'Agendada' || carga.status === 'Em Trânsito') {
-            if (carga.motorista) {
+            if (carga.motorista) { // API V2 envia 'motorista' como nome
                 listaInfo += `<li><strong>Motorista:</strong> ${carga.motorista} (${carga.placa || 'N/A'})</li>`;
             }
         }
@@ -128,9 +133,8 @@ document.addEventListener('DOMContentLoaded', () => {
         listaInfo += `<li><strong>Peso Total:</strong> ${formatarPeso(carga.peso_total)}</li>`;
         listaInfo += '</ul>';
 
-        // 4. Junta tudo e insere no card
         cartao.innerHTML = cabecalhoCartao + listaInfo;
-        
+
         const colunaId = carga.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
         const coluna = document.getElementById(colunaId);
         if (coluna) {
@@ -139,63 +143,104 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error(`Coluna com ID '${colunaId}' não encontrada para o status '${carga.status}'`);
         }
     }
-    
-    // --- ALTERAÇÃO DA TASK 2 (UX Adicionar Entrega) ---
-    // A função agora aceita um parâmetro para saber se deve reabrir o form de add entrega
+
     async function abrirModalDetalhes(id, reabrirFormularioEntrega = false) {
-    // --- FIM DA ALTERAÇÃO DA TASK 2 ---
         try {
             const response = await fetch(`/api/cargas/${id}`);
             if (!response.ok) throw new Error('Carga não encontrada');
             cargaAtual = await response.json();
-            // --- ALTERAÇÃO DA TASK 2 (UX Adicionar Entrega) ---
-            renderizarModalDetalhes(reabrirFormularioEntrega); // Passa o parâmetro adiante
-            // --- FIM DA ALTERAÇÃO DA TASK 2 ---
+            renderizarModalDetalhes(reabrirFormularioEntrega);
             modalDetalhes.style.display = 'block';
+
+            // Módulo 4: Inicializar Select2 para motorista/veículo se modal foi aberto
+            inicializarSelect2MotoristaVeiculo();
+
         } catch (error) {
             console.error("Erro ao buscar detalhes:", error);
             alert("Não foi possível carregar os detalhes.");
         }
     }
 
-    // --- ALTERAÇÃO DA TASK 2 (UX Adicionar Entrega) ---
-    // A função agora aceita o parâmetro
+    // --- FUNÇÃO ATUALIZADA PARA V2 ---
     function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
-    // --- FIM DA ALTERAÇÃO DA TASK 2 ---
         const { detalhes_carga, entregas } = cargaAtual;
         const statusClass = detalhes_carga.status.toLowerCase().replace(/\s+/g, '-');
         const podeEditarGeral = ['admin', 'operador'].includes(sessaoUsuario.user_permission);
         const podeEditarEntregas = podeEditarGeral && ['Pendente', 'Agendada'].includes(detalhes_carga.status);
-        const pesoTotal = entregas.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
-        const freteTotal = entregas.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
+
+        // Agrupa entregas por Remetente (Módulo 4)
+        const coletasPorRemetente = entregas.reduce((acc, e) => {
+            const remetenteKey = e.remetente_nome || 'Desconhecido';
+            if (!acc[remetenteKey]) {
+                acc[remetenteKey] = { nome: remetenteKey, cidade: e.remetente_cidade, peso: 0 };
+            }
+            acc[remetenteKey].peso += (e.peso_bruto || 0);
+            return acc;
+        }, {});
+        const resumoColetasHtml = Object.values(coletasPorRemetente).map(coleta =>
+            `<li>${coleta.nome} (${coleta.cidade}): ${formatarPeso(coleta.peso)}</li>`
+        ).join('');
+
+        // Agrupa entregas por Cliente (Módulo 4)
+        const entregasAgrupadas = entregas.reduce((acc, e) => {
+             const clienteKey = e.cliente_id; // Agrupa pelo ID do destinatário
+             if (!acc[clienteKey]) {
+                 acc[clienteKey] = {
+                     id: clienteKey,
+                     razao_social: e.razao_social,
+                     cidade: e.cidade, // Cidade final (pode ser override)
+                     estado: e.estado, // Estado final (pode ser override)
+                     ddd: e.ddd,
+                     telefone: e.telefone,
+                     obs_cliente: e.obs_cliente,
+                     peso_total: 0,
+                     frete_total: 0,
+                     sub_entregas: []
+                 };
+             }
+             acc[clienteKey].peso_total += (e.peso_bruto || 0);
+             acc[clienteKey].frete_total += (e.valor_frete || 0);
+             acc[clienteKey].sub_entregas.push(e); // Guarda a entrega original
+             return acc;
+         }, {});
+
+
+        const pesoTotalGeral = entregas.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
+        const freteTotalGeral = entregas.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
         let secaoDados, secaoAcoes;
 
+        // --- Lógica de renderização por Status (ATUALIZADA) ---
         if (detalhes_carga.status === 'Pendente') {
-            secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4"><div class="campo-form"><label>Origem</label><input type="text" id="detalhe-origem" value="${detalhes_carga.origem || ''}"></div><div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotal)}</p></div><div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotal)}</p></div><div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div></div></div>`;
-            secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao-agendar"><label for="detalhe-agendamento">Data do Agendamento:</label><input type="date" id="detalhe-agendamento" value="${formatarDataParaInput(detalhes_carga.data_agendamento)}"><button class="btn-acao" data-acao="agendar">Agendar Carga</button><button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button></div></div>`;
+            secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
+                <div class="campo-form"><label>Origem</label><input type="text" id="detalhe-origem" value="${detalhes_carga.origem || ''}"></div>
+                <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
+                <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
+                <div class="campo-form"><label>Frete Pago</label><input type="text" id="detalhe-frete-pago" value="${formatarMoeda(detalhes_carga.frete_pago).replace('R$ ','')}" inputmode="decimal"></div>
+                <div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div>
+            </div></div>`;
+            secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao-agendar">
+                <label for="detalhe-agendamento">Data do Agendamento:</label>
+                <input type="date" id="detalhe-agendamento" value="${formatarDataParaInput(detalhes_carga.data_agendamento)}">
+                <button class="btn-acao" data-acao="agendar">Agendar Carga</button>
+                <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
+            </div></div>`;
         } else if (detalhes_carga.status === 'Agendada') {
-            secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4"><div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div><div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotal)}</p></div><div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotal)}</p></div><div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div><div class="campo-form"><label for="detalhe-motorista">Motorista</label><input type="text" id="detalhe-motorista" value="${detalhes_carga.motorista || ''}"></div><div class="campo-form"><label for="detalhe-placa">Placa</label><input type="text" id="detalhe-placa" value="${detalhes_carga.placa || ''}" maxlength="7"></div></div></div>`;
-            
-            // --- INÍCIO DA ALTERAÇÃO DA TASK 5 (Admin Editar Agendamento) ---
+            // Módulo 4: Motorista e Placa agora são Select2
+            secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
+                <div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div>
+                <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
+                <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
+                <div class="campo-form"><label>Frete Pago</label><input type="text" id="detalhe-frete-pago" value="${formatarMoeda(detalhes_carga.frete_pago).replace('R$ ','')}" inputmode="decimal"></div>
+                <div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div>
+                <div class="campo-form"><label for="select-motorista">Motorista</label><select id="select-motorista" style="width: 100%;"></select></div>
+                <div class="campo-form"><label for="select-veiculo">Veículo</label><select id="select-veiculo" style="width: 100%;"></select></div>
+            </div></div>`;
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao">`;
-            
-            // Verifica a permissão do usuário
             if (sessaoUsuario.user_permission === 'admin') {
-                // Se for admin, mostra um input editável
-                secaoAcoes += `
-                <div class="campo-form">
-                    <label for="detalhe-agendamento-edit">Agendamento</label>
-                    <input type="date" id="detalhe-agendamento-edit" value="${formatarDataParaInput(detalhes_carga.data_agendamento)}">
-                </div>`;
+                secaoAcoes += `<div class="campo-form"><label for="detalhe-agendamento-edit">Agendamento</label><input type="date" id="detalhe-agendamento-edit" value="${formatarDataParaInput(detalhes_carga.data_agendamento)}"></div>`;
             } else {
-                // Se não for admin, mostra apenas o texto
-                secaoAcoes += `
-                <div class="campo-form">
-                    <label>Agendamento</label>
-                    <p>${formatarData(detalhes_carga.data_agendamento)}</p>
-                </div>`;
+                secaoAcoes += `<div class="campo-form"><label>Agendamento</label><p>${formatarData(detalhes_carga.data_agendamento)}</p></div>`;
             }
-            
             secaoAcoes += `
                 <div class="campo-form"><label for="detalhe-carregamento">Carregamento</label><input type="date" id="detalhe-carregamento" value="${formatarDataParaInput(detalhes_carga.data_carregamento) || getHojeFormatado()}"></div>
                 <div class="campo-form"><label for="detalhe-previsao">Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div>
@@ -205,121 +250,236 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button class="btn-acao-secundario" data-acao="cancelar-agendamento">Cancelar Agendamento</button>
                 <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
             </div></div>`;
-            // --- FIM DA ALTERAÇÃO DA TASK 5 ---
-
         } else if (detalhes_carga.status === 'Em Trânsito') {
-            secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4"><div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div><div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotal)}</p></div><div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotal)}</p></div><div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div><div class="campo-form"><label>Motorista</label><p>${detalhes_carga.motorista || ''}</p></div><div class="campo-form"><label>Placa</label><p>${detalhes_carga.placa || ''}</p></div><div class="campo-form"><label>Carregamento</label><p>${formatarData(detalhes_carga.data_carregamento)}</p></div><div class="campo-form"><label>Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div></div></div>`;
-            secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="acoes-container"><button class="btn-acao-finalizar" data-acao="finalizar">Finalizar Carga</button><button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button></div></div>`;
+            // Módulo 4: Mostra nome do motorista e placa (não editáveis aqui)
+            secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
+                <div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div>
+                <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
+                <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
+                 <div class="campo-form"><label>Frete Pago</label><input type="text" id="detalhe-frete-pago" value="${formatarMoeda(detalhes_carga.frete_pago).replace('R$ ','')}" inputmode="decimal"></div>
+                <div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div>
+                <div class="campo-form"><label>Motorista</label><p>${detalhes_carga.motorista_nome || 'N/A'}</p></div>
+                <div class="campo-form"><label>Placa</label><p>${detalhes_carga.veiculo_placa || 'N/A'}</p></div>
+                <div class="campo-form"><label>Carregamento</label><p>${formatarData(detalhes_carga.data_carregamento)}</p></div>
+                <div class="campo-form"><label>Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div>
+            </div></div>`;
+            secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="acoes-container">
+                <button class="btn-acao-finalizar" data-acao="finalizar">Finalizar Carga</button>
+                <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
+            </div></div>`;
         } else { // Finalizada
-            secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4"><div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div><div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotal)}</p></div><div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotal)}</p></div><div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div></div></div>`;
+            secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
+                <div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div>
+                <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
+                <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
+                <div class="campo-form"><label>Frete Pago</label><p>${formatarMoeda(detalhes_carga.frete_pago)}</p></div>
+                <div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div>
+                <div class="campo-form"><label>Motorista</label><p>${detalhes_carga.motorista_nome || 'N/A'}</p></div>
+                <div class="campo-form"><label>Placa</label><p>${detalhes_carga.veiculo_placa || 'N/A'}</p></div>
+                <div class="campo-form"><label>Carregamento</label><p>${formatarData(detalhes_carga.data_carregamento)}</p></div>
+                 <div class="campo-form"><label>Finalização</label><p>${formatarData(detalhes_carga.data_finalizacao)}</p></div>
+            </div></div>`;
             secaoAcoes = '';
         }
 
+        // --- Montagem do HTML do Modal ---
         detalhesConteudo.innerHTML = `
             <div id="detalhes-header"><h2>${detalhes_carga.codigo_carga}</h2><span class="status-${statusClass}">${detalhes_carga.status}</span></div>
             <div class="modal-body-grid">
                 ${secaoDados}
+
+                <details class="detalhes-secao secao-expansivel">
+                    <summary><h4>Resumo de Coletas (${Object.keys(coletasPorRemetente).length})</h4></summary>
+                    <ul class="lista-resumo">${resumoColetasHtml || '<li>Nenhuma coleta encontrada.</li>'}</ul>
+                </details>
+
                 <div class="detalhes-secao secao-full-width"><h4>Observações da Viagem</h4><div class="form-acao"><textarea id="obs-carga" rows="4" ${!podeEditarGeral ? 'disabled' : ''}>${detalhes_carga.observacoes || ''}</textarea></div></div>
                 ${podeEditarGeral ? secaoAcoes : ''}
             </div>
-            <div class="detalhes-secao" id="detalhes-entregas">
-                <div class="entregas-header"><h3>Entregas (${entregas.length})</h3>${podeEditarEntregas ? '<button id="btn-add-entrega" class="btn-acao">+ Adicionar Entrega</button>' : ''}</div>
-                <div id="form-add-entrega-container"></div>
-                <div class="tabela-wrapper"><table id="tabela-entregas"><thead><tr>${podeEditarEntregas ? '<th>Destino</th>': ''}<th>Cliente</th><th>Cidade/UF</th><th>Peso</th><th>Frete</th><th>Telefone</th><th>Observações</th>${podeEditarGeral ? '<th>Ações</th>': ''}</tr></thead><tbody id="tabela-entregas-corpo"></tbody></table></div>
-            </div>`;
-        
-        const tabelaCorpoEntregas = document.getElementById('tabela-entregas-corpo');
-        tabelaCorpoEntregas.innerHTML = entregas.length > 0 ? entregas.map(e => `
-            <tr>
-                ${podeEditarEntregas ? `
-                <td class="col-destino">
-                    <input type="radio" name="ultima-entrega" class="radio-ultima-entrega" data-id="${e.id}" ${e.is_last_delivery ? 'checked' : ''}>
-                </td>` : ''}
-                <td>${e.razao_social}</td><td>${e.cidade}-${e.estado}</td><td>${formatarPeso(e.peso_bruto)}</td><td>${formatarMoeda(e.valor_frete)}</td><td>(${e.ddd||''}) ${e.telefone||''}</td><td title="${e.obs_cliente || ''}">${(e.obs_cliente || 'Nenhuma').substring(0, 20)}</td>
-                ${podeEditarGeral ? `
-                <td>
-                    ${podeEditarEntregas ? `
-                    <button class="btn-editar btn-editar-entrega" data-id="${e.id}">Editar</button>
-                    <button class="btn-excluir-entrega" data-id="${e.id}">Excluir</button>
-                    ` : 'N/A'}
-                </td>` : ''}
-            </tr>
-        `).join('') : `<tr><td colspan="${podeEditarGeral ? (podeEditarEntregas ? 8 : 7) : 6}">Nenhuma entrega.</td></tr>`;
-        
-        configurarEventListenersDeAcoes();
 
-        // --- ALTERAÇÃO DA TASK 2 (UX Adicionar Entrega) ---
-        // Se a flag for verdadeira, clica no botão de adicionar entrega
+            <div class="detalhes-secao" id="detalhes-entregas">
+                <div class="entregas-header"><h3>Entregas (${Object.keys(entregasAgrupadas).length} Clientes / ${entregas.length} Coletas)</h3>${podeEditarEntregas ? '<button id="btn-add-entrega" class="btn-acao">+ Adicionar Entrega (V1)</button>' : ''}</div>
+                <div id="form-add-entrega-container"></div>
+                <div class="tabela-wrapper"><table id="tabela-entregas">
+                    <thead><tr>
+                        ${podeEditarEntregas ? '<th>Destino</th>': ''}
+                        <th>Cliente</th><th>Cidade/UF</th><th>Peso Total</th><th>Frete Total</th><th>Telefone</th><th>Observações</th>
+                        ${podeEditarGeral ? '<th>Ações</th>': ''}
+                    </tr></thead>
+                    <tbody id="tabela-entregas-corpo"></tbody>
+                </table></div>
+            </div>`;
+
+        // --- Preenche Tabela Agrupada e Sub-linhas ---
+        const tabelaCorpoEntregas = document.getElementById('tabela-entregas-corpo');
+        tabelaCorpoEntregas.innerHTML = ''; // Limpa antes de preencher
+
+        if (Object.keys(entregasAgrupadas).length > 0) {
+            Object.values(entregasAgrupadas).forEach((grupo, index) => {
+                const isChecked = grupo.sub_entregas.some(se => se.is_last_delivery); // Verifica se alguma sub-entrega é o destino final
+                const radioId = `ultima-entrega-${grupo.id}`; // ID único para o radio do grupo
+
+                const trGrupo = document.createElement('tr');
+                trGrupo.classList.add('linha-grupo-entrega');
+                trGrupo.innerHTML = `
+                    ${podeEditarEntregas ? `<td class="col-destino"><input type="radio" name="ultima-entrega-grupo" id="${radioId}" class="radio-ultima-entrega-grupo" data-cliente-id="${grupo.id}" ${isChecked ? 'checked' : ''}></td>` : ''}
+                    <td>${grupo.razao_social}</td>
+                    <td>${grupo.cidade}-${grupo.estado}</td>
+                    <td>${formatarPeso(grupo.peso_total)}</td>
+                    <td>${formatarMoeda(grupo.frete_total)}</td>
+                    <td>(${grupo.ddd || ''}) ${grupo.telefone || ''}</td>
+                    <td title="${grupo.obs_cliente || ''}">${(grupo.obs_cliente || 'Nenhuma').substring(0, 20)}</td>
+                    ${podeEditarGeral ? `<td><button class="btn-detalhes-entrega" data-target="detalhes-${grupo.id}">+ Detalhes (${grupo.sub_entregas.length})</button></td>` : ''}
+                `;
+                tabelaCorpoEntregas.appendChild(trGrupo);
+
+                // Linha de Detalhes (inicialmente escondida)
+                const trDetalhes = document.createElement('tr');
+                trDetalhes.classList.add('linha-detalhes-entrega');
+                trDetalhes.id = `detalhes-${grupo.id}`;
+                trDetalhes.style.display = 'none'; // Começa escondida
+                const colspanCount = podeEditarGeral ? (podeEditarEntregas ? 8 : 7) : 6;
+                let detalhesHtml = `<td colspan="${colspanCount}"><div class="detalhes-subtabela"><h4>Coletas para ${grupo.razao_social}:</h4><ul>`;
+
+                grupo.sub_entregas.forEach(sub => {
+                    detalhesHtml += `<li>
+                        <span>Origem: ${sub.remetente_nome} (${sub.remetente_cidade})</span> |
+                        <span>Peso: ${formatarPeso(sub.peso_bruto)}</span> |
+                        <span>Frete: ${formatarMoeda(sub.valor_frete)}</span> |
+                        <span>Nota: ${sub.nota_fiscal || 'N/A'}</span>
+                        ${podeEditarEntregas ? ` | <button class="btn-editar btn-editar-entrega" data-id="${sub.id}">Editar Linha</button> <button class="btn-excluir-entrega" data-id="${sub.id}">Excluir Linha</button>` : ''}
+                    </li>`;
+                });
+                detalhesHtml += `</ul></div></td>`;
+                trDetalhes.innerHTML = detalhesHtml;
+                tabelaCorpoEntregas.appendChild(trDetalhes);
+            });
+        } else {
+            const colspanCount = podeEditarGeral ? (podeEditarEntregas ? 8 : 7) : 6;
+            tabelaCorpoEntregas.innerHTML = `<tr><td colspan="${colspanCount}">Nenhuma entrega adicionada.</td></tr>`;
+        }
+
+        // --- Listeners para botões de detalhes e edição/exclusão DENTRO dos detalhes ---
+        document.querySelectorAll('.btn-detalhes-entrega').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const targetId = e.target.dataset.target;
+                const detalhesRow = document.getElementById(targetId);
+                if (detalhesRow) {
+                    detalhesRow.style.display = detalhesRow.style.display === 'none' ? 'table-row' : 'none';
+                    e.target.textContent = detalhesRow.style.display === 'none' ? `+ Detalhes (${detalhesRow.querySelectorAll('li').length})` : `- Detalhes (${detalhesRow.querySelectorAll('li').length})`;
+                }
+            });
+        });
+
+        document.querySelectorAll('.btn-editar-entrega').forEach(btn => btn.addEventListener('click', abrirModalEdicaoEntrega));
+        document.querySelectorAll('.btn-excluir-entrega').forEach(btn => btn.addEventListener('click', (e) => { if(confirm('Tem certeza? Esta linha será excluída.')) handleExcluirEntrega(e.target.dataset.id); }));
+
+        // Módulo 4: Marcar última entrega pelo GRUPO
+        document.querySelectorAll('.radio-ultima-entrega-grupo').forEach(radio => {
+             radio.addEventListener('change', async (event) => {
+                const clienteIdParaMarcar = event.target.dataset.clienteId;
+                const entregaParaMarcar = cargaAtual.entregas.find(ent => ent.cliente_id == clienteIdParaMarcar); // Pega a primeira entrega desse cliente para marcar
+                if (entregaParaMarcar) {
+                    await handleMarcarUltimaEntrega(entregaParaMarcar.id);
+                } else {
+                     alert('Erro: Não foi possível encontrar uma entrega para este cliente.');
+                     event.target.checked = false; // Desmarca visualmente
+                }
+             });
+        });
+
+
+        // --- Configura Ações Gerais e Mascaras ---
+        configurarEventListenersDeAcoesGerais();
+        mascaraDecimal(document.getElementById('detalhe-frete-pago'));
+
         if (reabrirFormularioEntrega) {
             const btnAddEntrega = document.getElementById('btn-add-entrega');
-            if (btnAddEntrega) {
-                btnAddEntrega.click();
-            }
+            if (btnAddEntrega) btnAddEntrega.click();
         }
-        // --- FIM DA ALTERAÇÃO DA TASK 2 ---
     }
-    
-    function configurarEventListenersDeAcoes() {
+
+    // Módulo 4: Separação dos Listeners
+    function configurarEventListenersDeAcoesGerais() {
         document.querySelector('[data-acao="salvar"]')?.addEventListener('click', handleSalvarAlteracoes);
         document.querySelector('[data-acao="agendar"]')?.addEventListener('click', handleAgendar);
         document.querySelector('[data-acao="iniciar-transito"]')?.addEventListener('click', handleIniciarTransito);
         document.querySelector('[data-acao="cancelar-agendamento"]')?.addEventListener('click', handleCancelarAgendamento);
         document.querySelector('[data-acao="finalizar"]')?.addEventListener('click', handleFinalizarCarga);
-        document.getElementById('btn-add-entrega')?.addEventListener('click', (e) => {
-            e.target.style.display = 'none';
-            const container = document.getElementById('form-add-entrega-container');
-            container.innerHTML = `<form id="form-nova-entrega" class="form-acao"><select id="select-cliente" style="width: 250px;"></select><input type="text" id="entrega-peso-bruto" placeholder="Peso Bruto *" inputmode="decimal" required><input type="text" id="entrega-valor-frete" placeholder="Valor Frete" inputmode="decimal"><input type="text" id="entrega-peso-cobrado" placeholder="Peso Cobrado" inputmode="decimal"><button type="submit">Salvar</button></form>`;
-            $('#select-cliente').select2({ placeholder: 'Selecione um cliente', dropdownParent: $('#form-add-entrega-container'), data: listaDeClientes.map(c => ({ id: c.id, text: `${c.razao_social} (${c.cidade})` })) });
-            document.getElementById('form-nova-entrega').addEventListener('submit', salvarNovaEntrega);
-            
-            mascaraDecimal(document.getElementById('entrega-peso-bruto'));
-            mascaraDecimal(document.getElementById('entrega-valor-frete'));
-            mascaraDecimal(document.getElementById('entrega-peso-cobrado'));
-        });
-        document.querySelectorAll('.btn-excluir-entrega').forEach(btn => btn.addEventListener('click', (e) => { if(confirm('Tem certeza?')) handleExcluirEntrega(e.target.dataset.id); }));
-        document.querySelectorAll('.btn-editar-entrega').forEach(btn => btn.addEventListener('click', (e) => {
-            const entregaId = e.target.dataset.id;
-            const entrega = cargaAtual.entregas.find(ent => ent.id == entregaId);
-
-            document.getElementById('edit-entrega-id').value = entrega.id;
-            document.getElementById('edit-peso-bruto').value = formatarPeso(entrega.peso_bruto).replace(' kg', '');
-            document.getElementById('edit-valor-frete').value = formatarMoeda(entrega.valor_frete).replace('R$ ', '');
-            document.getElementById('edit-peso-cobrado').value = formatarPeso(entrega.peso_cobrado).replace(' kg', '');
-            
-            mascaraDecimal(document.getElementById('edit-peso-bruto'));
-            mascaraDecimal(document.getElementById('edit-valor-frete'));
-            mascaraDecimal(document.getElementById('edit-peso-cobrado'));
-
-            modalEditarEntrega.style.display = 'block';
-        }));
-
-        document.querySelectorAll('.radio-ultima-entrega').forEach(radio => {
-            radio.addEventListener('change', handleMarcarUltimaEntrega);
-        });
+        document.getElementById('btn-add-entrega')?.addEventListener('click', abrirFormAddEntregaV1);
     }
 
-    async function handleMarcarUltimaEntrega(event) {
-        const entregaId = event.target.dataset.id;
+    function abrirFormAddEntregaV1(e){
+        e.target.style.display = 'none';
+        const container = document.getElementById('form-add-entrega-container');
+        container.innerHTML = `<form id="form-nova-entrega" class="form-acao">
+            <select id="select-cliente-v1" style="width: 250px;"></select>
+            <input type="text" id="entrega-peso-bruto-v1" placeholder="Peso Bruto *" inputmode="decimal" required>
+            <input type="text" id="entrega-valor-frete-v1" placeholder="Valor Frete" inputmode="decimal">
+            <input type="text" id="entrega-peso-cobrado-v1" placeholder="Peso Cobrado" inputmode="decimal">
+            <button type="submit">Salvar Entrega</button>
+            <button type="button" class="btn-navegacao-secundario" id="cancelar-add-entrega-v1">Cancelar</button>
+        </form>`;
+        $('#select-cliente-v1').select2({ placeholder: 'Selecione um cliente', dropdownParent: $('#form-add-entrega-container'), data: listaDeClientes });
+        document.getElementById('form-nova-entrega').addEventListener('submit', salvarNovaEntregaV1);
+        document.getElementById('cancelar-add-entrega-v1').addEventListener('click', () => {
+             container.innerHTML = '';
+             e.target.style.display = 'inline-flex';
+        });
+
+        mascaraDecimal(document.getElementById('entrega-peso-bruto-v1'));
+        mascaraDecimal(document.getElementById('entrega-valor-frete-v1'));
+        mascaraDecimal(document.getElementById('entrega-peso-cobrado-v1'));
+    }
+
+     // --- FUNÇÃO PARA ABRIR MODAL DE EDIÇÃO DE LINHA DE ENTREGA ---
+    function abrirModalEdicaoEntrega(e) {
+        const entregaId = e.target.dataset.id;
+        const entrega = cargaAtual.entregas.find(ent => ent.id == entregaId);
+
+        if (!entrega) { alert('Erro: Entrega não encontrada.'); return; }
+
+        document.getElementById('edit-entrega-id').value = entrega.id;
+        document.getElementById('edit-peso-bruto').value = (entrega.peso_bruto || 0).toString().replace('.', ',');
+        document.getElementById('edit-valor-frete').value = (entrega.valor_frete || 0).toString().replace('.', ',');
+        document.getElementById('edit-peso-cobrado').value = (entrega.peso_cobrado || 0).toString().replace('.', ',');
+        document.getElementById('edit-cidade-entrega').value = entrega.cidade_entrega_override || ''; // Módulo 4
+        document.getElementById('edit-estado-entrega').value = entrega.estado_entrega_override || ''; // Módulo 4
+
+        // Módulo 4: Habilita/Desabilita campos de local
+        const isAdmin = sessaoUsuario.user_permission === 'admin';
+        document.getElementById('edit-cidade-entrega').disabled = !isAdmin;
+        document.getElementById('edit-estado-entrega').disabled = !isAdmin;
+
+
+        mascaraDecimal(document.getElementById('edit-peso-bruto'));
+        mascaraDecimal(document.getElementById('edit-valor-frete'));
+        mascaraDecimal(document.getElementById('edit-peso-cobrado'));
+
+        modalEditarEntrega.style.display = 'block';
+    }
+
+
+    // --- FUNÇÕES DE AÇÕES (Handles) ---
+
+    async function handleMarcarUltimaEntrega(entregaIdParaMarcar) {
         try {
-            const response = await fetch(`/api/entregas/${entregaId}`, {
+            const response = await fetch(`/api/entregas/${entregaIdParaMarcar}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ is_last_delivery: 1 })
             });
             if (!response.ok) throw new Error('Falha ao marcar como destino.');
-            
-            // Pega o estado atual do form de add entrega
+
             const formAberto = !!document.getElementById('form-nova-entrega');
-            
             await carregarDadosIniciais();
             const cargaId = cargaAtual.detalhes_carga.id;
-            
-            // Reabre o modal, mantendo o form de add entrega aberto se já estava
             await abrirModalDetalhes(cargaId, formAberto);
 
         } catch (error) {
             alert(`Erro: ${error.message}`);
-            event.target.checked = false;
+             // Re-renderiza para garantir que o radio volte ao estado anterior
+            renderizarModalDetalhes(!!document.getElementById('form-nova-entrega'));
         }
     }
 
@@ -330,23 +490,22 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify({ entrega_id: entregaId })
         });
         if (response.ok) {
-            // Pega o estado atual do form de add entrega
             const formAberto = !!document.getElementById('form-nova-entrega');
             await carregarDadosIniciais();
-            // Reabre o modal, mantendo o form de add entrega aberto se já estava
             await abrirModalDetalhes(cargaAtual.detalhes_carga.id, formAberto);
         } else { alert('Erro ao excluir entrega.'); }
     }
-    
-    async function salvarNovaEntrega(e) {
+
+    // Salvar entrega adicionada via V1
+    async function salvarNovaEntregaV1(e) {
         e.preventDefault();
         const dados = {
-            cliente_id: $('#select-cliente').val(),
-            peso_bruto: parseDecimal(document.getElementById('entrega-peso-bruto').value),
-            valor_frete: parseDecimal(document.getElementById('entrega-valor-frete').value),
-            peso_cobrado: parseDecimal(document.getElementById('entrega-peso-cobrado').value)
+            cliente_id: $('#select-cliente-v1').val(),
+            peso_bruto: parseDecimal(document.getElementById('entrega-peso-bruto-v1').value),
+            valor_frete: parseDecimal(document.getElementById('entrega-valor-frete-v1').value),
+            peso_cobrado: parseDecimal(document.getElementById('entrega-peso-cobrado-v1').value)
         };
-        if(!dados.cliente_id || !dados.peso_bruto) { alert("Cliente e Peso Bruto são obrigatórios."); return; }
+        if(!dados.cliente_id || dados.peso_bruto === null) { alert("Cliente e Peso Bruto são obrigatórios."); return; }
         const response = await fetch(`/api/cargas/${cargaAtual.detalhes_carga.id}/entregas`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -354,24 +513,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (response.ok) {
             await carregarDadosIniciais();
-            // --- ALTERAÇÃO DA TASK 2 (UX Adicionar Entrega) ---
-            // Chama a função com a flag 'true' para reabrir o formulário
-            await abrirModalDetalhes(cargaAtual.detalhes_carga.id, true);
-            // --- FIM DA ALTERAÇÃO DA TASK 2 ---
-        } else { alert('Erro ao salvar entrega.'); }
+            await abrirModalDetalhes(cargaAtual.detalhes_carga.id, true); // Reabre com form V1
+        } else {
+             const err = await response.json();
+             alert(`Erro ao salvar entrega: ${err.error || 'Erro desconhecido.'}`);
+        }
     }
-    
+
+    // Salvar alterações da edição de entrega
     document.getElementById('form-editar-entrega').addEventListener('submit', async (e) => {
         e.preventDefault();
         const entregaId = document.getElementById('edit-entrega-id').value;
         const dados = {
             peso_bruto: parseDecimal(document.getElementById('edit-peso-bruto').value),
             valor_frete: parseDecimal(document.getElementById('edit-valor-frete').value),
-            peso_cobrado: parseDecimal(document.getElementById('edit-peso-cobrado').value)
+            peso_cobrado: parseDecimal(document.getElementById('edit-peso-cobrado').value),
+            cidade_entrega: document.getElementById('edit-cidade-entrega').value || null, // Módulo 4
+            estado_entrega: document.getElementById('edit-estado-entrega').value || null // Módulo 4
         };
-        if (!dados.peso_bruto || dados.peso_bruto <= 0) {
+        if (dados.peso_bruto === null || dados.peso_bruto <= 0) {
             alert('Peso bruto é obrigatório e deve ser maior que zero.'); return;
         }
+        // Se não for admin, não envia os campos de local
+        if (sessaoUsuario.user_permission !== 'admin') {
+            delete dados.cidade_entrega;
+            delete dados.estado_entrega;
+        }
+
         try {
             const response = await fetch(`/api/entregas/${entregaId}`, {
                 method: 'PUT',
@@ -380,19 +548,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const resultado = await response.json();
             if (!response.ok) throw new Error(resultado.error || 'Falha ao atualizar entrega.');
-            
-            // Pega o estado atual do form de add entrega
+
             const formAberto = !!document.getElementById('form-nova-entrega');
-            
-            fecharModais(); // Fecha todos (inclusive o de editar entrega)
-            
+            fecharModais();
             await carregarDadosIniciais();
-            // Reabre o modal principal, mantendo o form de add entrega aberto se já estava
             await abrirModalDetalhes(cargaAtual.detalhes_carga.id, formAberto);
-            
+
         } catch (error) { alert(`Erro: ${error.message}`); }
     });
-    
+
     async function handleFinalizarCarga() {
         const senha = prompt("Para finalizar a carga, insira sua senha de usuário:");
         if (senha === null) return;
@@ -405,53 +569,53 @@ document.addEventListener('DOMContentLoaded', () => {
             enviarAtualizacaoStatus({ status: 'Finalizada', data_finalizacao: getHojeFormatado() });
         } else { alert("Senha incorreta!"); }
     }
-    
+
     async function handleCancelarAgendamento() {
         if (!confirm('Tem certeza? A carga voltará para "Pendentes".')) return;
         enviarAtualizacaoStatus({ status: 'Pendente', data_agendamento: null });
     }
-    
+
     function handleAgendar() {
         const dataAgendamento = document.getElementById('detalhe-agendamento').value;
         if (!dataAgendamento) { alert('A data de agendamento é obrigatória.'); return; }
         enviarAtualizacaoStatus({ status: 'Agendada', data_agendamento: dataAgendamento });
     }
-    
+
     function handleIniciarTransito() {
-        const motorista = document.getElementById('detalhe-motorista').value;
-        const placa = document.getElementById('detalhe-placa').value;
+        // Módulo 4: Pega IDs dos Select2
+        const motoristaId = $('#select-motorista').val();
+        const veiculoId = $('#select-veiculo').val();
         const dataCarregamento = document.getElementById('detalhe-carregamento').value;
-        if (!motorista || !placa || !dataCarregamento) { alert('Motorista, Placa e Data de Carregamento são obrigatórios.'); return; }
-        enviarAtualizacaoStatus({ status: 'Em Trânsito', motorista, placa, data_carregamento: dataCarregamento });
+        if (!motoristaId || !veiculoId || !dataCarregamento) { alert('Motorista, Veículo e Data de Carregamento são obrigatórios.'); return; }
+        enviarAtualizacaoStatus({ status: 'Em Trânsito', motorista_id: motoristaId, veiculo_id: veiculoId, data_carregamento: dataCarregamento });
     }
 
     function handleSalvarAlteracoes() {
         const { detalhes_carga } = cargaAtual;
-        let dados = { observacoes: document.getElementById('obs-carga').value };
+        let dados = {
+             observacoes: document.getElementById('obs-carga').value,
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) // Módulo 4
+        };
+
         if(detalhes_carga.status === 'Pendente') {
             dados.origem = document.getElementById('detalhe-origem').value;
             dados.data_agendamento = document.getElementById('detalhe-agendamento').value || null;
         } else if (detalhes_carga.status === 'Agendada') {
-            dados.motorista = document.getElementById('detalhe-motorista').value;
-            dados.placa = document.getElementById('detalhe-placa').value;
+            // Módulo 4: Pega IDs dos Select2
+            dados.motorista_id = $('#select-motorista').val() || null;
+            dados.veiculo_id = $('#select-veiculo').val() || null;
             dados.data_carregamento = document.getElementById('detalhe-carregamento').value || null;
             dados.previsao_entrega = document.getElementById('detalhe-previsao').value || null;
-            
-            // --- INÍCIO DA ALTERAÇÃO DA TASK 5 (Admin Editar Agendamento) ---
-            // Procura pelo campo de edição de agendamento
             const campoAgendamentoEdit = document.getElementById('detalhe-agendamento-edit');
             if (campoAgendamentoEdit) {
-                // Se ele existir (admin), envia o valor dele
                 dados.data_agendamento = campoAgendamentoEdit.value || null;
             }
-            // --- FIM DA ALTERAÇÃO DA TASK 5 ---
-            
         } else if (detalhes_carga.status === 'Em Trânsito') {
             dados.previsao_entrega = document.getElementById('detalhe-previsao').value || null;
         }
         enviarAtualizacaoStatus(dados);
     }
-    
+
     async function enviarAtualizacaoStatus(dados) {
         try {
             const response = await fetch(`/api/cargas/${cargaAtual.detalhes_carga.id}/status`, {
@@ -467,14 +631,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- Inicialização Select2 (Módulo 4) ---
+    function inicializarSelect2MotoristaVeiculo() {
+         if (cargaAtual?.detalhes_carga?.status === 'Agendada') {
+            $('#select-motorista').select2({
+                placeholder: 'Selecione um motorista',
+                allowClear: true,
+                dropdownParent: $('#modal-detalhes-carga'), // Garante que o dropdown apareça sobre o modal
+                data: listaDeMotoristas
+            }).val(cargaAtual.detalhes_carga.motorista_id).trigger('change'); // Pré-seleciona o atual
+
+            $('#select-veiculo').select2({
+                placeholder: 'Selecione um veículo',
+                allowClear: true,
+                dropdownParent: $('#modal-detalhes-carga'),
+                data: listaDeVeiculos
+            }).val(cargaAtual.detalhes_carga.veiculo_id).trigger('change');
+         }
+    }
+
+    // --- Listener Principal ---
     painelContainer.addEventListener('click', (e) => {
         const cartao = e.target.closest('.cartao-carga');
-        // --- ALTERAÇÃO DA TASK 2 (UX Adicionar Entrega) ---
-        // Chama a função com a flag 'false' (comportamento padrão)
         if (cartao) abrirModalDetalhes(cartao.dataset.id, false);
-        // --- FIM DA ALTERAÇÃO DA TASK 2 ---
     });
-    
+
     document.getElementById('form-nova-carga').addEventListener('submit', async (e) => {
         e.preventDefault();
         const dados = { origem: document.getElementById('origem').value.toUpperCase() };
@@ -492,6 +673,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('form-nova-carga').reset();
         } catch (error) { console.error("Erro ao criar carga:", error); }
     });
-    
+
     carregarDadosIniciais();
 });

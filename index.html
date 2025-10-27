@@ -15,7 +15,10 @@
         <h1>Painel de Controle de Cargas</h1>
         <div>
             <span id="nav-admin"></span> 
-            <a href="/clientes.html" class="btn-navegacao">Gerenciar Clientes</a>
+            <a href="/montagem.html" class="btn-navegacao">Montagem de Carga</a>
+            <a href="/clientes.html" class="btn-navegacao">Clientes</a>
+            <a href="/motoristas.html" class="btn-navegacao">Motoristas</a>
+            <a href="/veiculos.html" class="btn-navegacao">Veículos</a>
             <a href="/consulta.html" class="btn-navegacao">Consultar Cargas</a>
             <a href="/logout" class="btn-navegacao-secundario">Sair</a>
         </div>
@@ -40,7 +43,7 @@
     <div id="modal-nova-carga" class="modal">
         <div class="modal-conteudo">
             <span class="fechar-modal" id="fechar-modal-nova-carga">&times;</span>
-            <h2>Criar Nova Viagem</h2>
+            <h2>Criar Nova Viagem (V1)</h2>
             <form id="form-nova-carga">
                 <label for="origem">Origem da Viagem:</label>
                 <input type="text" id="origem" required placeholder="Ex: SÃO PAULO - SP">
@@ -68,6 +71,12 @@
                 <input type="text" id="edit-valor-frete" placeholder="R$ 0,00" inputmode="decimal">
                 <label for="edit-peso-cobrado">Peso Cobrado (kg)</label>
                 <input type="text" id="edit-peso-cobrado" placeholder="0,00" inputmode="decimal">
+                
+                <label for="edit-cidade-entrega">Cidade Entrega (Admin)</label>
+                <input type="text" id="edit-cidade-entrega" placeholder="Deixar em branco para usar Padrão">
+                <label for="edit-estado-entrega">Estado Entrega (Admin)</label>
+                <input type="text" id="edit-estado-entrega" placeholder="Deixar em branco para usar Padrão" maxlength="2">
+                
                 <button type="submit">Salvar Alterações</button>
             </form>
         </div>

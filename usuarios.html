@@ -8,33 +8,36 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+
     <header>
         <h1>Gestão de Usuários</h1>
         <div>
-            <a href="/" class="btn-navegacao">Voltar ao Painel</a>
+            <span id="nav-admin"></span> 
+            <a href="/montagem.html" class="btn-navegacao">Montagem de Carga</a>
+            <a href="/clientes.html" class="btn-navegacao">Clientes</a>
+            <a href="/motoristas.html" class="btn-navegacao">Motoristas</a>
+            <a href="/veiculos.html" class="btn-navegacao">Veículos</a>
+            <a href="/consulta.html" class="btn-navegacao">Consultar Cargas</a>
             <a href="/logout" class="btn-navegacao-secundario">Sair</a>
         </div>
     </header>
 
     <main class="container-clientes">
         <div class="card-importacao">
-            <h2>Cadastrar Novo Usuário</h2>
+            <h2>Novo Usuário</h2>
             <form id="form-novo-usuario">
-                <label for="nome_usuario">Nome de Usuário:</label>
-                <input type="text" id="nome_usuario" required>
-                
-                <label for="senha">Senha:</label>
-                <input type="password" id="senha" required>
-
-                <label for="permissao">Permissão:</label>
-                <select id="permissao" required>
-                    <option value="" disabled selected>Selecione um nível de permissão</option>
-                    <option value="admin">Administrador (Master)</option>
-                    <option value="operador">Operador</option>
-                    <option value="consulta">Consulta</option>
-                </select>
-                
-                <button type="submit">Cadastrar Usuário</button>
+                <div class="filtro-grid">
+                    <input type="text" id="nome_usuario" placeholder="Nome de Usuário" required>
+                    <input type="password" id="senha" placeholder="Senha" required>
+                    <select id="permissao" required>
+                        <option value="">Selecione a Permissão</option>
+                        <option value="operador">Operador</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-acao">
+                    <button type="submit">Cadastrar Usuário</button>
+                </div>
             </form>
             <div id="mensagem-cadastro" class="mensagem"></div>
         </div>
@@ -45,7 +48,7 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Usuário</th>
+                            <th>Nome de Usuário</th>
                             <th>Permissão</th>
                             <th>Ações</th>
                         </tr>
@@ -56,32 +59,31 @@
             </div>
         </div>
     </main>
-</table>
+
+    <div id="modal-editar-usuario" class="modal">
+        <div class="modal-conteudo">
+            <span id="fechar-modal-editar" class="fechar-modal">&times;</span>
+            <h2>Editar Usuário</h2>
+            <form id="form-editar-usuario">
+                <input type="hidden" id="edit-user-id">
+                
+                <label for="edit_nome_usuario">Nome de Usuário:</label>
+                <input type="text" id="edit_nome_usuario" required>
+
+                <label for="edit_permissao">Permissão:</label>
+                <select id="edit_permissao" required>
+                    <option value="operador">Operador</option>
+                    <option value="admin">Admin</option>
+                </select>
+                
+                <label for="edit_senha">Nova Senha (deixe em branco para manter):</label>
+                <input type="password" id="edit_senha">
+
+                <button type="submit">Salvar Alterações</button>
+            </form>
         </div>
     </div>
-</main>
 
-<div id="modal-editar-usuario" class="modal">
-    <div class="modal-conteudo">
-        <span id="fechar-modal-editar" class="fechar-modal">&times;</span>
-        <h2>Editar Usuário</h2>
-        <form id="form-editar-usuario">
-            <input type="hidden" id="edit-user-id">
-            <label for="edit_nome_usuario">Nome de Usuário:</label>
-            <input type="text" id="edit_nome_usuario" required>
-            <label for="edit_senha">Nova Senha (deixe em branco para não alterar):</label>
-            <input type="password" id="edit_senha">
-            <label for="edit_permissao">Permissão:</label>
-            <select id="edit_permissao" required>
-                <option value="admin">Administrador (Master)</option>
-                <option value="operador">Operador</option>
-                <option value="consulta">Consulta</option>
-            </select>
-            <button type="submit">Salvar Alterações</button>
-        </form>
-    </div>
-</div>
-
-<script src="usuarios.js"></script>
+    <script src="usuarios.js"></script>
 </body>
 </html>

@@ -12,7 +12,12 @@
     <header>
         <h1>Consulta de Cargas</h1>
         <div>
-            <a href="/" class="btn-navegacao">Voltar ao Painel</a>
+            <span id="nav-admin"></span> 
+            <a href="/montagem.html" class="btn-navegacao">Montagem de Carga</a>
+            <a href="/clientes.html" class="btn-navegacao">Clientes</a>
+            <a href="/motoristas.html" class="btn-navegacao">Motoristas</a>
+            <a href="/veiculos.html" class="btn-navegacao">Veículos</a>
+            <a href="/consulta.html" class="btn-navegacao">Consultar Cargas</a>
             <a href="/logout" class="btn-navegacao-secundario">Sair</a>
         </div>
     </header>
@@ -107,6 +112,12 @@
                 <input type="text" id="edit-valor-frete" placeholder="R$ 0,00" inputmode="decimal">
                 <label for="edit-peso-cobrado">Peso Cobrado</label>
                 <input type="text" id="edit-peso-cobrado" placeholder="0,00" inputmode="decimal">
+
+                <label for="edit-cidade-entrega">Cidade Entrega (Admin)</label>
+                <input type="text" id="edit-cidade-entrega" placeholder="Deixar em branco para usar Padrão">
+                <label for="edit-estado-entrega">Estado Entrega (Admin)</label>
+                <input type="text" id="edit-estado-entrega" placeholder="Deixar em branco para usar Padrão" maxlength="2">
+
                 <button type="submit">Salvar Alterações</button>
             </form>
         </div>
