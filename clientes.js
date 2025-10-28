@@ -1,3 +1,4 @@
+// clientes.js (CORRIGIDO PARA BUSCAR DETALHES - VERSÃO FINAL)
 document.addEventListener('DOMContentLoaded', () => {
     const tabelaCorpo = document.getElementById('tabela-clientes-corpo');
     const formImportar = document.getElementById('form-importar');
@@ -19,55 +20,70 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FUNÇÃO PRINCIPAL PARA CARREGAR DADOS ---
     async function carregarClientes() {
         try {
-            const response = await fetch('/api/clientes');
-            if (!response.ok) throw new Error('Falha ao buscar clientes');
+            // ***** CORREÇÃO APLICADA AQUI *****
+            const response = await fetch('/api/clientes/detalhes');
+            // **********************************
+            if (!response.ok) {
+                console.error("Status da resposta:", response.status, response.statusText);
+                 try {
+                     const errorData = await response.json();
+                     throw new Error(`Falha ao buscar clientes: ${errorData.error || response.statusText}`);
+                 } catch (jsonError) {
+                      throw new Error(`Falha ao buscar clientes: ${response.statusText}`);
+                 }
+            }
             const clientes = await response.json();
             tabelaCorpo.innerHTML = '';
+            if (!Array.isArray(clientes)) {
+                 console.error("Resposta da API não é um array:", clientes);
+                 throw new Error("Formato de dados inválido recebido do servidor.");
+            }
+
             if (clientes.length === 0) {
                 tabelaCorpo.innerHTML = '<tr><td colspan="6">Nenhum cliente cadastrado.</td></tr>';
             } else {
                 clientes.forEach(cliente => {
                     const tr = document.createElement('tr');
+                    // Garante que os datasets peguem os nomes corretos das colunas do banco
                     tr.dataset.id = cliente.id;
-                    tr.dataset.codigo = cliente.codigo_cliente;
-                    tr.dataset.razao = cliente.razao_social;
-                    tr.dataset.cidade = cliente.cidade;
-                    tr.dataset.estado = cliente.estado;
+                    tr.dataset.codigo = cliente.codigo_cliente || ''; // Fallback
+                    tr.dataset.razao = cliente.razao_social || ''; // Fallback
+                    tr.dataset.cidade = cliente.cidade || ''; // Fallback
+                    tr.dataset.estado = cliente.estado || ''; // Fallback
                     tr.dataset.ddd = cliente.ddd || '';
                     tr.dataset.telefone = cliente.telefone || '';
                     tr.dataset.observacoes = cliente.observacoes || '';
-                    
+
+                    // ***** CORREÇÃO AQUI: Usa os nomes corretos das colunas *****
                     tr.innerHTML = `
-                        <td>${cliente.codigo_cliente}</td>
-                        <td>${cliente.razao_social}</td>
-                        <td>${cliente.cidade}</td>
-                        <td>${cliente.estado}</td>
+                        <td>${cliente.codigo_cliente || 'N/A'}</td>
+                        <td>${cliente.razao_social || 'N/A'}</td>
+                        <td>${cliente.cidade || 'N/A'}</td>
+                        <td>${cliente.estado || 'N/A'}</td>
                         <td>(${cliente.ddd || ''}) ${cliente.telefone || ''}</td>
                         <td><button class="btn-editar">Editar</button></td>`;
+                    // **********************************************************
                     tabelaCorpo.appendChild(tr);
                 });
             }
         } catch (error) {
-            console.error('Erro:', error);
-            tabelaCorpo.innerHTML = `<tr><td colspan="6">Erro ao carregar clientes.</td></tr>`;
+            console.error('Erro ao carregar clientes:', error); // Loga o erro completo
+            tabelaCorpo.innerHTML = `<tr><td colspan="6" style="color: #f87171;">Erro ao carregar clientes. Verifique o console (F12). Detalhes: ${error.message}</td></tr>`; // Mostra erro na tabela
         }
     }
 
     // --- EVENT LISTENERS ---
-
-    // 1. Lógica da Pesquisa de Clientes
+    // ... (Restante do código igual: Pesquisa, Importação, Abrir Modal, Fechar Modal, Salvar Edição) ...
+     // 1. Lógica da Pesquisa de Clientes
     inputPesquisa.addEventListener('keyup', () => {
         const termo = inputPesquisa.value.toUpperCase();
         const linhas = tabelaCorpo.getElementsByTagName('tr');
-        
         for (let i = 0; i < linhas.length; i++) {
             const celulaRazao = linhas[i].getElementsByTagName('td')[1];
             const celulaCodigo = linhas[i].getElementsByTagName('td')[0];
-            
             if (celulaRazao && celulaCodigo) {
                 const textoRazao = celulaRazao.textContent || celulaRazao.innerText;
                 const textoCodigo = celulaCodigo.textContent || celulaCodigo.innerText;
-                
                 if (textoRazao.toUpperCase().indexOf(termo) > -1 || textoCodigo.toUpperCase().indexOf(termo) > -1) {
                     linhas[i].style.display = "";
                 } else {
@@ -76,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    
+
     // 2. Lógica de Importação de Arquivo
     formImportar.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -85,17 +101,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData();
         formData.append('arquivo', arquivo);
         mensagemDiv.textContent = 'Importando...';
+        mensagemDiv.style.color = '#cbd5e1'; // Cor neutra
         try {
             const response = await fetch('/api/clientes/import', { method: 'POST', body: formData });
             const resultado = await response.json();
-            if (!response.ok) throw new Error(resultado.error);
+            if (!response.ok) throw new Error(resultado.error || `Erro HTTP ${response.status}`);
             mensagemDiv.textContent = resultado.message;
-            mensagemDiv.style.color = '#2ecc71';
+            mensagemDiv.style.color = '#2ecc71'; // Verde sucesso
             formImportar.reset();
             carregarClientes();
         } catch (error) {
             mensagemDiv.textContent = `Erro: ${error.message}`;
-            mensagemDiv.style.color = '#e74c3c';
+            mensagemDiv.style.color = '#e74c3c'; // Vermelho erro
         }
     });
 
@@ -103,6 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
     tabelaCorpo.addEventListener('click', (event) => {
         if (event.target.classList.contains('btn-editar')) {
             const linha = event.target.closest('tr');
+            if (!linha || !linha.dataset || linha.dataset.id === undefined) return;
             document.getElementById('edit-cliente-id').value = linha.dataset.id;
             document.getElementById('edit-razao-social').value = linha.dataset.razao;
             document.getElementById('edit-cidade').value = linha.dataset.cidade;
@@ -116,9 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 4. Lógica para Fechar Modal
     botaoFecharEditar.addEventListener('click', () => modalEditar.style.display = 'none');
-    window.addEventListener('click', (event) => {
-        if (event.target == modalEditar) modalEditar.style.display = 'none';
-    });
+    window.addEventListener('click', (event) => { if (event.target == modalEditar) modalEditar.style.display = 'none'; });
+    document.addEventListener('keydown', (event) => { if (event.key === "Escape" && modalEditar.style.display === 'block') modalEditar.style.display = 'none'; });
 
     // 5. Lógica para Salvar Edição
     formEditar.addEventListener('submit', async (event) => {
@@ -127,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const dadosAtualizados = {
             razao_social: document.getElementById('edit-razao-social').value,
             cidade: document.getElementById('edit-cidade').value,
-            estado: document.getElementById('edit-estado').value,
+            estado: document.getElementById('edit-estado').value.toUpperCase(),
             ddd: document.getElementById('edit-ddd').value,
             telefone: document.getElementById('edit-telefone').value,
             observacoes: document.getElementById('edit-observacoes').value
@@ -138,14 +155,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(dadosAtualizados)
             });
-            if (!response.ok) throw new Error('Falha ao atualizar o cliente.');
+            const resultado = await response.json();
+            if (!response.ok) throw new Error(resultado.error || 'Falha ao atualizar.');
+            alert(resultado.message || "Atualizado com sucesso!");
             modalEditar.style.display = 'none';
             carregarClientes();
-        } catch (error) {
-            console.error("Erro ao salvar alterações:", error);
-            alert("Não foi possível salvar as alterações.");
-        }
+        } catch (error) { console.error("Erro ao salvar:", error); alert(`Erro: ${error.message}`); }
     });
+
 
     // --- APLICAÇÃO DAS MÁSCARAS ---
     mascaraApenasNumeros(document.getElementById('edit-ddd'));
@@ -153,4 +170,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CARREGAMENTO INICIAL ---
     carregarClientes();
+
+     // Carrega info de sessão (para o menu 'nav-admin' se aplicável)
+    fetch('/api/session').then(res => res.json()).then(data => {
+        if (data.user_permission === 'admin') {
+            const navAdmin = document.getElementById('nav-admin');
+            if(navAdmin) navAdmin.innerHTML = `<a href="/usuarios.html" class="btn-navegacao">Usuários</a>`;
+        }
+    }).catch(err => console.error("Erro ao buscar sessão:", err)); // Adiciona catch para erro de sessão
 });
