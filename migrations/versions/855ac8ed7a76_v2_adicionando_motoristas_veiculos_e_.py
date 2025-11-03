@@ -1,8 +1,8 @@
 """V2 - Adicionando motoristas, veiculos e remetentes
 
-Revision ID: f194e970e7ab
+Revision ID: 855ac8ed7a76
 Revises: 
-Create Date: 2025-11-03 15:04:07.854991
+Create Date: 2025-11-03 15:11:49.868902
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'f194e970e7ab'
+revision = '855ac8ed7a76'
 down_revision = None
 branch_labels = None
 depends_on = None
