@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B. Nunes - Controle de Cargas</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+</head>
+<body>
+    <header>
+        <h1>Painel de Controle de Cargas</h1>
+        <div>
+            <a href="/" class="btn-navegacao">Painel Principal</a>
+            <a href="/montagem.html" class="btn-navegacao">Montagem de Carga</a>
+            <a href="/consulta.html" class="btn-navegacao">Consultar Cargas</a>
+
+            <div class="dropdown">
+                <button class="dropdown-btn">Cadastros ▾</button>
+                <div class="dropdown-content">
+                    <a href="/clientes.html">Clientes</a>
+                    <a href="/motoristas.html">Motoristas</a>
+                    <a href="/veiculos.html">Veículos</a>
+                    <span id="nav-admin-dropdown"></span> 
+                </div>
+            </div>
+            
+            <a href="/logout" class="btn-navegacao-secundario">Sair</a>
+        </div>
+        <button id="nova-carga-btn">+ Nova Carga</button>
+    </header>
+
+    <main class="container">
+        <div class="coluna">
+            <h2>Pendentes</h2>
+            <div id="pendente" class="lista-cargas"></div>
+        </div>
+        <div class="coluna">
+            <h2>Agendadas</h2>
+            <div id="agendada" class="lista-cargas"></div>
+        </div>
+        <div class="coluna">
+            <h2>Em Trânsito</h2>
+            <div id="em-transito" class="lista-cargas"></div>
+        </div>
+    </main>
+
+    <div id="modal-nova-carga" class="modal">
+        <div class="modal-conteudo">
+            <span class="fechar-modal" id="fechar-modal-nova-carga">&times;</span>
+            <h2>Criar Nova Viagem (V1)</h2>
+            <form id="form-nova-carga">
+                <label for="origem">Origem da Viagem:</label>
+                <input type="text" id="origem" required placeholder="Ex: SÃO PAULO - SP">
+                <button type="submit">Criar Carga</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-detalhes-carga" class="modal">
+        <div class="modal-conteudo-grande">
+            <span class="fechar-modal" id="fechar-modal-detalhes">&times;</span>
+            <div id="detalhes-conteudo"></div>
+        </div>
+    </div>
+
+    <div id="modal-editar-entrega" class="modal">
+        <div class="modal-conteudo">
+            <span class="fechar-modal" id="fechar-modal-editar-entrega">&times;</span>
+            <h2>Editar Entrega</h2>
+            <form id="form-editar-entrega">
+                <input type="hidden" id="edit-entrega-id">
+                
+                <label for="edit-remetente-carga">Remetente (Origem):*</label>
+                <select id="edit-remetente-carga" style="width: 100%;" required></select>
+                <label for="edit-peso-bruto">Peso Bruto (kg)*</label>
+                <input type="text" id="edit-peso-bruto" placeholder="0,00" inputmode="decimal" required>
+                
+                <label for="edit-valor-frete">Valor Frete</label>
+                <input type="text" id="edit-valor-frete" placeholder="R$ 0,00" inputmode="decimal">
+                
+                <label for="edit-peso-cobrado">Peso Cobrado (kg)</label>
+                <input type="text" id="edit-peso-cobrado" placeholder="0,00" inputmode="decimal">
+                
+                <label for="edit-cidade-entrega">Cidade Entrega (Admin)</label>
+                <input type="text" id="edit-cidade-entrega" placeholder="Deixar em branco para usar Padrão">
+                
+                <label for="edit-estado-entrega">Estado Entrega (Admin)</label>
+                <input type="text" id="edit-estado-entrega" placeholder="Deixar em branco para usar Padrão" maxlength="2">
+                
+                <button type="submit">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

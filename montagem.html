@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B. Nunes - Montagem de Carga</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        .container-montagem { display: grid; grid-template-columns: 400px 1fr; gap: 20px; align-items: flex-start; }
+        #coluna-cadastro, #coluna-disponiveis { display: flex; flex-direction: column; gap: 20px; }
+        .card-lista-clientes { flex-grow: 1; } /* Faz os cards ocuparem altura disponível */
+        .grid-col-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .divisor-form { border: none; border-top: 1px solid #475569; margin: 20px 0; }
+        #tabela-disponiveis th:first-child, #tabela-disponiveis td:first-child { width: 40px; text-align: center; } /* Checkbox */
+        #tabela-disponiveis td { font-size: 0.9em; }
+        .painel-montagem {
+            background-color: #475569; padding: 15px 20px; border-radius: 8px; margin-top: 15px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 20px; align-items: center;
+        }
+        .painel-montagem span { font-weight: bold; color: #e2e8f0; }
+        .painel-montagem input[type=text] { margin-bottom: 0; } /* Remove margem inferior no painel */
+        .painel-montagem button { margin-top: 0; white-space: nowrap; } /* Remove margem superior no painel */
+        #lista-rascunhos-corpo ul { list-style: none; padding: 0; margin: 0; }
+        #lista-rascunhos-corpo li { padding: 10px 5px; border-bottom: 1px dashed #475569; display: flex; justify-content: space-between; align-items: center; font-size: 0.9em;}
+        #lista-rascunhos-corpo li:last-child { border-bottom: none; }
+        #lista-rascunhos-corpo button { font-size: 10px; padding: 3px 6px; margin-left: 5px; }
+        .highlight-row { background-color: #52637a !important; } /* Cor para linha selecionada */
+
+        /* Ajustes Responsivos */
+        @media (max-width: 900px) {
+            .container-montagem { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Montagem de Carga</h1>
+        <div>
+            <a href="/" class="btn-navegacao">Painel Principal</a>
+            <a href="/montagem.html" class="btn-navegacao">Montagem de Carga</a>
+            <a href="/consulta.html" class="btn-navegacao">Consultar Cargas</a>
+
+            <div class="dropdown">
+                <button class="dropdown-btn">Cadastros ▾</button>
+                <div class="dropdown-content">
+                    <a href="/clientes.html">Clientes</a>
+                    <a href="/motoristas.html">Motoristas</a>
+                    <a href="/veiculos.html">Veículos</a>
+                    <span id="nav-admin-dropdown"></span> 
+                </div>
+            </div>
+            
+            <a href="/logout" class="btn-navegacao-secundario">Sair</a>
+        </div>
+    </header>
+
+    <main class="container-montagem">
+
+        <div id="coluna-cadastro">
+            <div class="card-lista-clientes">
+                <h2>Adicionar Entrega Disponível</h2>
+                <form id="form-add-entrega-disponivel">
+                    <label for="select-remetente">Remetente (Origem):*</label>
+                    <select id="select-remetente" style="width: 100%;" required></select>
+
+                    <label for="select-destinatario">Destinatário (Cliente):*</label>
+                    <select id="select-destinatario" style="width: 100%;" required></select>
+
+                    <div class="grid-col-2">
+                        <div><label for="entrega-peso-bruto">Peso Bruto:*</label><input type="text" id="entrega-peso-bruto" placeholder="0,00" inputmode="decimal" required></div>
+                        <div><label for="entrega-valor-frete">Valor Frete:</label><input type="text" id="entrega-valor-frete" placeholder="R$ 0,00" inputmode="decimal"></div>
+                    </div>
+                    <div class="grid-col-2">
+                         <div><label for="entrega-peso-cubado">Peso Cubado:</label><input type="text" id="entrega-peso-cubado" placeholder="0,00" inputmode="decimal"></div>
+                        <div><label for="entrega-nota-fiscal">Nota Fiscal:</label><input type="text" id="entrega-nota-fiscal"></div>
+                    </div>
+                    <hr class="divisor-form">
+                    <label>Local de Entrega (Opcional - Padrão do Cadastro)</label>
+                    <div class="grid-col-2">
+                        <div><input type="text" id="entrega-cidade" placeholder="Cidade Entrega"></div>
+                        <div><input type="text" id="entrega-estado" placeholder="UF" maxlength="2"></div>
+                    </div>
+                    <button type="submit">Adicionar à Lista</button>
+                    <div id="mensagem-cadastro" class="mensagem"></div>
+                </form>
+            </div>
+
+            <div class="card-lista-clientes">
+                <h2>Rascunhos Salvos</h2>
+                <div id="lista-rascunhos-corpo" class="tabela-wrapper" style="max-height: 300px;">
+                    <ul><li>Carregando...</li></ul>
+                </div>
+                 <div id="mensagem-rascunho" class="mensagem"></div>
+            </div>
+        </div>
+
+        <div id="coluna-disponiveis">
+            <div class="card-lista-clientes">
+                <h2>Entregas Disponíveis para Montagem</h2>
+                <div class="form-acao" style="margin-bottom: 15px;">
+                    <input type="text" id="pesquisa-disponiveis" placeholder="Buscar Remetente, Destinatário, Nota..." style="width: 100%;">
+                </div>
+                <div class="tabela-wrapper" style="max-height: 60vh;">
+                    <table id="tabela-disponiveis">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox" id="select-all-disponiveis" title="Selecionar Todos"></th>
+                                <th>Remetente</th>
+                                <th>Destinatário</th>
+                                <th>Cidade/UF</th>
+                                <th>Peso Bruto</th>
+                                <th>Nota Fiscal</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-disponiveis-corpo">
+                            <tr><td colspan="7">Carregando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="painel-montagem">
+                    <div>Entregas: <span id="total-entregas-selecionadas">0</span></div>
+                    <div>Peso Bruto: <span id="total-peso-selecionado">0,00 kg</span></div>
+                    <div>Peso Cubado: <span id="total-cubado-selecionado">0,00 kg</span></div>
+                    <div>Frete: <span id="total-frete-selecionado">R$ 0,00</span></div>
+                    <input type="text" id="input-origem-principal" placeholder="Origem Principal da Carga*" required>
+                    <button id="btn-salvar-rascunho" class="btn-acao-verde" disabled>Salvar Rascunho</button>
+                    <div id="mensagem-montagem" class="mensagem" style="grid-column: 1 / -1;"></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="modal-editar-entrega-disponivel" class="modal">
+        <div class="modal-conteudo">
+            <span class="fechar-modal" id="fechar-modal-editar-disponivel">&times;</span>
+            <h2>Editar Entrega Disponível</h2>
+            <form id="form-editar-entrega-disponivel">
+                <input type="hidden" id="edit-disp-entrega-id">
+
+                <label for="edit-disp-remetente">Remetente:</label>
+                <select id="edit-disp-remetente" style="width: 100%;" required></select>
+                <label>Destinatário:</label>
+                <p id="edit-disp-destinatario-nome"></p> 
+                
+                <div class="grid-col-2">
+                    <div><label for="edit-disp-peso-bruto">Peso Bruto:*</label><input type="text" id="edit-disp-peso-bruto" placeholder="0,00" inputmode="decimal" required></div>
+                    <div><label for="edit-disp-valor-frete">Valor Frete:</label><input type="text" id="edit-disp-valor-frete" placeholder="R$ 0,00" inputmode="decimal"></div>
+                </div>
+                 <div class="grid-col-2">
+                    <div><label for="edit-disp-peso-cubado">Peso Cubado:</label><input type="text" id="edit-disp-peso-cubado" placeholder="0,00" inputmode="decimal"></div>
+                    <div><label for="edit-disp-nota-fiscal">Nota Fiscal:</label><input type="text" id="edit-disp-nota-fiscal"></div>
+                </div>
+                 <hr class="divisor-form">
+                <label>Local de Entrega (Opcional)</label>
+                 <div class="grid-col-2">
+                    <div><input type="text" id="edit-disp-cidade" placeholder="Cidade Entrega"></div>
+                    <div><input type="text" id="edit-disp-estado" placeholder="UF" maxlength="2"></div>
+                </div>
+                <button type="submit">Salvar Alterações</button>
+                 <div id="mensagem-edicao-disp" class="mensagem"></div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="montagem.js"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B. Nunes - Gestão de Motoristas</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>Gestão de Motoristas</h1>
+        <div>
+            <a href="/" class="btn-navegacao">Painel Principal</a>
+            <a href="/montagem.html" class="btn-navegacao">Montagem de Carga</a>
+            <a href="/consulta.html" class="btn-navegacao">Consultar Cargas</a>
+
+            <div class="dropdown">
+                <button class="dropdown-btn">Cadastros ▾</button>
+                <div class="dropdown-content">
+                    <a href="/clientes.html">Clientes</a>
+                    <a href="/motoristas.html">Motoristas</a>
+                    <a href="/veiculos.html">Veículos</a>
+                    <span id="nav-admin-dropdown"></span> 
+                </div>
+            </div>
+            
+            <a href="/logout" class="btn-navegacao-secundario">Sair</a>
+        </div>
+    </header>
+
+    <main class="container-clientes">
+        <div class="card-importacao">
+            <h2>Importar Motoristas</h2>
+            <p>Selecione um arquivo (.xls, .xlsx, .csv) para importar novos motoristas.</p>
+            <p><b>Estrutura:</b> Coluna A = Código, Coluna B = Nome.</p>
+            <form id="form-importar">
+                <input type="file" id="arquivo-importar" accept=".xls, .xlsx, .csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
+                <button type="submit">Importar Arquivo</button>
+            </form>
+            <div id="mensagem-importacao" class="mensagem"></div>
+        </div>
+
+        <div class="card-lista-clientes">
+            <h2>Motoristas Cadastrados</h2>
+			<div class="form-acao" style="margin-bottom: 15px;">
+				<input type="text" id="pesquisa-motorista" placeholder="Buscar por Nome ou Código..." style="width: 100%;">
+			</div>
+            <div class="tabela-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Nome</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-motoristas-corpo">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+	
+    <script src="motoristas.js"></script>
+</body>
+</html>

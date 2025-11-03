@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B.Nunes - Consulta de Cargas</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+</head>
+<body>
+    <header>
+        <h1>Consulta de Cargas</h1>
+        <div>
+            <a href="/" class="btn-navegacao">Painel Principal</a>
+            <a href="/montagem.html" class="btn-navegacao">Montagem de Carga</a>
+            <a href="/consulta.html" class="btn-navegacao">Consultar Cargas</a>
+
+            <div class="dropdown">
+                <button class="dropdown-btn">Cadastros ▾</button>
+                <div class="dropdown-content">
+                    <a href="/clientes.html">Clientes</a>
+                    <a href="/motoristas.html">Motoristas</a>
+                    <a href="/veiculos.html">Veículos</a>
+                    <span id="nav-admin-dropdown"></span> 
+                </div>
+            </div>
+            
+            <a href="/logout" class="btn-navegacao-secundario">Sair</a>
+        </div>
+    </header>
+
+    <main class="container-clientes">
+        <div class="card-importacao">
+            <h2>Filtros de Busca</h2>
+            <form id="form-consulta">
+                <div class="filtro-grid">
+                    <input type="text" id="filtro-codigo" placeholder="Código da Carga">
+                    <input type="text" id="filtro-motorista" placeholder="Nome do Motorista">
+                    <input type="text" id="filtro-placa" placeholder="Placa do Veículo">
+                    <input type="text" id="filtro-origem" placeholder="Origem">
+                    <select id="filtro-status">
+                        <option value="">Todos os Status</option>
+                        <option value="Pendente">Pendente</option>
+                        <option value="Agendada">Agendada</option>
+                        <option value="Em Trânsito">Em Trânsito</option>
+                        <option value="Finalizada">Finalizada</option>
+                    </select>
+                </div>
+
+                <div class="filtro-linha">
+                    <select id="filtro-cliente" style="width: 100%;">
+                        <option value="">Todos os Clientes</option>
+                    </select>
+                </div>
+                
+                <div class="filtro-linha-datas">
+                    <div class="campo-data">
+                        <label>Carregamento entre:</label>
+                        <input type="date" id="filtro-data-carregamento-inicio">
+                        <span>e</span>
+                        <input type="date" id="filtro-data-carregamento-fim">
+                    </div>
+                    <div class="campo-data">
+                        <label>Finalização entre:</label>
+                        <input type="date" id="filtro-data-finalizacao-inicio">
+                        <span>e</span>
+                        <input type="date" id="filtro-data-finalizacao-fim">
+                    </div>
+                </div>
+
+                <div class="form-acao">
+                    <button type="submit">Buscar</button>
+                    <button type="reset" class="btn-navegacao-secundario" style="margin-right: 0;">Limpar Filtros</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-lista-clientes">
+            <h2>Resultados da Busca</h2>
+            <div id="mensagem-busca" class="mensagem"></div>
+            <div class="tabela-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Status</th>
+                            <th>Origem</th>
+                            <th>Destino</th>
+                            <th>Motorista</th>
+                            <th>Nº Entregas</th>
+                            <th>Peso Total</th>
+                            <th>Data Finalização</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-resultados-corpo">
+                        <tr><td colspan="8">Utilize os filtros acima para buscar as cargas.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="paginacao-container"></div>
+        </div>
+    </main>
+
+    <div id="modal-detalhes-carga" class="modal">
+        <div class="modal-conteudo-grande">
+            <span id="fechar-modal-detalhes" class="fechar-modal">&times;</span>
+            <div id="detalhes-conteudo"></div>
+        </div>
+    </div>
+    
+    <div id="modal-editar-entrega" class="modal">
+        <div class="modal-conteudo">
+            <span id="fechar-modal-editar-entrega" class="fechar-modal">&times;</span>
+            <h2>Editar Entrega</h2>
+            <form id="form-editar-entrega">
+                <input type="hidden" id="edit-entrega-id">
+                
+                <label for="edit-remetente-carga">Remetente (Origem):*</label>
+                <select id="edit-remetente-carga" style="width: 100%;" required></select>
+                <label for="edit-peso-bruto">Peso Bruto *</label>
+                <input type="text" id="edit-peso-bruto" placeholder="0,00" inputmode="decimal" required>
+                
+                <label for="edit-valor-frete">Valor Frete</label>
+                <input type="text" id="edit-valor-frete" placeholder="R$ 0,00" inputmode="decimal">
+                
+                <label for="edit-peso-cobrado">Peso Cobrado</label>
+                <input type="text" id="edit-peso-cobrado" placeholder="0,00" inputmode="decimal">
+
+                <label for="edit-cidade-entrega">Cidade Entrega (Admin)</label>
+                <input type="text" id="edit-cidade-entrega" placeholder="Deixar em branco para usar Padrão">
+                
+                <label for="edit-estado-entrega">Estado Entrega (Admin)</label>
+                <input type="text" id="edit-estado-entrega" placeholder="Deixar em branco para usar Padrão" maxlength="2">
+
+                <button type="submit">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="consulta.js"></script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B. Nunes - Gestão de Usuários</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header>
+        <h1>Gestão de Usuários</h1>
+        <div>
+            <a href="/" class="btn-navegacao">Painel Principal</a>
+            <a href="/montagem.html" class="btn-navegacao">Montagem de Carga</a>
+            <a href="/consulta.html" class="btn-navegacao">Consultar Cargas</a>
+
+            <div class="dropdown">
+                <button class="dropdown-btn">Cadastros ▾</button>
+                <div class="dropdown-content">
+                    <a href="/clientes.html">Clientes</a>
+                    <a href="/motoristas.html">Motoristas</a>
+                    <a href="/veiculos.html">Veículos</a>
+                    <span id="nav-admin-dropdown"></span> 
+                </div>
+            </div>
+            
+            <a href="/logout" class="btn-navegacao-secundario">Sair</a>
+        </div>
+    </header>
+
+    <main class="container-clientes">
+        <div class="card-importacao">
+            <h2>Novo Usuário</h2>
+            <form id="form-novo-usuario">
+                <div class="filtro-grid">
+                    <input type="text" id="nome_usuario" placeholder="Nome de Usuário" required>
+                    <input type="password" id="senha" placeholder="Senha" required>
+                    <select id="permissao" required>
+                        <option value="">Selecione a Permissão</option>
+                        <option value="operador">Operador</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-acao">
+                    <button type="submit">Cadastrar Usuário</button>
+                </div>
+            </form>
+            <div id="mensagem-cadastro" class="mensagem"></div>
+        </div>
+
+        <div class="card-lista-clientes">
+            <h2>Usuários Cadastrados</h2>
+            <div class="tabela-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nome de Usuário</th>
+                            <th>Permissão</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-usuarios-corpo">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="modal-editar-usuario" class="modal">
+        <div class="modal-conteudo">
+            <span id="fechar-modal-editar" class="fechar-modal">&times;</span>
+            <h2>Editar Usuário</h2>
+            <form id="form-editar-usuario">
+                <input type="hidden" id="edit-user-id">
+                
+                <label for="edit_nome_usuario">Nome de Usuário:</label>
+                <input type="text" id="edit_nome_usuario" required>
+
+                <label for="edit_permissao">Permissão:</label>
+                <select id="edit_permissao" required>
+                    <option value="operador">Operador</option>
+                    <option value="admin">Admin</option>
+                </select>
+                
+                <label for="edit_senha">Nova Senha (deixe em branco para manter):</label>
+                <input type="password" id="edit_senha">
+
+                <button type="submit">Salvar Alterações</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="usuarios.js"></script>
+</body>
+</html>

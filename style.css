@@ -1,0 +1,588 @@
+/*
+* style.css (ATUALIZADO PARA V2 - MÓDULO 4 - CORREÇÃO DE ALINHAMENTO)
+*/
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #1e293b; /* Azul escuro */
+    margin: 0;
+    padding: 20px;
+    color: #cbd5e1; /* Cinza claro */
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #334155; /* Azul acinzentado */
+}
+
+header h1 {
+    color: #fde047; /* Amarelo */
+    margin: 0; /* Remove margem padrão */
+}
+
+header div {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap; /* Permite que botões quebrem linha */
+    gap: 10px; /* Espaçamento entre botões */
+}
+
+/* ================================================= */
+/* --- SEÇÃO DE BOTÕES CORRIGIDA E UNIFICADA --- */
+/* ================================================= */
+
+/* --- Estilo Base para TODOS os botões e links de navegação --- */
+button, .btn-navegacao, .btn-navegacao-secundario {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif; /* Garante a mesma fonte */
+    font-size: 14px; /* Padroniza o tamanho da fonte */
+    display: inline-flex; /* Alinha o texto interno corretamente */
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
+    white-space: nowrap; /* Impede que o texto quebre linha */
+}
+
+button:hover, .btn-navegacao:hover, .btn-navegacao-secundario:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,.3);
+}
+
+/* --- Botão Principal (Amarelo, ex: Nova Carga, Salvar, Importar) --- */
+#nova-carga-btn, form button[type="submit"], .btn-acao {
+    background-color: #fde047; /* Amarelo */
+    color: #1e293b; /* Azul escuro */
+    font-size: 16px;
+}
+#nova-carga-btn:hover, form button[type="submit"]:hover, .btn-acao:hover {
+    background-color: #facc15; /* Amarelo mais escuro */
+}
+
+/* --- Botão de Navegação (Contorno Amarelo) --- */
+.btn-navegacao {
+    color: #fde047; /* Amarelo */
+    background-color: transparent;
+    border: 1px solid #fde047;
+}
+.btn-navegacao:hover {
+    background-color: #fde047;
+    color: #1e293b;
+}
+
+/* --- Botão Secundário / Sair / Limpar / Cancelar (Vermelho) --- */
+.btn-navegacao-secundario {
+    color: #fff;
+    background-color: #ef4444; /* Vermelho */
+}
+.btn-navegacao-secundario:hover {
+    background-color: #dc2626; /* Vermelho mais escuro */
+}
+
+
+/* --- Botões Pequenos de Ação (Tabelas e Modais) --- */
+.btn-editar, .btn-excluir-entrega, .btn-detalhes-entrega {
+    font-size: 10px;
+    padding: 4px 8px;
+    margin-right: 5px;
+    margin-bottom: 3px; /* Espaço caso quebre linha */
+}
+
+/* Botão Editar (Cinza) */
+.btn-editar {
+    background-color: #64748b; /* Cinza */
+    color: #fff;
+}
+.btn-editar:hover {
+    background-color: #475569; /* Cinza escuro */
+}
+
+/* Botão Excluir (Vermelho) */
+.btn-excluir-entrega {
+    background-color: #ef4444; /* Vermelho */
+    color: #fff;
+}
+.btn-excluir-entrega:hover {
+    background-color: #dc2626; /* Vermelho escuro */
+}
+
+/* Botão Detalhes (Azul) */
+.btn-detalhes-entrega {
+     background-color: #3b82f6; /* Azul */
+     color: #fff;
+}
+.btn-detalhes-entrega:hover {
+    background-color: #2563eb; /* Azul escuro */
+}
+
+
+/* --- Outros Botões Específicos --- */
+.btn-acao-verde { background-color: #22c55e; color: #fff; } /* Verde */
+.btn-acao-verde:hover { background-color: #16a34a; } /* Verde escuro */
+.btn-acao-secundario { background-color: #ef4444; color: #fff; } /* Vermelho */
+.btn-acao-secundario:hover { background-color: #dc2626; } /* Vermelho escuro */
+.btn-acao-finalizar { background-color: #22c55e; color: #fff; } /* Verde */
+.btn-acao-finalizar:hover { background-color: #16a34a; } /* Verde escuro */
+.btn-paginacao {
+    background-color: #475569; /* Cinza escuro */
+    color: #cbd5e1; /* Cinza claro */
+    margin: 0 3px;
+    padding: 5px 10px;
+}
+.btn-paginacao.active {
+    background-color: #fde047; /* Amarelo */
+    color: #1e293b; /* Azul escuro */
+    font-weight: bold;
+}
+.btn-paginacao:hover:not(.active) {
+    background-color: #64748b; /* Cinza */
+}
+
+
+/* ================================================= */
+/* --- LAYOUTS GERAIS E CARDS --- */
+/* ================================================= */
+.container{ display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; } /* Responsivo */
+.coluna{ background-color:#334155; border-radius:12px; padding:15px; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+.coluna h2{ text-align:center; margin-top:0; border-bottom:2px solid #475569; padding-bottom:10px; color:#fff; }
+.lista-cargas{ min-height:400px; padding-top:10px; }
+
+.cartao-carga{ background-color:#475569; border-radius:8px; padding:15px; margin-bottom:15px; box-shadow:0 2px 4px rgba(0,0,0,.2); cursor:pointer; border-left:5px solid #94a3b8; /* Cinza default */ }
+.cartao-carga:hover{ box-shadow:0 4px 8px rgba(0,0,0,.3); transform: translateY(-1px); }
+.cartao-carga h3{ margin:0; color:#fde047; font-size: 1.1em; }
+.cartao-carga ul{ list-style:none; padding:0; margin:10px 0 0 0; font-size:14px; color:#e2e8f0; }
+.cartao-carga li{ margin-bottom:7px; line-height: 1.4; }
+.cartao-carga li strong { color: #94a3b8; } /* Cinza mais claro para labels */
+
+/* Bordas coloridas por status */
+#pendente .cartao-carga{ border-left-color:#94a3b8; } /* Cinza */
+#agendada .cartao-carga{ border-left-color:#60a5fa; } /* Azul */
+#em-transito .cartao-carga{ border-left-color:#fde047; } /* Amarelo */
+
+.cartao-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.cartao-data { background-color: #334155; color: #e2e8f0; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+/* Layouts específicos de página */
+.container-clientes { display: flex; flex-direction: column; gap: 30px; }
+.card-importacao, .card-lista-clientes { background-color: #334155; border-radius: 12px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+.card-importacao h2, .card-lista-clientes h2 { margin-top: 0; color: #fde047; }
+.card-importacao p { margin-bottom: 15px; line-height: 1.5; }
+
+/* ================================================= */
+/* --- MODAIS --- */
+/* ================================================= */
+.modal{ display:none; position:fixed; z-index:1000; left:0; top:0; width:100%; height:100%; overflow:auto; background-color:rgba(0,0,0,.7); backdrop-filter:blur(4px); }
+.modal-conteudo,.modal-conteudo-grande{ background-color:#334155; margin:5% auto; padding:30px; border:1px solid #475569; width:90%; border-radius:12px; position:relative; box-shadow:0 10px 30px rgba(0,0,0,.5); }
+.modal-conteudo{ max-width:500px; }
+.modal-conteudo-grande{ max-width:1200px; }
+.fechar-modal{ color:#94a3b8; position:absolute; top:15px; right:25px; font-size:32px; font-weight:bold; cursor:pointer; line-height:1; }
+.fechar-modal:hover,.fechar-modal:focus{ color:#fde047; }
+
+/* Modal Detalhes - Layout interno */
+#detalhes-header{ padding-right:50px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #475569; padding-bottom:15px; margin-bottom:20px; }
+#detalhes-header h2{ color:#fde047; margin:0; }
+#detalhes-header span{ font-size:16px; padding:5px 10px; border-radius:8px; font-weight:bold; color:#1e293b; text-transform: capitalize; }
+.status-pendente{ background-color:#94a3b8; } /* Cinza */
+.status-agendada{ background-color:#60a5fa; } /* Azul */
+.status-em-transito{ background-color:#fde047; } /* Amarelo */
+.status-finalizada{ background-color:#4ade80; } /* Verde */
+
+.modal-body-grid{ display:grid; grid-template-columns:1fr; gap:20px; }
+.detalhes-secao{ margin-top:25px; border-top:1px solid #475569; padding-top:20px; }
+.detalhes-secao:first-of-type{ border-top:none; margin-top:0; padding-top:0; }
+.secao-full-width{ grid-column:1/-1; }
+.detalhes-secao h4{ color:#fde047; margin-top:0; margin-bottom:15px; font-size:18px; font-weight:600; }
+
+.detalhes-form-grid-4{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:15px 20px; }
+.campo-form{ background-color:#475569; padding:12px; border-radius:8px; }
+.campo-form label{ display:block; font-size:12px; color:#cbd5e1; margin-bottom:5px; font-weight: normal; }
+.campo-form p{ margin:0; font-weight:bold; font-size:15px; padding:10px 0; color: #fff; } /* Padrão para valores exibidos */
+.campo-form input[type=text], .campo-form input[type=date], .campo-form textarea, .campo-form select { text-transform:uppercase; margin-top: 5px; } /* Inputs dentro do campo-form */
+.campo-form input:disabled, .campo-form textarea:disabled { background-color:#475569; border-color:#475569; cursor:not-allowed; opacity:.7; }
+
+.acoes-container { margin-top: 20px; } /* Ajuste no container de botões de ação */
+
+/* Estilo para <details> (Resumo de Coletas) */
+.secao-expansivel summary { cursor: pointer; display: list-item; list-style: disclosure-closed inside; /* Seta padrão */ }
+.secao-expansivel[open] summary { list-style-type: disclosure-open; }
+.secao-expansivel summary h4 { display: inline; /* Título ao lado da seta */ }
+.lista-resumo { list-style: none; padding-left: 20px; margin-top: 10px; }
+.lista-resumo li { padding: 5px 0; border-bottom: 1px dashed #475569; }
+.lista-resumo li:last-child { border-bottom: none; }
+
+/* ================================================= */
+/* --- FORMULÁRIOS --- */
+/* ================================================= */
+form label{ display:block; margin-top:15px; margin-bottom:5px; font-weight:600; color:#94a3b8; }
+input[type=text], input[type=password], input[type=date], input[type=file], textarea, select {
+    width:100%;
+    padding:10px;
+    box-sizing:border-box;
+    border-radius:8px;
+    border:1px solid #475569;
+    background-color:#1e293b;
+    color:#e2e8f0;
+    font-size:14px;
+    font-family:inherit;
+    margin-bottom: 10px; /* Espaço abaixo dos inputs */
+}
+input[type=file] { color:#e0e0e0; padding: 8px 10px; } /* Ajuste padding file input */
+input[type=date] { color-scheme: dark; height: 40px; } /* Ajuste altura date input */
+
+form button[type="submit"] { margin-top:20px; width: auto; /* Botões de submit não precisam ser 100% */ }
+#form-nova-carga button{ width:100%; }
+
+/* Layouts específicos de formulário */
+/* ***** CORREÇÃO ALINHAMENTO IMPORTAR (IMAGEM 5da8b4) ***** */
+#form-importar{
+    display:flex;
+    gap:15px;
+    margin-top:15px;
+    align-items: center; /* Alinha verticalmente */
+}
+/* Faz o input de arquivo ocupar o espaço disponível, e o botão ter tamanho automático */
+#form-importar input[type="file"] {
+    width: auto;
+    flex-grow: 1; /* Ocupa o espaço restante */
+    margin-bottom: 0; /* Remove margem inferior padrão */
+}
+#form-importar button {
+    width: auto; /* Tamanho automático */
+    flex-shrink: 0; /* Impede que o botão encolha */
+    margin-top: 0; /* Remove margem superior padrão */
+}
+
+/* ***** CORREÇÃO ALINHAMENTO AÇÕES (IMAGEM 5dacbc) ***** */
+.form-acao {
+    display:flex;
+    align-items:center;
+    gap:15px;
+    flex-wrap:wrap;
+    margin-top:10px;
+    justify-content: flex-start; /* Alinha itens à esquerda */
+}
+.form-acao-agendar {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background-color:#475569;
+    padding:15px;
+    border-radius:8px;
+    flex-wrap: wrap;
+    justify-content: flex-start; /* Alinha itens à esquerda */
+}
+.form-acao-agendar input[type="date"] {
+    width: auto; /* Data no agendamento */
+}
+.form-acao-agendar button {
+    margin-top: 0; /* Remove margem topo dos botões nesta linha */
+}
+
+.filtro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+.filtro-linha { margin-top: 15px; }
+.filtro-linha-datas { display: flex; flex-wrap: wrap; gap: 30px; margin-top: 15px; align-items: center; }
+.campo-data { display: flex; align-items: center; gap: 10px; }
+.campo-data label, .campo-data span { white-space: nowrap; margin: 0; font-weight: normal; color: #cbd5e1; }
+.campo-data input[type="date"] { width: auto; flex-grow: 1; margin-bottom: 0; /* Remove margem de input padrão */ }
+
+/* ***** CORREÇÃO ALINHAMENTO CONSULTA (IMAGEM 5dabdb) ***** */
+#form-consulta .form-acao {
+    margin-top: 20px;
+    justify-content: flex-start; /* Garante alinhamento à esquerda */
+}
+#form-consulta button[type="reset"] {
+    margin-right: 0 !important;
+}
+
+/* Mensagens */
+.mensagem{ margin-top:15px; font-weight:bold; min-height: 1em; /* Evita pulos de layout */ }
+.mensagem-erro{ color:#f87171; margin-top:15px; height:20px; }
+
+/* ================================================= */
+/* --- TABELAS --- */
+/* ================================================= */
+.tabela-wrapper{ max-height:500px; overflow-y:auto; border:1px solid #475569; border-radius:8px; margin-top: 15px; /* Espaço acima da tabela */ }
+table{ width:100%; border-collapse:collapse; }
+th,td{ padding:12px 15px; text-align:left; border-bottom:1px solid #475569; }
+th{ background-color:#475569; color:#fde047; position:sticky; top:0; z-index: 10; }
+tbody tr:last-child td{ border-bottom:none; }
+tbody tr:hover{ background-color:#475569; }
+td.col-destino { text-align: center; }
+input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entrega-grupo { width: auto; cursor: pointer; }
+
+/* Módulo 4: Estilos para Agrupamento de Entregas */
+.linha-grupo-entrega td { font-weight: bold; }
+.linha-detalhes-entrega td { padding: 0 !important; border: 0; } /* Remove padding e borda da linha container */
+.detalhes-subtabela { background-color: #283549; /* Tom mais escuro */ padding: 15px; border-radius: 0 0 8px 8px; }
+.detalhes-subtabela h4 { margin: 0 0 10px 0; color: #94a3b8; font-size: 0.9em; }
+.detalhes-subtabela ul { list-style: none; padding: 0; margin: 0; }
+.detalhes-subtabela li { padding: 8px 5px; border-bottom: 1px dashed #475569; font-size: 0.85em; display: flex; flex-wrap: wrap; gap: 5px 15px; align-items: center;}
+.detalhes-subtabela li:last-child { border-bottom: none; }
+.detalhes-subtabela li span { color: #cbd5e1; }
+
+
+/* ================================================= */
+/* --- LOGIN --- */
+/* ================================================= */
+.login-body{ display:flex; justify-content:center; align-items:center; height:100vh; padding: 20px; }
+.login-container{ background-color:#334155; padding:40px; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,.5); width:100%; max-width:400px; text-align:center; }
+.login-container h2{ color:#fde047; margin-bottom: 25px; }
+
+
+/* ================================================= */
+/* --- SELECT2 CUSTOMIZAÇÃO --- */
+/* ================================================= */
+.select2-container--default .select2-selection--single {
+    background-color: #1e293b !important;
+    border: 1px solid #475569 !important;
+    border-radius: 8px !important;
+    height: 40px !important; /* Mesma altura dos inputs */
+    padding: 5px 0px 5px 5px !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #e2e8f0 !important;
+    line-height: 28px !important;
+}
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: #94a3b8 transparent transparent transparent !important;
+    border-style: solid !important;
+    border-width: 5px 4px 0 4px !important;
+    margin-top: -2px !important;
+}
+.select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b {
+     border-color: transparent transparent #94a3b8 transparent !important;
+     border-width: 0 4px 5px 4px !important;
+}
+/* Dropdown */
+.select2-dropdown {
+    background-color: #1e293b !important;
+    border: 1px solid #475569 !important;
+    border-radius: 8px !important;
+    color: #e2e8f0 !important;
+}
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    background-color: #334155 !important;
+    border: 1px solid #475569 !important;
+    color: #e2e8f0 !important;
+    border-radius: 4px;
+}
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #fde047 !important;
+    color: #1e293b !important;
+}
+.select2-results__option[aria-selected=true] {
+     background-color: #475569 !important; /* Cor para item selecionado no dropdown */
+}
+.container-montagem { display: grid; grid-template-columns: 400px 1fr; gap: 20px; align-items: flex-start; }
+#coluna-cadastro, #coluna-disponiveis { display: flex; flex-direction: column; gap: 20px; }
+#coluna-cadastro .card-lista-clientes, #coluna-disponiveis .card-lista-clientes { flex-grow: 1; } /* Faz os cards ocuparem altura disponível */
+.grid-col-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.divisor-form { border: none; border-top: 1px solid #475569; margin: 20px 0; }
+#tabela-disponiveis th:first-child, #tabela-disponiveis td:first-child { width: 40px; text-align: center; } /* Checkbox */
+#tabela-disponiveis td { font-size: 0.9em; }
+.painel-montagem {
+    background-color: #475569; padding: 15px 20px; border-radius: 8px; margin-top: 15px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 20px; align-items: center;
+}
+.painel-montagem span { font-weight: bold; color: #e2e8f0; }
+.painel-montagem input[type=text] { margin-bottom: 0; }
+.painel-montagem button { margin-top: 0; white-space: nowrap; }
+#lista-rascunhos-corpo ul { list-style: none; padding: 0; margin: 0; }
+#lista-rascunhos-corpo li { padding: 10px 5px; border-bottom: 1px dashed #475569; display: flex; justify-content: space-between; align-items: center; font-size: 0.9em;}
+#lista-rascunhos-corpo li:last-child { border-bottom: none; }
+#lista-rascunhos-corpo button { font-size: 10px; padding: 3px 6px; margin-left: 5px; }
+.highlight-row { background-color: #52637a !important; }
+
+/* Ajustes Responsivos */
+@media (max-width: 900px) {
+    .container-montagem { grid-template-columns: 1fr; }
+}
+
+/* Garante que dropdowns do Select2 apareçam sobre modais */
+.select2-container--open { z-index: 1051 !important; /* Maior que o z-index do modal */ }
+/* Adicione no final do style.css */
+.campo-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #475569; /* Fundo cinza */
+    border-radius: 8px;
+}
+.campo-checkbox input[type="checkbox"] {
+    width: auto; /* Tamanho automático */
+    margin: 0;
+}
+.campo-checkbox label {
+    margin: 0; /* Remove margens do label padrão */
+    font-weight: normal;
+    color: #cbd5e1;
+}
+/* ================================================= */
+/* --- MENU DROPDOWN (HEADER LIMPO) --- */
+/* ================================================= */
+
+/* O container do botão do dropdown */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* O botão que aciona o dropdown (estilizado como btn-navegacao) */
+.dropdown-btn {
+    color: #fde047;
+    background-color: transparent;
+    border: 1px solid #fde047;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
+    white-space: nowrap;
+}
+
+.dropdown-btn:hover {
+    background-color: #fde047;
+    color: #1e293b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,.3);
+}
+
+/* O conteúdo que aparece (a caixa do dropdown) */
+.dropdown-content {
+    display: none; /* Escondido por padrão */
+    position: absolute;
+    background-color: #334155; /* Cor da coluna */
+    min-width: 200px; /* Largura mínima */
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.4);
+    z-index: 100; /* Sobrepor outros itens */
+    border-radius: 8px;
+    margin-top: 5px; /* Espaço do botão */
+    right: 0; /* Alinha à direita do container */
+}
+
+/* Links dentro do dropdown */
+.dropdown-content a {
+    color: #cbd5e1; /* Cinza claro */
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    font-size: 14px;
+    font-weight: normal; /* Fonte normal, não bold */
+    border-bottom: 1px solid #475569; /* Separador */
+}
+
+.dropdown-content a:last-child {
+    border-bottom: none; /* Remove borda do último item */
+}
+
+/* Efeito hover nos links */
+.dropdown-content a:hover {
+    background-color: #475569; /* Cinza hover */
+    color: #fde047; /* Amarelo hover */
+}
+
+/* Mostrar o dropdown ao passar o mouse */
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+/* ================================================= */
+/* --- MENU DROPDOWN (HEADER LIMPO) --- */
+/* ================================================= */
+
+/* O container do botão do dropdown */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* O botão que aciona o dropdown (estilizado como btn-navegacao) */
+.dropdown-btn {
+    color: #fde047;
+    background-color: transparent;
+    border: 1px solid #fde047;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
+    white-space: nowrap;
+}
+
+.dropdown-btn:hover {
+    background-color: #fde047;
+    color: #1e293b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,.3);
+}
+
+/* O conteúdo que aparece (a caixa do dropdown) */
+.dropdown-content {
+    display: none; /* Escondido por padrão */
+    position: absolute;
+    background-color: #334155; /* Cor da coluna */
+    min-width: 200px; /* Largura mínima */
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.4);
+    z-index: 100; /* Sobrepor outros itens */
+    border-radius: 8px;
+    margin-top: 5px; /* Espaço do botão */
+    right: 0; /* Alinha à direita do container */
+}
+
+/* Links dentro do dropdown */
+.dropdown-content a {
+    color: #cbd5e1; /* Cinza claro */
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    font-size: 14px;
+    font-weight: normal; /* Fonte normal, não bold */
+    border-bottom: 1px solid #475569; /* Separador */
+}
+
+.dropdown-content a:last-child {
+    border-bottom: none; /* Remove borda do último item */
+}
+
+/* Efeito hover nos links */
+.dropdown-content a:hover {
+    background-color: #475569; /* Cinza hover */
+    color: #fde047; /* Amarelo hover */
+}
+
+/* Mostrar o dropdown ao passar o mouse */
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+/* ***** CORREÇÃO BOTÃO EDITAR CARGA NA MONTAGEM (IMAGEM bc3c62) ***** */
+/*
+  O botão "Editar Carga na Montagem" estava usando a classe "btn-editar".
+  Agora, ele usará "btn-navegacao", mas precisamos de um ajuste
+  para que ele não fique desproporcional dentro do modal.
+*/
+.entregas-header .btn-navegacao {
+    font-size: 14px; /* Tamanho da fonte padrão do botão */
+    padding: 10px 15px; /* Padding padrão do botão */
+}
