@@ -141,11 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
         let listaInfo = '<ul>';
         listaInfo += `<li><strong>Origem:</strong> ${carga.origem}</li>`;
 
-        if (carga.destino) {
-            const destinoCompleto = carga.destino_uf ? `${carga.destino}/${carga.destino_uf}` : carga.destino;
-            listaInfo += `<li><strong>Destino:</strong> ${destinoCompleto}</li>`;
-        }
-        if (carga.status === 'Agendada' || carga.status === 'Em Trânsito') {
+		if (carga.destino_principal) {
+        // A API já envia o destino formatado (ex: "CIDADE-UF")
+        listaInfo += `<li><strong>Destino:</strong> ${carga.destino_principal}</li>`;
+		}
+		if (carga.status === 'Agendada' || carga.status === 'Em Trânsito') {
             if (carga.motorista) { 
                 listaInfo += `<li><strong>Motorista:</strong> ${carga.motorista} (${carga.placa || 'N/A'})</li>`;
             }

@@ -305,7 +305,7 @@ def handle_cargas():
             status_filter = request.args.get('status')
             
             # >>>>> CORREÇÃO 3: Query simplificada para evitar crash
-            base_query = Carga.query.filter(Carga.status != 'Rascunho')
+            base_query = Carga.query.filter(Carga.status != 'Rascunho', Carga.status != 'Finalizada')
 
             if status_filter:
                 base_query = base_query.filter(Carga.status == status_filter)
@@ -313,7 +313,7 @@ def handle_cargas():
             cargas = base_query.order_by(Carga.data_carregamento.desc()).all()
             
             cargas_data = []
-            for carga in cargas:
+for carga in cargas:
                 carga_dict = carga.to_dict()
                 
                 # Dados das relações (acesso seguro)
@@ -324,19 +324,29 @@ def handle_cargas():
                 carga_dict['entregas'] = [e.to_dict() for e in carga.entregas]
                 carga_dict['num_entregas'] = len(carga.entregas)
                 
-                # >>>>> CORREÇÃO 4: Lógica de destinos "à prova de nulos"
+                # --- CORREÇÃO DE PESO E DESTINO ---
+                peso_total_carga = 0.0
                 destinos_set = set()
+                
                 for e in carga.entregas:
+                    # 1. Acumula o peso
+                    if e.peso_bruto:
+                        peso_total_carga += e.peso_bruto
+
+                    # 2. Define destinos
                     if e.cliente: # Garante que a entrega tem um cliente associado
-                        cidade_str = (e.cliente.cidade or "").upper() # (ou "") garante que .upper() não falhe
+                        cidade_str = (e.cliente.cidade or "").upper()
                         estado_str = (e.cliente.estado or "").upper()
-                        if cidade_str or estado_str: # Evita adicionar "- " se ambos forem nulos
+                        if cidade_str or estado_str:
                             destinos_set.add(f"{cidade_str}-{estado_str}")
                 
                 destinos_list = sorted(list(destinos_set)) 
             
                 carga_dict['destinos'] = destinos_list
                 carga_dict['destino_principal'] = destinos_list[0] if destinos_list else 'N/A'
+                
+                # 3. Adiciona o peso total ao dicionário
+                carga_dict['peso_total'] = peso_total_carga 
                 
                 cargas_data.append(carga_dict)
                 
@@ -424,29 +434,37 @@ def get_cargas_consulta():
 @login_required
 def get_carga_detalhes(carga_id):
     try:
-        # >>>>> CORREÇÃO 7: Query simplificada. Os dados serão carregados sob demanda.
         carga = Carga.query.get(carga_id)
         
         if not carga:
             return jsonify(error='Carga não encontrada'), 404
 
-        carga_dict = carga.to_dict()
-        carga_dict['motorista_nome'] = carga.motorista_rel.nome if carga.motorista_rel else None
-        carga_dict['placa_veiculo'] = carga.veiculo_rel.placa if carga.veiculo_rel else None
+        # 1. Prepara os detalhes da carga
+        detalhes_carga = carga.to_dict()
+        detalhes_carga['motorista_nome'] = carga.motorista_rel.nome if carga.motorista_rel else None
+        detalhes_carga['placa_veiculo'] = carga.veiculo_rel.placa if carga.veiculo_rel else None
 
+        # 2. Prepara os detalhes das entregas (com TODOS os campos que o modal precisa)
         entregas_data = []
         for entrega in carga.entregas:
-            # >>>>> CORREÇÃO 8: Acesso seguro aos dados do cliente/remetente (à prova de nulos)
             entregas_data.append({
                 'id': entrega.id,
                 'remetente_id': entrega.remetente_id,
                 'cliente_id': entrega.cliente_id,
+                # Dados do Remetente
                 'remetente_nome': (entrega.remetente.razao_social or 'N/A') if entrega.remetente else 'N/A',
+                'remetente_cidade': (entrega.remetente.cidade or 'N/A') if entrega.remetente else 'N/A', 
+                # Dados do Destinatário (Cliente)
                 'razao_social': (entrega.cliente.razao_social or 'N/A') if entrega.cliente else 'N/A',
                 'cidade': (entrega.cliente.cidade or '') if entrega.cliente else '',
                 'estado': (entrega.cliente.estado or '') if entrega.cliente else '',
+                'ddd': (entrega.cliente.ddd or '') if entrega.cliente else '',
+                'telefone': (entrega.cliente.telefone or '') if entrega.cliente else '',
+                'obs_cliente': (entrega.cliente.observacoes or '') if entrega.cliente else '',
+                # Campos de Override da Entrega
                 'cidade_entrega_override': entrega.cidade_entrega,
                 'estado_entrega_override': entrega.estado_entrega,
+                # Valores da Entrega
                 'peso_bruto': entrega.peso_bruto,
                 'valor_frete': entrega.valor_frete,
                 'peso_cubado': entrega.peso_cubado,
@@ -454,14 +472,16 @@ def get_carga_detalhes(carga_id):
                 'is_last_delivery': entrega.is_last_delivery
             })
 
-        carga_dict['entregas'] = entregas_data
-        
-        return jsonify(carga_dict)
+        # 3. Retorna no formato que o JavaScript (script.js) espera
+        return jsonify({
+            'detalhes_carga': detalhes_carga,
+            'entregas': entregas_data
+        })
     except Exception as e:
         print(f"Erro em /api/cargas/<id>: {e}")
         traceback.print_exc()
         return jsonify(error=f"Erro interno: {str(e)}"), 500
-
+        
 # --- API: MONTAGEM (RASCUNHOS) ---
 @app.route('/api/cargas/montar', methods=['POST'])
 @login_required
@@ -852,7 +872,7 @@ def handle_usuario(user_id):
 def serve_static(filename):
     if filename in ['style.css', 'script.js', 'clientes.js', 'montagem.js', 'consulta.js', 'motoristas.js', 'veiculos.js', 'usuarios.js']:
         return send_from_directory('.', filename)
-    return 404
+    return "Arquivo não encontrado", 404
 
 if __name__ == '__main__':
     with app.app_context():
