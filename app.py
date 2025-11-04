@@ -282,7 +282,7 @@ def gerenciar_cargas():
         return jsonify({'id': nova_carga.id, 'codigo_carga': nova_carga.codigo_carga, 'origem': nova_carga.origem, 'status': nova_carga.status, 'num_entregas': 0, 'peso_total': 0, 'frete_total': 0, 'motorista': None, 'placa': None, 'destino': None, 'destino_uf': None}), 201
     # GET
     try:
-        base_query = Carga.query.options(joinedload(Carga.motorista_rel), joinedload(Carga.veiculo_rel), joinedload(Carga.entregas).options(joinedload(Entrega.cliente), joinedload(Entrega.remetente))).filter(Carga.status != 'Rascunho')
+        base_query = Carga.query.filter(Carga.status != 'Rascunho')
         try:
             cargas_pendentes_db = base_query.filter(Carga.status == 'Pendente').order_by(Carga.id.desc()).all()
             cargas_agendadas_db = base_query.filter(Carga.status == 'Agendada').order_by(db.func.coalesce(Carga.data_agendamento, '9999-12-31'), Carga.id.desc()).all()
@@ -310,7 +310,7 @@ def gerenciar_cargas():
 def consultar_cargas():
     try:
         args = request.args; page = args.get('page', 1, type=int); per_page = 10
-        query = Carga.query.options(joinedload(Carga.motorista_rel), joinedload(Carga.veiculo_rel), joinedload(Carga.entregas).joinedload(Entrega.cliente)).filter(Carga.status != 'Rascunho')
+        query = Carga.query.filter(Carga.status != 'Rascunho')
         if args.get('codigo_carga'): query = query.filter(Carga.codigo_carga.like(f"%{args.get('codigo_carga').upper()}%"))
         if args.get('status'): query = query.filter(Carga.status == args.get('status'))
         if args.get('motorista'): query = query.join(Motorista, Carga.motorista_id == Motorista.id).filter(Motorista.nome.like(f"%{args.get('motorista').upper()}%"))
@@ -334,7 +334,7 @@ def consultar_cargas():
 @login_required
 def get_detalhes_carga(carga_id):
     try:
-        carga = Carga.query.options(joinedload(Carga.motorista_rel), joinedload(Carga.veiculo_rel), joinedload(Carga.entregas).options(joinedload(Entrega.cliente), joinedload(Entrega.remetente))).get(carga_id)
+        carga = Carga.query.get(carga_id)
         if not carga: return jsonify({"error": "Carga não encontrada"}), 404
         detalhes_carga = {c.name: getattr(carga, c.name) for c in carga.__table__.columns}; detalhes_carga['motorista_nome'] = carga.motorista_rel.nome if carga.motorista_rel else None; detalhes_carga['veiculo_placa'] = carga.veiculo_rel.placa if carga.veiculo_rel else None; entregas_lista = []
         for e in carga.entregas:
