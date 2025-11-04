@@ -137,7 +137,7 @@ def get_clientes_detalhes():
                 'id': c.id,
                 'codigo_cliente': c.codigo_cliente,
                 'razao_social': c.razao_social,
-                'telefone_completo': c.telefone_completo,
+                'telefone_completo': f"({c.ddd or ''}) {c.telefone or ''}".strip(),
                 'cidade': c.cidade,
                 'estado': c.estado,
                 'is_remetente': c.is_remetente,
@@ -333,8 +333,10 @@ def handle_cargas():
                         if cidade_str or estado_str: # Evita adicionar "- " se ambos forem nulos
                             destinos_set.add(f"{cidade_str}-{estado_str}")
                 
-                carga_dict['destinos'] = sorted(list(destinos_set))
-                carga_dict['destino_principal'] = destinos[0] if destinos else 'N/A'
+                destinos_list = sorted(list(destinos_set)) 
+            
+                carga_dict['destinos'] = destinos_list
+                carga_dict['destino_principal'] = destinos_list[0] if destinos_list else 'N/A'
                 
                 cargas_data.append(carga_dict)
                 
