@@ -1,5 +1,5 @@
 #
-# models.py (VERSÃO 5 - CORRIGINDO RELAÇÃO (REMOÇÃO DE DUPLICIDADE))
+# models.py (VERSÃO 6 - CORREÇÃO FINAL - OBRIGADO LOGS DO RAILWAY!)
 #
 from database import db
 
@@ -50,14 +50,16 @@ class Cliente(db.Model):
     is_remetente = db.Column(db.Boolean, default=False, nullable=False)
     
     # Relação como Destinatário
-    # <<< CORREÇÃO APLICADA AQUI: Removemos 'foreign_keys' >>>
+    # <<< CORREÇÃO APLICADA AQUI (Como o log do Railway pediu) >>>
     entregas_como_destinatario = db.relationship('Entrega', 
+                                                 foreign_keys='Entrega.cliente_id', 
                                                  back_populates='cliente',
                                                  lazy=True)
     
     # Relação como Remetente
-    # <<< CORREÇÃO APLICADA AQUI: Removemos 'foreign_keys' >>>
+    # <<< CORREÇÃO APLICADA AQUI (Como o log do Railway pediu) >>>
     entregas_como_remetente = db.relationship('Entrega', 
+                                               foreign_keys='Entrega.remetente_id', 
                                                back_populates='remetente',
                                                lazy=True)
 
@@ -127,15 +129,13 @@ class Entrega(db.Model):
     carga = db.relationship('Carga', foreign_keys='Entrega.carga_id', back_populates='entregas')
 
     # Relação com o Destinatário
-    # Esta é a definição CORRETA
+    # <<< CORREÇÃO APLICADA AQUI: Removemos 'foreign_keys' daqui >>>
     cliente = db.relationship('Cliente', 
-                          foreign_keys=[cliente_id], 
                           back_populates='entregas_como_destinatario')
 
     # Relação com o Remetente
-    # Esta é a definição CORRETA
+    # <<< CORREÇÃO APLICADA AQUI: Removemos 'foreign_keys' daqui >>>
     remetente = db.relationship('Cliente', 
-                            foreign_keys=[remetente_id], 
                             back_populates='entregas_como_remetente')
 
     def to_dict(self):
