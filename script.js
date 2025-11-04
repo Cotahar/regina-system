@@ -146,9 +146,9 @@ document.addEventListener('DOMContentLoaded', () => {
         listaInfo += `<li><strong>Destino:</strong> ${carga.destino_principal}</li>`;
 		}
 		if (carga.status === 'Agendada' || carga.status === 'Em Trânsito') {
-            if (carga.motorista) { 
-                listaInfo += `<li><strong>Motorista:</strong> ${carga.motorista} (${carga.placa || 'N/A'})</li>`;
-            }
+            if (carga.motorista_nome) { 
+        listaInfo += `<li><strong>Motorista:</strong> ${carga.motorista_nome} (${carga.placa_veiculo || 'N/A'})</li>`;
+			}
         }
         listaInfo += `<li><strong>Nº Entregas:</strong> ${carga.num_entregas || 0}</li>`;
         listaInfo += `<li><strong>Peso Total:</strong> ${formatarPeso(carga.peso_total)}</li>`;

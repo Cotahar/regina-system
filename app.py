@@ -419,7 +419,12 @@ def get_cargas_consulta():
                 'motorista_nome': carga.motorista_rel.nome if carga.motorista_rel else 'N/A',
                 'num_entregas': len(carga.entregas),
                 'peso_total_bruto': peso_total_bruto,
-                'data_finalizacao': carga.data_finalizacao
+                'data_finalizacao': carga.data_finalizacao,
+                
+                # CHAVES DE COMPATIBILIDADE (para consulta.js)
+                'destino': destinos[0] if destinos else 'N/A',
+                'motorista': carga.motorista_rel.nome if carga.motorista_rel else 'N/A',
+                'peso_total': peso_total_bruto
             })
             
         return jsonify(
