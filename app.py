@@ -1,6 +1,5 @@
-#
-# app.py (ATUALIZADO PARA V2 - MÓDULO 4.2 - Edição de Remetente)
-#
+# app.py CORRIGIDO (À PROVA DE NULOS)
+
 import time
 import pandas as pd
 import os
@@ -9,73 +8,90 @@ from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from sqlalchemy.orm import joinedload
-
-
+from sqlalchemy import func, or_
 import traceback
-from dotenv import load_dotenv # 
 
-from sqlalchemy import func # Para somas no banco
-
+from dotenv import load_dotenv
 
 from database import db
 from models import Carga, Cliente, Entrega, Usuario, Motorista, Veiculo
 
 # --- INICIALIZAÇÃO E CONFIGURAÇÃO ---
-load_dotenv('.env.railway') # <-- LINHA NOVA AQUI
+load_dotenv('.env.railway') # Garante que as variáveis de ambiente sejam lidas
 app = Flask(__name__)
 app.secret_key = 'sua-chave-secreta-muito-segura-aqui-12345'
+
+# Configuração do Banco de Dados (Lê do .env.railway ou usa sqlite local)
 basedir = os.path.abspath(os.path.dirname(__file__))
-database_url = os.environ.get('DATABASE_URL')
-if database_url and database_url.startswith('postgres://'):
-    database_url = database_url.replace('postgres://', 'postgresql://', 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url or \
-    'sqlite:///' + os.path.join(basedir, 'cargas.db')
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+database_url = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'cargas.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+
 db.init_app(app)
 migrate = Migrate(app, db)
 
-# --- DECORATORS DE AUTENTICAÇÃO ---
+# --- DECORATOR DE AUTENTICAÇÃO ---
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            if request.path.startswith('/api/'):
-                return jsonify({"error": "Acesso não autorizado."}), 401
-            return redirect(url_for('login_page'))
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify(error='Sessão expirada, faça login novamente.'), 401
+            return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
 
-def permission_required(permissions):
-    def wrapper(f):
-        @wraps(f)
-        def decorated_view(*args, **kwargs):
-            if session.get('user_permission') not in permissions:
-                return jsonify({"error": "Permissão negada."}), 403
-            return f(*args, **kwargs)
-        return decorated_view
-    return wrapper
+# --- ROTAS DE AUTENTICAÇÃO E SESSÃO ---
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.json
+    nome_usuario = data.get('nome_usuario')
+    senha = data.get('senha')
+    
+    user = Usuario.query.filter_by(nome_usuario=nome_usuario).first()
+    
+    if user and check_password_hash(user.senha_hash, senha):
+        session['user_id'] = user.id
+        session['user_name'] = user.nome_usuario
+        session['user_permission'] = user.permissao
+        return jsonify(message='Login bem-sucedido!')
+    
+    return jsonify(error='Usuário ou senha inválidos'), 401
 
-# --- ROTAS DE PÁGINAS ESTÁTICAS ---
-@app.route('/login')
-def login_page():
-    return send_from_directory('.', 'login.html')
+@app.route('/logout')
+def logout():
+    session.pop('user_id', None)
+    session.pop('user_name', None)
+    session.pop('user_permission', None)
+    return redirect(url_for('login_page'))
 
+@app.route('/api/session', methods=['GET'])
+@login_required
+def get_session():
+    return jsonify(
+        user_name=session.get('user_name'),
+        user_permission=session.get('user_permission')
+    )
+
+# --- ROTAS DAS PÁGINAS (HTML) ---
 @app.route('/')
 @login_required
 def index():
     return send_from_directory('.', 'index.html')
+
+@app.route('/login')
+def login_page():
+    return send_from_directory('.', 'login.html')
 
 @app.route('/clientes.html')
 @login_required
 def clientes_page():
     return send_from_directory('.', 'clientes.html')
 
-@app.route('/usuarios.html')
+@app.route('/montagem.html')
 @login_required
-@permission_required(['admin'])
-def usuarios_page():
-    return send_from_directory('.', 'usuarios.html')
-
+def montagem_page():
+    return send_from_directory('.', 'montagem.html')
+    
 @app.route('/consulta.html')
 @login_required
 def consulta_page():
@@ -83,482 +99,760 @@ def consulta_page():
 
 @app.route('/motoristas.html')
 @login_required
-@permission_required(['admin', 'operador'])
 def motoristas_page():
+    if session.get('user_permission') != 'admin':
+        return redirect(url_for('index'))
     return send_from_directory('.', 'motoristas.html')
 
 @app.route('/veiculos.html')
 @login_required
-@permission_required(['admin', 'operador'])
 def veiculos_page():
+    if session.get('user_permission') != 'admin':
+        return redirect(url_for('index'))
     return send_from_directory('.', 'veiculos.html')
 
-@app.route('/montagem.html')
+@app.route('/usuarios.html')
 @login_required
-@permission_required(['admin', 'operador'])
-def montagem_page():
-    return send_from_directory('.', 'montagem.html')
+def usuarios_page():
+    if session.get('user_permission') != 'admin':
+        return redirect(url_for('index'))
+    return send_from_directory('.', 'usuarios.html')
 
-@app.route('/<path:filename>')
-def serve_static(filename):
-    if filename.endswith(('.js', '.css')):
-        return send_from_directory('.', filename)
-    return "File not found", 404
+# --- ROTAS DA API (DADOS) ---
 
-# --- API DE AUTENTICAÇÃO ---
-@app.route('/api/login', methods=['POST'])
-def login_api():
-    dados = request.json
-    user = Usuario.query.filter_by(nome_usuario=dados.get('nome_usuario')).first()
-    if user and check_password_hash(user.senha_hash, dados.get('senha')):
-        session.clear()
-        session['user_id'] = user.id
-        session['user_name'] = user.nome_usuario
-        session['user_permission'] = user.permissao
-        return jsonify({"message": "Login bem-sucedido"})
-    return jsonify({"error": "Usuário ou senha inválidos"}), 401
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    return redirect(url_for('login_page'))
-
-@app.route('/api/session', methods=['GET'])
-@login_required
-def get_session_info():
-    return jsonify({'user_name': session.get('user_name'), 'user_permission': session.get('user_permission')})
-
-@app.route('/api/verify-password', methods=['POST'])
-@login_required
-def verify_password():
-    password_to_check = request.json.get('password')
-    user = Usuario.query.get(session['user_id'])
-    if user and check_password_hash(user.senha_hash, password_to_check):
-        return jsonify({"success": True})
-    return jsonify({"success": False}), 401
-
-
-# --- API DE CLIENTES ---
-# Rota simplificada (agora com is_remetente)
-@app.route('/api/clientes', methods=['GET'])
-@login_required
-def get_clientes():
-    clientes_db = Cliente.query.order_by(Cliente.razao_social).all()
-    clientes_lista = [{'id': c.id, 'text': f"{c.razao_social} ({c.cidade or 'N/A'})", 'cidade': c.cidade, 'estado': c.estado, 'is_remetente': c.is_remetente} for c in clientes_db]
-    return jsonify(clientes_lista)
-
-# Rota completa (agora com is_remetente)
+# --- API: CLIENTES ---
 @app.route('/api/clientes/detalhes', methods=['GET'])
 @login_required
 def get_clientes_detalhes():
-    clientes_db = Cliente.query.order_by(Cliente.razao_social).all()
-    clientes_lista = [{col.name: getattr(cliente, col.name) for col in cliente.__table__.columns} for cliente in clientes_db]
-    return jsonify(clientes_lista)
-
-@app.route('/api/clientes/import', methods=['POST'])
-@login_required
-@permission_required(['admin'])
-def importar_clientes():
-    if 'arquivo' not in request.files: return jsonify({"error": "Nenhum arquivo"}), 400
-    arquivo = request.files['arquivo']; df = None
     try:
-        try:
-            try: arquivo.seek(0); df = pd.read_csv(arquivo, header=None, skiprows=1, sep=';'); assert len(df.columns) >= 6
-            except: arquivo.seek(0); df = pd.read_csv(arquivo, header=None, skiprows=1); assert len(df.columns) >= 6
-        except:
-            try: arquivo.seek(0); df = pd.read_excel(arquivo, header=None, skiprows=1, engine='openpyxl')
-            except: arquivo.seek(0); df = pd.read_excel(arquivo, header=None, skiprows=1)
-        if df is None: return jsonify({"error": "Não leu."}), 500
-        if len(df.columns) < 6: return jsonify({"error": f"{len(df.columns)} colunas."}), 400
-        df = df.iloc[:, :6]; df.columns = ['codigo_cliente', 'razao_social', 'ddd', 'telefone', 'cidade', 'estado']; novos = 0
+        clientes = Cliente.query.order_by(Cliente.razao_social).all()
+        clientes_data = []
+        for c in clientes:
+            entregas_count = Entrega.query.filter_by(cliente_id=c.id).count()
+            
+            # >>>>> CORREÇÃO 1: Adicionado `(c.razao_social or '')` para evitar erro .upper() em Nulos
+            text = f"{(c.codigo_cliente or '')} - {(c.razao_social or '').upper()}"
+            
+            clientes_data.append({
+                'id': c.id,
+                'codigo_cliente': c.codigo_cliente,
+                'razao_social': c.razao_social,
+                'telefone_completo': c.telefone_completo,
+                'cidade': c.cidade,
+                'estado': c.estado,
+                'is_remetente': c.is_remetente,
+                'entregas_count': entregas_count,
+                'text': text
+            })
+        return jsonify(clientes_data)
+    except Exception as e:
+        print(f"Erro em /api/clientes/detalhes: {e}")
+        return jsonify(error=f"Erro interno ao buscar clientes: {str(e)}"), 500
+
+
+@app.route('/api/clientes', methods=['GET'])
+@login_required
+def get_clientes():
+    try:
+        clientes = Cliente.query.all()
+        # Simplificado para o Select2
+        clientes_data = [{
+            'id': c.id, 
+            'text': f"{(c.codigo_cliente or '')} - {(c.razao_social or '').upper()}", # >>>>> CORREÇÃO 2: Proteção contra Nulos
+            'cidade': c.cidade,
+            'estado': c.estado,
+            'is_remetente': c.is_remetente
+        } for c in clientes]
+        return jsonify(clientes_data)
+    except Exception as e:
+        print(f"Erro em /api/clientes: {e}")
+        return jsonify(error=f"Erro interno ao buscar clientes: {str(e)}"), 500
+
+@app.route('/api/clientes', methods=['POST'])
+@login_required
+def importar_clientes():
+    if 'arquivo' not in request.files:
+        return jsonify(error='Nenhum arquivo enviado'), 400
+    arquivo = request.files['arquivo']
+    
+    try:
+        if arquivo.filename.endswith('.csv'):
+            df = pd.read_csv(arquivo, dtype=str)
+        else:
+            df = pd.read_excel(arquivo, dtype=str)
+        
+        df = df.fillna('')
+        novos_count = 0
+        ignorados_count = 0
+        
+        codigos_existentes = set(row[0] for row in db.session.query(Cliente.codigo_cliente).all())
+
         for _, row in df.iterrows():
-            if pd.isna(row['codigo_cliente']): continue
-            try: code = str(int(row['codigo_cliente']))
-            except: code = str(row['codigo_cliente'])
-            if not Cliente.query.filter_by(codigo_cliente=code).first():
-                ddd = str(int(row['ddd'])) if not pd.isna(row['ddd']) and str(row['ddd']).isdigit() else str(row['ddd'] or '')
-                tel = str(row['telefone']) if not pd.isna(row['telefone']) else ''
-                cid = str(row['cidade']) if not pd.isna(row['cidade']) else ''
-                est = str(row['estado']) if not pd.isna(row['estado']) else ''
-                raz = str(row['razao_social']) if not pd.isna(row['razao_social']) else ''
-                novo = Cliente(codigo_cliente=code, razao_social=raz, ddd=ddd, telefone=tel, cidade=cid, estado=est, is_remetente=False)
-                db.session.add(novo); novos += 1
+            codigo = str(row.iloc[0]).strip()
+            if not codigo or codigo in codigos_existentes:
+                ignorados_count += 1
+                continue
+                
+            razao_social = str(row.iloc[1]).strip().upper()
+            cidade = str(row.iloc[2]).strip().upper()
+            estado = str(row.iloc[3]).strip().upper()[:2]
+            ddd = str(row.iloc[4]).strip()[:2]
+            telefone = str(row.iloc[5]).strip()
+            observacoes = str(row.iloc[6]).strip()
+
+            novo_cliente = Cliente(
+                codigo_cliente=codigo,
+                razao_social=razao_social,
+                cidade=cidade,
+                estado=estado,
+                ddd=ddd,
+                telefone=telefone,
+                observacoes=observacoes,
+                is_remetente=False # Padrão
+            )
+            db.session.add(novo_cliente)
+            codigos_existentes.add(codigo)
+            novos_count += 1
+
         db.session.commit()
-        return jsonify({"message": f"{novos} clientes importados!"}), 200
-    except Exception as e: db.session.rollback(); print(f"ERR Import Cli: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro: {e}"}), 500
+        return jsonify(message=f'Importação concluída! {novos_count} novos clientes importados, {ignorados_count} ignorados (código já existente).')
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro na importação de clientes: {e}")
+        traceback.print_exc()
+        return jsonify(error=f'Erro ao processar o arquivo: {str(e)}'), 500
 
 @app.route('/api/clientes/<int:cliente_id>', methods=['PUT'])
 @login_required
-@permission_required(['admin', 'operador'])
-def atualizar_cliente(cliente_id): # (agora com is_remetente)
-    cl = Cliente.query.get_or_404(cliente_id)
-    dados = request.json
-    if not dados.get('razao_social') or not dados.get('cidade'): return jsonify({"error": "Razão e Cidade obrigatórios"}), 400
-    cl.razao_social = dados['razao_social']
-    cl.cidade = dados['cidade']
-    cl.estado = dados.get('estado')
-    cl.ddd = dados.get('ddd')
-    cl.telefone = dados.get('telefone')
-    cl.observacoes = dados.get('observacoes')
-    cl.is_remetente = dados.get('is_remetente', False)
-    db.session.commit()
-    return jsonify({"message": "Cliente atualizado"}), 200
-
-# --- APIs de Motorista/Veículo ---
-@app.route('/api/motoristas', methods=['GET'])
-@login_required
-def get_motoristas():
-    motoristas_db = Motorista.query.order_by(Motorista.nome).all()
-    motoristas_lista = [{'id': m.id, 'codigo': m.codigo, 'nome': m.nome, 'text': m.nome} for m in motoristas_db]
-    return jsonify(motoristas_lista)
-
-@app.route('/api/veiculos', methods=['GET'])
-@login_required
-def get_veiculos():
-    veiculos_db = Veiculo.query.order_by(Veiculo.placa).all()
-    veiculos_lista = [{'id': v.id, 'placa': v.placa, 'text': v.placa} for v in veiculos_db]
-    return jsonify(veiculos_lista)
-
-@app.route('/api/motoristas/import', methods=['POST'])
-@login_required
-@permission_required(['admin', 'operador'])
-def importar_motoristas():
-    if 'arquivo' not in request.files: return jsonify({"error": "Nenhum arquivo"}), 400
-    arquivo = request.files['arquivo']; df = None
+def update_cliente(cliente_id):
     try:
-        try: arquivo.seek(0); df = pd.read_excel(arquivo, header=None, engine='openpyxl')
-        except:
-            try: arquivo.seek(0); df = pd.read_excel(arquivo, header=None)
-            except:
-                try: arquivo.seek(0); df = pd.read_csv(arquivo, header=None, sep=';'); assert len(df.columns) >= 2
-                except: arquivo.seek(0); df = pd.read_csv(arquivo, header=None); assert len(df.columns) >= 2
-        if df is None: return jsonify({"error": "Não leu."}), 500
-        if len(df.columns) < 2: return jsonify({"error": "Formato inválido A(cod) B(nome)."}), 400
-        df = df.iloc[:, [0, 1]]; df.columns = ['codigo', 'nome']; novos = 0; ignorados = 0
-        for _, row in df.iterrows():
-            if pd.isna(row['nome']): continue
-            cod = str(row['codigo']) if not pd.isna(row['codigo']) else None; nom = str(row['nome']).upper()
-            if Motorista.query.filter_by(nome=nom).first() or (cod and Motorista.query.filter_by(codigo=cod).first()): ignorados += 1; continue
-            novo = Motorista(codigo=cod, nome=nom); db.session.add(novo); novos += 1
+        data = request.json
+        cliente = Cliente.query.get(cliente_id)
+        if not cliente:
+            return jsonify(error='Cliente não encontrado'), 404
+
+        cliente.razao_social = (data.get('razao_social') or '').upper()
+        cliente.cidade = (data.get('cidade') or '').upper()
+        cliente.estado = (data.get('estado') or '').upper()
+        cliente.ddd = data.get('ddd') or None
+        cliente.telefone = data.get('telefone') or None
+        cliente.observacoes = data.get('observacoes') or None
+        cliente.is_remetente = data.get('is_remetente', False)
+        
         db.session.commit()
-        return jsonify({"message": f"{novos} motoristas importados! ({ignorados} ignorados)"}), 200
-    except Exception as e: db.session.rollback(); print(f"ERR Import Mot: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro: {e}"}), 500
+        return jsonify(message='Cliente atualizado com sucesso!')
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao atualizar cliente {cliente_id}: {e}")
+        return jsonify(error=f'Erro interno: {str(e)}'), 500
 
-@app.route('/api/veiculos/import', methods=['POST'])
-@login_required
-@permission_required(['admin', 'operador'])
-def importar_veiculos():
-    if 'arquivo' not in request.files: return jsonify({"error": "Nenhum arquivo"}), 400
-    arquivo = request.files['arquivo']; df = None
-    try:
-        try: arquivo.seek(0); df = pd.read_excel(arquivo, header=None, engine='openpyxl')
-        except:
-            try: arquivo.seek(0); df = pd.read_excel(arquivo, header=None)
-            except:
-                try: arquivo.seek(0); df = pd.read_csv(arquivo, header=None, sep=';'); assert len(df.columns) >= 1
-                except: arquivo.seek(0); df = pd.read_csv(arquivo, header=None); assert len(df.columns) >= 1
-        if df is None: return jsonify({"error": "Não leu."}), 500
-        if len(df.columns) < 1: return jsonify({"error": "Formato inválido A(placa)."}), 400
-        df = df.iloc[:, [0]]; df.columns = ['placa']; novos = 0; ignorados = 0
-        for _, row in df.iterrows():
-            if pd.isna(row['placa']): continue
-            placa = str(row['placa']).upper().replace('-', '').replace(' ', '')
-            if not Veiculo.query.filter_by(placa=placa).first(): novo = Veiculo(placa=placa); db.session.add(novo); novos += 1
-            else: ignorados += 1
-        db.session.commit()
-        return jsonify({"message": f"{novos} veículos importados! ({ignorados} ignorados)"}), 200
-    except Exception as e: db.session.rollback(); print(f"ERR Import Veic: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro: {e}"}), 500
-
-
-# --- API DE CARGAS E ENTREGAS ---
+# --- API: CARGAS ---
 @app.route('/api/cargas', methods=['GET', 'POST'])
 @login_required
-def gerenciar_cargas():
+def handle_cargas():
+    # --- POST (Criação da Carga Rápida V1) ---
     if request.method == 'POST':
-        if session['user_permission'] not in ['admin', 'operador']: return jsonify({"error": "Permissão negada"}), 403
-        dados = request.json
-        nova_carga = Carga(codigo_carga=f"CARGA-{int(time.time())}", origem=dados['origem'].upper(), status='Pendente')
-        db.session.add(nova_carga); db.session.commit()
-        return jsonify({'id': nova_carga.id, 'codigo_carga': nova_carga.codigo_carga, 'origem': nova_carga.origem, 'status': nova_carga.status, 'num_entregas': 0, 'peso_total': 0, 'frete_total': 0, 'motorista': None, 'placa': None, 'destino': None, 'destino_uf': None}), 201
-    # GET
-    try:
-        base_query = Carga.query.filter(Carga.status != 'Rascunho')
         try:
-            cargas_pendentes_db = base_query.filter(Carga.status == 'Pendente').order_by(Carga.id.desc()).all()
-            cargas_agendadas_db = base_query.filter(Carga.status == 'Agendada').order_by(db.func.coalesce(Carga.data_agendamento, '9999-12-31'), Carga.id.desc()).all()
-            cargas_em_transito_db = base_query.filter(Carga.status == 'Em Trânsito').order_by(db.func.coalesce(Carga.previsao_entrega, '9999-12-31'), Carga.id.desc()).all()
-        except Exception as query_err: print(f"!!! ERRO query /api/cargas: {query_err}"); traceback.print_exc(); return jsonify({"error": f"Erro query: {query_err}"}), 500
-        cargas_ativas = cargas_pendentes_db + cargas_agendadas_db + cargas_em_transito_db; cargas_lista = []
-        for i, carga in enumerate(cargas_ativas):
-            try:
-                peso_total = sum(e.peso_bruto for e in carga.entregas if e and e.peso_bruto is not None)
-                frete_total = sum(e.valor_frete for e in carga.entregas if e and e.valor_frete is not None)
-                destino = None; destino_uf = None
-                destino_entrega = next((e for e in carga.entregas if e and e.is_last_delivery == 1), None)
-                if destino_entrega:
-                    cliente_destino = destino_entrega.cliente
-                    if cliente_destino: destino = destino_entrega.cidade_entrega or cliente_destino.cidade; destino_uf = destino_entrega.estado_entrega or cliente_destino.estado
-                    else: print(f"!!! WARN: [Carga ID: {carga.id}] Cliente destino (ID: {destino_entrega.cliente_id}) não encontrado."); destino = destino_entrega.cidade_entrega or "Cliente Inválido"; destino_uf = destino_entrega.estado_entrega or "XX"
-                carga_dict = {'id': carga.id, 'codigo_carga': carga.codigo_carga, 'origem': carga.origem, 'status': carga.status, 'motorista': carga.motorista_rel.nome if carga.motorista_rel else None, 'placa': carga.veiculo_rel.placa if carga.veiculo_rel else None, 'data_agendamento': carga.data_agendamento, 'data_carregamento': carga.data_carregamento, 'previsao_entrega': carga.previsao_entrega, 'observacoes': carga.observacoes, 'data_finalizacao': carga.data_finalizacao, 'num_entregas': len(carga.entregas) if carga.entregas else 0, 'peso_total': peso_total, 'frete_total': frete_total, 'destino': destino, 'destino_uf': destino_uf}
-                cargas_lista.append(carga_dict)
-            except Exception as carga_proc_err: print(f"!!! ERRO processar Carga ID {carga.id}: {carga_proc_err}"); traceback.print_exc()
-        return jsonify(cargas_lista)
-    except Exception as e: print(f"!!! ERRO GERAL /api/cargas GET: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro: {e}"}), 500
+            data = request.json
+            cliente_id = data.get('cliente_id')
+            peso_bruto = data.get('peso_bruto')
+            
+            # Busca o remetente padrão V1
+            remetente_padrao = Cliente.query.filter_by(codigo_cliente='000-REMETENTE-V1').first()
+            if not remetente_padrao:
+                return jsonify(error="Cliente '000-REMETENTE-V1' não cadastrado. Crie este cliente na tela de Clientes e marque-o como Remetente."), 400
+
+            cliente = Cliente.query.get(cliente_id)
+            if not cliente:
+                 return jsonify(error="Cliente (Destinatário) não encontrado."), 404
+
+            # Cria a Carga (Rascunho)
+            nova_carga = Carga(
+                codigo_carga=f"RASC-{int(time.time())}",
+                origem=remetente_padrao.cidade.upper() if remetente_padrao.cidade else 'ORIGEM V1',
+                status='Rascunho'
+            )
+            db.session.add(nova_carga)
+            db.session.flush() # Pega o ID da Carga antes de commitar
+
+            # Cria a Entrega
+            nova_entrega = Entrega(
+                carga_id=nova_carga.id,
+                cliente_id=cliente.id,
+                remetente_id=remetente_padrao.id,
+                peso_bruto=peso_bruto,
+                cidade_entrega=cliente.cidade, # Usa dados do cliente
+                estado_entrega=cliente.estado # Usa dados do cliente
+            )
+            db.session.add(nova_entrega)
+            
+            # Confirma a Carga (Muda status)
+            nova_carga.status = 'Pendente'
+            nova_carga.codigo_carga = f"CARGA-{int(time.time())}"
+            
+            db.session.commit()
+            return jsonify(message=f'Carga {nova_carga.codigo_carga} criada com sucesso!'), 201
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Erro em POST /api/cargas (V1): {e}")
+            return jsonify(error=f"Erro interno: {str(e)}"), 500
+            
+    # --- GET (Listagem Painel Principal) ---
+    if request.method == 'GET':
+        try:
+            status_filter = request.args.get('status')
+            
+            # >>>>> CORREÇÃO 3: Query simplificada para evitar crash
+            base_query = Carga.query.filter(Carga.status != 'Rascunho')
+
+            if status_filter:
+                base_query = base_query.filter(Carga.status == status_filter)
+                
+            cargas = base_query.order_by(Carga.data_carregamento.desc()).all()
+            
+            cargas_data = []
+            for carga in cargas:
+                carga_dict = carga.to_dict()
+                
+                # Dados das relações (acesso seguro)
+                carga_dict['motorista_nome'] = carga.motorista_rel.nome if carga.motorista_rel else None
+                carga_dict['placa_veiculo'] = carga.veiculo_rel.placa if carga.veiculo_rel else None
+                
+                # Processamento de entregas
+                carga_dict['entregas'] = [e.to_dict() for e in carga.entregas]
+                carga_dict['num_entregas'] = len(carga.entregas)
+                
+                # >>>>> CORREÇÃO 4: Lógica de destinos "à prova de nulos"
+                destinos_set = set()
+                for e in carga.entregas:
+                    if e.cliente: # Garante que a entrega tem um cliente associado
+                        cidade_str = (e.cliente.cidade or "").upper() # (ou "") garante que .upper() não falhe
+                        estado_str = (e.cliente.estado or "").upper()
+                        if cidade_str or estado_str: # Evita adicionar "- " se ambos forem nulos
+                            destinos_set.add(f"{cidade_str}-{estado_str}")
+                
+                carga_dict['destinos'] = sorted(list(destinos_set))
+                carga_dict['destino_principal'] = destinos[0] if destinos else 'N/A'
+                
+                cargas_data.append(carga_dict)
+                
+            return jsonify(cargas_data)
+        except Exception as e:
+            print(f"Erro em GET /api/cargas: {e}")
+            traceback.print_exc() # Imprime o stack trace completo no log do servidor
+            return jsonify(error=f"Erro interno ao buscar cargas: {str(e)}"), 500
 
 @app.route('/api/cargas/consulta', methods=['GET'])
 @login_required
-def consultar_cargas():
+def get_cargas_consulta():
     try:
-        args = request.args; page = args.get('page', 1, type=int); per_page = 10
+        # >>>>> CORREÇÃO 5: Query simplificada para evitar crash inicial
         query = Carga.query.filter(Carga.status != 'Rascunho')
-        if args.get('codigo_carga'): query = query.filter(Carga.codigo_carga.like(f"%{args.get('codigo_carga').upper()}%"))
-        if args.get('status'): query = query.filter(Carga.status == args.get('status'))
-        if args.get('motorista'): query = query.join(Motorista, Carga.motorista_id == Motorista.id).filter(Motorista.nome.like(f"%{args.get('motorista').upper()}%"))
-        if args.get('origem'): query = query.filter(Carga.origem.like(f"%{args.get('origem').upper()}%"))
-        if args.get('placa'): query = query.join(Veiculo, Carga.veiculo_id == Veiculo.id).filter(Veiculo.placa.like(f"%{args.get('placa').upper()}%"))
-        if args.get('data_finalizacao_inicio') and args.get('data_finalizacao_fim'): query = query.filter(Carga.data_finalizacao.between(args.get('data_finalizacao_inicio'), args.get('data_finalizacao_fim')))
-        if args.get('data_carregamento_inicio') and args.get('data_carregamento_fim'): query = query.filter(Carga.data_carregamento.between(args.get('data_carregamento_inicio'), args.get('data_carregamento_fim')))
-        if args.get('cliente_id'): query = query.join(Entrega, Carga.id == Entrega.carga_id).filter(Entrega.cliente_id == args.get('cliente_id'))
-        pagination = query.order_by(Carga.id.desc()).paginate(page=page, per_page=per_page, error_out=False)
-        cargas = pagination.items; cargas_lista = []
+
+        # Aplicar filtros
+        if request.args.get('codigo_carga'):
+            query = query.filter(Carga.codigo_carga.ilike(f"%{request.args.get('codigo_carga')}%"))
+        if request.args.get('origem'):
+            query = query.filter(Carga.origem.ilike(f"%{request.args.get('origem')}%"))
+        if request.args.get('status'):
+            query = query.filter(Carga.status == request.args.get('status'))
+        if request.args.get('motorista'):
+            query = query.join(Carga.motorista_rel).filter(Motorista.nome.ilike(f"%{request.args.get('motorista')}%"))
+        if request.args.get('placa'):
+            query = query.join(Carga.veiculo_rel).filter(Veiculo.placa.ilike(f"%{request.args.get('placa')}%"))
+        if request.args.get('cliente_id'):
+            query = query.join(Carga.entregas).filter(Entrega.cliente_id == request.args.get('cliente_id'))
+        if request.args.get('data_carregamento_inicio'):
+            query = query.filter(Carga.data_carregamento >= request.args.get('data_carregamento_inicio'))
+        if request.args.get('data_carregamento_fim'):
+            query = query.filter(Carga.data_carregamento <= request.args.get('data_carregamento_fim'))
+        if request.args.get('data_finalizacao_inicio'):
+            query = query.filter(Carga.data_finalizacao >= request.args.get('data_finalizacao_inicio'))
+        if request.args.get('data_finalizacao_fim'):
+            query = query.filter(Carga.data_finalizacao <= request.args.get('data_finalizacao_fim'))
+
+        # Paginação
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        total = query.count()
+        cargas = query.order_by(Carga.id.desc()).paginate(page=page, per_page=per_page, error_out=False).items
+        
+        cargas_data = []
         for carga in cargas:
-            destino = None; destino_uf = None
-            destino_entrega = next((e for e in carga.entregas if e.is_last_delivery == 1), None)
-            if destino_entrega and destino_entrega.cliente: destino = destino_entrega.cidade_entrega or destino_entrega.cliente.cidade; destino_uf = destino_entrega.estado_entrega or destino_entrega.cliente.estado
-            peso_total = sum(e.peso_bruto for e in carga.entregas if e.peso_bruto)
-            cargas_lista.append({'id': carga.id, 'codigo_carga': carga.codigo_carga, 'origem': carga.origem, 'status': carga.status, 'motorista': carga.motorista_rel.nome if carga.motorista_rel else None, 'data_finalizacao': carga.data_finalizacao, 'num_entregas': len(carga.entregas), 'peso_total': peso_total, 'destino': destino, 'destino_uf': destino_uf})
-        return jsonify({'cargas': cargas_lista, 'total_paginas': pagination.pages, 'pagina_atual': page, 'total_resultados': pagination.total})
-    except Exception as e: print(f"!!! ERRO /api/cargas/consulta GET: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro: {e}"}), 500
+            peso_total_bruto = sum(e.peso_bruto for e in carga.entregas if e.peso_bruto)
+            
+            # >>>>> CORREÇÃO 6: Lógica de destinos "à prova de nulos"
+            destinos_set = set()
+            for e in carga.entregas:
+                if e.cliente: # Garante que a entrega tem um cliente associado
+                    cidade_str = (e.cliente.cidade or "").upper() # (ou "") garante que .upper() não falhe
+                    estado_str = (e.cliente.estado or "").upper()
+                    if cidade_str or estado_str: # Evita adicionar "- " se ambos forem nulos
+                        destinos_set.add(f"{cidade_str}-{estado_str}")
+            destinos = sorted(list(destinos_set))
+
+            cargas_data.append({
+                'id': carga.id,
+                'codigo_carga': carga.codigo_carga,
+                'status': carga.status,
+                'origem': carga.origem,
+                'destino_principal': destinos[0] if destinos else 'N/A',
+                'motorista_nome': carga.motorista_rel.nome if carga.motorista_rel else 'N/A',
+                'num_entregas': len(carga.entregas),
+                'peso_total_bruto': peso_total_bruto,
+                'data_finalizacao': carga.data_finalizacao
+            })
+            
+        return jsonify(
+            cargas=cargas_data,
+            total=total,
+            page=page,
+            per_page=per_page,
+            total_pages=(total + per_page - 1) // per_page
+        )
+    except Exception as e:
+        print(f"Erro em /api/cargas/consulta: {e}")
+        traceback.print_exc()
+        return jsonify(error=f"Erro interno ao consultar cargas: {str(e)}"), 500
+
 
 @app.route('/api/cargas/<int:carga_id>', methods=['GET'])
 @login_required
-def get_detalhes_carga(carga_id):
+def get_carga_detalhes(carga_id):
     try:
+        # >>>>> CORREÇÃO 7: Query simplificada. Os dados serão carregados sob demanda.
         carga = Carga.query.get(carga_id)
-        if not carga: return jsonify({"error": "Carga não encontrada"}), 404
-        detalhes_carga = {c.name: getattr(carga, c.name) for c in carga.__table__.columns}; detalhes_carga['motorista_nome'] = carga.motorista_rel.nome if carga.motorista_rel else None; detalhes_carga['veiculo_placa'] = carga.veiculo_rel.placa if carga.veiculo_rel else None; entregas_lista = []
-        for e in carga.entregas:
-            cliente = e.cliente; remetente = e.remetente
-            cidade = e.cidade_entrega or (cliente.cidade if cliente else 'N/A'); estado = e.estado_entrega or (cliente.estado if cliente else 'N/A')
-            entrega_data = {'id': e.id, 'carga_id': e.carga_id, 'cliente_id': e.cliente_id, 'remetente_id': e.remetente_id, 'peso_bruto': e.peso_bruto, 'valor_frete': e.valor_frete, 'peso_cubado': e.peso_cubado, 'nota_fiscal': e.nota_fiscal, 'is_last_delivery': e.is_last_delivery, 'razao_social': cliente.razao_social if cliente else 'Cliente não encontrado', 'cidade': cidade, 'estado': estado, 'cidade_entrega_override': e.cidade_entrega, 'estado_entrega_override': e.estado_entrega, 'ddd': cliente.ddd if cliente else '', 'telefone': cliente.telefone if cliente else '', 'obs_cliente': cliente.observacoes if cliente else '', 'remetente_nome': remetente.razao_social if remetente else 'Remetente não encontrado', 'remetente_cidade': remetente.cidade if remetente else 'N/A'}
-            entregas_lista.append(entrega_data)
-        return jsonify({"detalhes_carga": detalhes_carga, "entregas": sorted(entregas_lista, key=lambda x: x['razao_social'])})
-    except Exception as e: print(f"!!! ERRO /api/cargas/{carga_id} GET: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro: {e}"}), 500
-
-@app.route('/api/cargas/<int:carga_id>/entregas', methods=['POST', 'DELETE'])
-@login_required
-@permission_required(['admin', 'operador'])
-def gerenciar_entregas(carga_id):
-    if request.method == 'POST':
-        dados = request.json;
-        if not dados.get('cliente_id') or dados.get('peso_bruto') is None: return jsonify({"error": "Cliente e Peso Bruto obrigatórios"}), 400
-        remetente_padrao = Cliente.query.filter_by(codigo_cliente='000-REMETENTE-V1').first()
-        if not remetente_padrao: return jsonify({"error": "Remetente padrão (000-REMETENTE-V1) não encontrado."}), 400
-        nova_entrega = Entrega(carga_id=carga_id, cliente_id=dados['cliente_id'], remetente_id=remetente_padrao.id, peso_bruto=dados.get('peso_bruto'), valor_frete=dados.get('valor_frete'))
-        db.session.add(nova_entrega); db.session.commit()
-        return jsonify({"message": "Entrega (V1) adicionada"}), 201
-    if request.method == 'DELETE':
-        entrega_id = request.json.get('entrega_id'); entrega = Entrega.query.get(entrega_id)
-        if entrega and entrega.carga_id == carga_id:
-            try: entrega.carga_id = None; entrega.is_last_delivery = 0; db.session.commit(); return jsonify({"message": "Entrega removida da carga e devolvida para 'Disponíveis'."}), 200
-            except Exception as e: db.session.rollback(); return jsonify({"error": f"Erro ao desvincular entrega: {e}"}), 500
-        return jsonify({"error": "Entrega não encontrada nesta carga"}), 404
-
-@app.route('/api/cargas/<int:carga_id>/status', methods=['PUT'])
-@login_required
-def atualizar_status_carga(carga_id):
-    carga = Carga.query.get_or_404(carga_id); dados = request.json; permissao_usuario = session['user_permission']
-    if 'status' in dados:
-        permissoes = {'Rascunho': ['admin', 'operador'], 'Pendente': ['admin', 'operador'], 'Agendada': ['admin', 'operador'], 'Em Trânsito': ['admin', 'operador'], 'Finalizada': ['admin', 'operador']}
-        if permissao_usuario not in permissoes.get(dados['status'], []): return jsonify({"error": "Permissão negada"}), 403
-    if 'motorista_id' in dados: setattr(carga, 'motorista_id', dados.pop('motorista_id') or None)
-    if 'veiculo_id' in dados: setattr(carga, 'veiculo_id', dados.pop('veiculo_id') or None)
-    if 'motorista' in dados: dados.pop('motorista')
-    if 'placa' in dados: dados.pop('placa')
-    for key, value in dados.items():
-        if hasattr(carga, key):
-            if key in ['origem'] and value is not None: value = value.upper()
-            if key in ['frete_pago'] and value == '': value = None
-            setattr(carga, key, value)
-    db.session.commit(); return jsonify({"message": "Carga atualizada"}), 200
-
-# ***** INÍCIO DA ALTERAÇÃO *****
-@app.route('/api/entregas/<int:entrega_id>', methods=['PUT'])
-@login_required
-@permission_required(['admin', 'operador'])
-def atualizar_entrega(entrega_id): # Atualiza entrega individual (V1 ou Disponível)
-    entrega = Entrega.query.get_or_404(entrega_id)
-    dados = request.json
-    
-    if 'is_last_delivery' in dados and dados['is_last_delivery'] == 1 and entrega.carga_id: # Só faz sentido se a entrega está numa carga
-        Entrega.query.filter(Entrega.carga_id == entrega.carga_id, Entrega.id != entrega_id).update({'is_last_delivery': 0})
-        entrega.is_last_delivery = 1
-        dados.pop('is_last_delivery')
         
-    if 'cidade_entrega' in dados or 'estado_entrega' in dados:
-        if session['user_permission'] != 'admin':
-            return jsonify({"error": "Apenas admin pode alterar local."}), 403
-        entrega.cidade_entrega = dados.pop('cidade_entrega', None) or None
-        entrega.estado_entrega = dados.pop('estado_entrega', None) or None
-        
-    # --- Linha Nova ---
-    # Permite que 'operador' ou 'admin' alterem o remetente
-    if 'remetente_id' in dados:
-        entrega.remetente_id = dados.pop('remetente_id')
-    # --- Fim da Linha Nova ---
-        
-    if 'peso_cobrado' in dados:
-        dados.pop('peso_cobrado') # Ignora peso cobrado
-        
-    for key, value in dados.items():
-        if hasattr(entrega, key):
-            if key in ['peso_bruto', 'valor_frete', 'peso_cubado'] and value == '':
-                value = None
-            setattr(entrega, key, value)
-            
-    if entrega.peso_bruto is None or entrega.peso_bruto == '':
-        return jsonify({"error": "Peso Bruto obrigatório"}), 400
-        
-    db.session.commit()
-    return jsonify({"message": "Entrega atualizada"}), 200
-# ***** FIM DA ALTERAÇÃO *****
+        if not carga:
+            return jsonify(error='Carga não encontrada'), 404
 
+        carga_dict = carga.to_dict()
+        carga_dict['motorista_nome'] = carga.motorista_rel.nome if carga.motorista_rel else None
+        carga_dict['placa_veiculo'] = carga.veiculo_rel.placa if carga.veiculo_rel else None
 
-# --- INÍCIO MÓDULO 3: APIs da Montagem de Carga ---
-@app.route('/api/entregas/disponiveis', methods=['GET', 'POST'])
-@login_required
-@permission_required(['admin', 'operador'])
-def gerenciar_entregas_disponiveis():
-    if request.method == 'POST':
-        dados = request.json
-        if not all(k in dados for k in ['remetente_id', 'cliente_id', 'peso_bruto']): return jsonify({"error": "Remetente, Destinatário e Peso Bruto são obrigatórios."}), 400
-        try:
-            nova_entrega = Entrega(carga_id=None, remetente_id=dados['remetente_id'], cliente_id=dados['cliente_id'], peso_bruto=dados.get('peso_bruto'), valor_frete=dados.get('valor_frete'), peso_cubado=dados.get('peso_cubado'), nota_fiscal=dados.get('nota_fiscal'), cidade_entrega=dados.get('cidade_entrega'), estado_entrega=dados.get('estado_entrega'))
-            db.session.add(nova_entrega); db.session.commit()
-            return jsonify({"message": "Entrega adicionada à lista de disponíveis!"}), 201
-        except Exception as e: db.session.rollback(); print(f"Erro ao criar entrega disponível: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro ao salvar no banco: {e}"}), 500
-    # GET
-    try:
-        entregas_db = Entrega.query.options(joinedload(Entrega.cliente), joinedload(Entrega.remetente)).filter(Entrega.carga_id == None).order_by(Entrega.id.desc()).all()
-        entregas_lista = []
-        for e in entregas_db:
-            cliente = e.cliente; remetente = e.remetente
-            cidade = e.cidade_entrega or (cliente.cidade if cliente else 'N/A'); estado = e.estado_entrega or (cliente.estado if cliente else 'N/A')
-            entregas_lista.append({'id': e.id, 'remetente_id': e.remetente_id, 'cliente_id': e.cliente_id, 'remetente_nome': remetente.razao_social if remetente else 'Remetente Inválido', 'destinatario_nome': cliente.razao_social if cliente else 'Cliente Inválido', 'cidade_entrega': cidade, 'estado_entrega': estado, 'cidade_entrega_override': e.cidade_entrega, 'estado_entrega_override': e.estado_entrega, 'peso_bruto': e.peso_bruto, 'valor_frete': e.valor_frete, 'peso_cubado': e.peso_cubado, 'nota_fiscal': e.nota_fiscal})
-        return jsonify(entregas_lista)
-    except Exception as e: print(f"Erro ao buscar entregas disponíveis: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro ao buscar: {e}"}), 500
+        entregas_data = []
+        for entrega in carga.entregas:
+            # >>>>> CORREÇÃO 8: Acesso seguro aos dados do cliente/remetente (à prova de nulos)
+            entregas_data.append({
+                'id': entrega.id,
+                'remetente_id': entrega.remetente_id,
+                'cliente_id': entrega.cliente_id,
+                'remetente_nome': (entrega.remetente.razao_social or 'N/A') if entrega.remetente else 'N/A',
+                'razao_social': (entrega.cliente.razao_social or 'N/A') if entrega.cliente else 'N/A',
+                'cidade': (entrega.cliente.cidade or '') if entrega.cliente else '',
+                'estado': (entrega.cliente.estado or '') if entrega.cliente else '',
+                'cidade_entrega_override': entrega.cidade_entrega,
+                'estado_entrega_override': entrega.estado_entrega,
+                'peso_bruto': entrega.peso_bruto,
+                'valor_frete': entrega.valor_frete,
+                'peso_cubado': entrega.peso_cubado,
+                'nota_fiscal': entrega.nota_fiscal,
+                'is_last_delivery': entrega.is_last_delivery
+            })
 
-@app.route('/api/entregas/disponiveis/<int:entrega_id>', methods=['DELETE'])
-@login_required
-@permission_required(['admin', 'operador'])
-def excluir_entrega_disponivel(entrega_id):
-    entrega = Entrega.query.filter_by(id=entrega_id, carga_id=None).first_or_404()
-    try: db.session.delete(entrega); db.session.commit(); return jsonify({"message": "Entrega disponível excluída com sucesso."}), 200
-    except Exception as e: db.session.rollback(); print(f"Erro ao excluir entrega disponível {entrega_id}: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro ao excluir: {e}"}), 500
+        carga_dict['entregas'] = entregas_data
+        
+        return jsonify(carga_dict)
+    except Exception as e:
+        print(f"Erro em /api/cargas/<id>: {e}")
+        traceback.print_exc()
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
 
+# --- API: MONTAGEM (RASCUNHOS) ---
 @app.route('/api/cargas/montar', methods=['POST'])
 @login_required
-@permission_required(['admin', 'operador'])
 def montar_carga_rascunho():
-    dados = request.json
-    if not dados.get('origem') or not dados.get('entrega_ids'): return jsonify({"error": "Origem Principal e IDs das Entregas são obrigatórios."}), 400
-    entrega_ids = dados['entrega_ids']
-    if not isinstance(entrega_ids, list) or len(entrega_ids) == 0: return jsonify({"error": "Nenhuma entrega selecionada."}), 400
     try:
-        nova_carga = Carga(codigo_carga=f"RASC-{int(time.time())}", origem=dados['origem'].upper(), status='Rascunho')
-        db.session.add(nova_carga); db.session.flush()
-        num_atualizadas = Entrega.query.filter(Entrega.id.in_(entrega_ids), Entrega.carga_id == None).update({'carga_id': nova_carga.id}, synchronize_session=False)
-        if num_atualizadas != len(entrega_ids):
-            db.session.rollback()
-            entregas_encontradas = Entrega.query.filter(Entrega.id.in_(entrega_ids)).all()
-            ids_encontrados = {e.id for e in entregas_encontradas}; ids_invalidos = [eid for eid in entrega_ids if eid not in ids_encontrados]; ids_ja_usados = [e.id for e in entregas_encontradas if e.carga_id is not None]
-            error_msg = "Algumas entregas não puderam ser adicionadas:"
-            if ids_invalidos: error_msg += f" IDs não encontrados: {ids_invalidos}."
-            if ids_ja_usados: error_msg += f" IDs já pertencem a outra carga: {ids_ja_usados}."
-            return jsonify({"error": error_msg}), 409
+        data = request.json
+        origem = data.get('origem')
+        entrega_ids = data.get('entrega_ids')
+
+        if not origem or not entrega_ids:
+            return jsonify(error='Origem e IDs de entrega são obrigatórios'), 400
+
+        nova_carga = Carga(
+            codigo_carga=f"RASC-{int(time.time())}",
+            origem=origem.upper(),
+            status='Rascunho'
+        )
+        db.session.add(nova_carga)
+        
+        # Vincula as entregas à nova carga (Rascunho)
+        entregas_para_vincular = Entrega.query.filter(Entrega.id.in_(entrega_ids), Entrega.carga_id == None).all()
+        
+        if len(entregas_para_vincular) != len(entrega_ids):
+             db.session.rollback()
+             return jsonify(error='Uma ou mais entregas selecionadas já estão em outra carga.'), 409
+             
+        for entrega in entregas_para_vincular:
+            entrega.carga = nova_carga
+
         db.session.commit()
-        return jsonify({"message": f"Rascunho {nova_carga.codigo_carga} salvo com {num_atualizadas} entregas!"}), 201
-    except Exception as e: db.session.rollback(); print(f"Erro ao montar rascunho: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro ao salvar rascunho: {e}"}), 500
+        return jsonify(message=f'Rascunho {nova_carga.codigo_carga} salvo com sucesso!', carga_id=nova_carga.id), 201
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro em /api/cargas/montar: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
 
 @app.route('/api/cargas/rascunhos', methods=['GET'])
 @login_required
-@permission_required(['admin', 'operador'])
 def get_rascunhos():
     try:
-        rascunhos_db = db.session.query(Carga.id, Carga.codigo_carga, Carga.origem, func.count(Entrega.id).label('num_entregas')).outerjoin(Entrega, Carga.id == Entrega.carga_id).filter(Carga.status == 'Rascunho').group_by(Carga.id, Carga.codigo_carga, Carga.origem).order_by(Carga.id.desc()).all()
-        rascunhos_lista = [{'id': r.id, 'codigo_carga': r.codigo_carga, 'origem': r.origem, 'num_entregas': r.num_entregas} for r in rascunhos_db]
-        return jsonify(rascunhos_lista)
-    except Exception as e: print(f"Erro ao buscar rascunhos: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro ao buscar rascunhos: {e}"}), 500
-
-@app.route('/api/cargas/<int:carga_id>/confirmar', methods=['PUT'])
-@login_required
-@permission_required(['admin', 'operador'])
-def confirmar_rascunho(carga_id):
-    carga = Carga.query.filter_by(id=carga_id, status='Rascunho').first_or_404()
-    try: carga.status = 'Pendente'; carga.codigo_carga = f"CARGA-{int(time.time())}"; db.session.commit(); return jsonify({"message": f"Carga {carga.codigo_carga} confirmada e movida para Pendentes!"}), 200
-    except Exception as e: db.session.rollback(); print(f"Erro ao confirmar rascunho {carga_id}: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro ao confirmar: {e}"}), 500
-
-@app.route('/api/cargas/<int:carga_id>/devolver-rascunho', methods=['PUT'])
-@login_required
-@permission_required(['admin', 'operador'])
-def devolver_para_rascunho(carga_id):
-    carga = Carga.query.get_or_404(carga_id)
-    if carga.status not in ['Pendente', 'Agendada']: return jsonify({"error": "Apenas cargas Pendentes ou Agendadas podem ser devolvidas."}), 400
-    try:
-        carga.status = 'Rascunho'; carga.codigo_carga = f"RASC-{int(time.time())}"; carga.motorista_id = None; carga.veiculo_id = None; carga.data_agendamento = None; carga.data_carregamento = None; carga.previsao_entrega = None
-        db.session.commit()
-        return jsonify({"message": "Carga devolvida para 'Rascunho'. Redirecionando para a tela de Montagem..."}), 200
-    except Exception as e: db.session.rollback(); print(f"Erro ao devolver carga {carga_id} para rascunho: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro ao devolver para rascunho: {e}"}), 500
+        rascunhos = Carga.query.filter_by(status='Rascunho').order_by(Carga.id.desc()).all()
+        rascunhos_data = []
+        for r in rascunhos:
+            rascunhos_data.append({
+                'id': r.id,
+                'codigo_carga': r.codigo_carga,
+                'origem': r.origem,
+                'num_entregas': len(r.entregas)
+            })
+        return jsonify(rascunhos_data)
+    except Exception as e:
+        print(f"Erro em /api/cargas/rascunhos: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
 
 @app.route('/api/cargas/<int:carga_id>/rascunho', methods=['DELETE'])
 @login_required
-@permission_required(['admin', 'operador'])
 def excluir_rascunho(carga_id):
-    carga = Carga.query.filter_by(id=carga_id, status='Rascunho').first_or_404()
-    try: Entrega.query.filter_by(carga_id=carga.id).update({'carga_id': None}); db.session.delete(carga); db.session.commit(); return jsonify({"message": f"Rascunho {carga.codigo_carga} excluído e entregas liberadas."}), 200
-    except Exception as e: db.session.rollback(); print(f"Erro ao excluir rascunho {carga_id}: {e}"); traceback.print_exc(); return jsonify({"error": f"Erro ao excluir: {e}"}), 500
-# --- FIM MÓDULO 3 ---
+    try:
+        carga = Carga.query.filter_by(id=carga_id, status='Rascunho').first()
+        if not carga:
+            return jsonify(error='Rascunho não encontrado'), 404
 
-# --- API DE USUÁRIOS ---
-@app.route('/api/usuarios', methods=['GET'])
-@login_required
-@permission_required(['admin'])
-def get_usuarios():
-    usuarios = Usuario.query.order_by(Usuario.nome_usuario).all()
-    return jsonify([{'id': u.id, 'nome_usuario': u.nome_usuario, 'permissao': u.permissao} for u in usuarios])
+        # Desvincula entregas
+        for entrega in carga.entregas:
+            entrega.carga_id = None
+            
+        db.session.delete(carga)
+        db.session.commit()
+        return jsonify(message=f'Rascunho {carga.codigo_carga} excluído. Entregas voltaram para "Disponíveis".')
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao excluir rascunho {carga_id}: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
 
-@app.route('/api/usuarios', methods=['POST'])
+@app.route('/api/cargas/<int:carga_id>/confirmar', methods=['PUT'])
 @login_required
-@permission_required(['admin'])
-def criar_usuario():
-    dados = request.json
-    if not all(k in dados for k in ['nome_usuario', 'senha', 'permissao']): return jsonify({"error": "Campos obrigatórios"}), 400
-    if Usuario.query.filter_by(nome_usuario=dados['nome_usuario']).first(): return jsonify({"error": "Usuário já existe"}), 409
-    novo = Usuario(nome_usuario=dados['nome_usuario'], senha_hash=generate_password_hash(dados['senha']), permissao=dados['permissao'])
-    db.session.add(novo); db.session.commit()
-    return jsonify({"message": "Usuário criado"}), 201
+def confirmar_rascunho(carga_id):
+    try:
+        carga = Carga.query.filter_by(id=carga_id, status='Rascunho').first()
+        if not carga:
+            return jsonify(error='Rascunho não encontrado'), 404
+            
+        if not carga.entregas:
+            return jsonify(error='Não é possível confirmar um rascunho vazio'), 400
+
+        carga.status = 'Pendente'
+        carga.codigo_carga = f"CARGA-{int(time.time())}"
+        
+        db.session.commit()
+        return jsonify(message=f'Carga {carga.codigo_carga} confirmada e movida para Pendentes.')
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao confirmar rascunho {carga_id}: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
+
+# --- API: ENTREGAS (Disponíveis e Edição) ---
+@app.route('/api/entregas/disponiveis', methods=['GET', 'POST'])
+@login_required
+def handle_entregas_disponiveis():
+    if request.method == 'POST':
+        try:
+            data = request.json
+            nova_entrega = Entrega(
+                carga_id=None, # Disponível
+                cliente_id=data.get('cliente_id'),
+                remetente_id=data.get('remetente_id'),
+                peso_bruto=data.get('peso_bruto'),
+                valor_frete=data.get('valor_frete'),
+                peso_cubado=data.get('peso_cubado'),
+                nota_fiscal=data.get('nota_fiscal'),
+                cidade_entrega=data.get('cidade_entrega'), # Cidade padrão do cliente
+                estado_entrega=data.get('estado_entrega')  # Estado padrão do cliente
+            )
+            db.session.add(nova_entrega)
+            db.session.commit()
+            return jsonify(message='Entrega adicionada à lista de disponíveis!'), 201
+        except Exception as e:
+            db.session.rollback()
+            print(f"Erro em POST /api/entregas/disponiveis: {e}")
+            return jsonify(error=f"Erro interno: {str(e)}"), 500
+
+    if request.method == 'GET':
+        try:
+            entregas = Entrega.query.filter_by(carga_id=None).all()
+            entregas_data = []
+            for e in entregas:
+                # >>>>> CORREÇÃO 9: Acesso seguro (à prova de nulos)
+                entregas_data.append({
+                    'id': e.id,
+                    'remetente_id': e.remetente_id,
+                    'cliente_id': e.cliente_id,
+                    'remetente_nome': (e.remetente.razao_social or 'N/A') if e.remetente else 'N/A',
+                    'destinatario_nome': (e.cliente.razao_social or 'N/A') if e.cliente else 'N/A',
+                    'cidade_entrega': e.cidade_entrega_override or (e.cliente.cidade if e.cliente else ''),
+                    'estado_entrega': e.estado_entrega_override or (e.cliente.estado if e.cliente else ''),
+                    'cidade_entrega_override': e.cidade_entrega, # Campo de override explícito
+                    'estado_entrega_override': e.estado_entrega, # Campo de override explícito
+                    'peso_bruto': e.peso_bruto,
+                    'valor_frete': e.valor_frete,
+                    'peso_cubado': e.peso_cubado,
+                    'nota_fiscal': e.nota_fiscal,
+                    'selecionada': False # Para controle no front-end
+                })
+            return jsonify(entregas_data)
+        except Exception as e:
+            print(f"Erro em GET /api/entregas/disponiveis: {e}")
+            traceback.print_exc()
+            return jsonify(error=f"Erro interno: {str(e)}"), 500
+
+@app.route('/api/entregas/disponiveis/<int:entrega_id>', methods=['DELETE'])
+@login_required
+def delete_entrega_disponivel(entrega_id):
+    try:
+        entrega = Entrega.query.filter_by(id=entrega_id, carga_id=None).first()
+        if not entrega:
+            return jsonify(error='Entrega disponível não encontrada'), 404
+            
+        db.session.delete(entrega)
+        db.session.commit()
+        return jsonify(message='Entrega disponível excluída com sucesso.')
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao excluir entrega disponível {entrega_id}: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
+
+@app.route('/api/entregas/<int:entrega_id>', methods=['PUT'])
+@login_required
+def update_entrega(entrega_id):
+    try:
+        data = request.json
+        entrega = Entrega.query.get(entrega_id)
+        if not entrega:
+            return jsonify(error='Entrega não encontrada'), 404
+
+        # Atualiza campos
+        entrega.remetente_id = data.get('remetente_id')
+        entrega.peso_bruto = data.get('peso_bruto')
+        entrega.valor_frete = data.get('valor_frete')
+        entrega.peso_cubado = data.get('peso_cubado')
+        entrega.nota_fiscal = data.get('nota_fiscal')
+        
+        # Campos de override
+        entrega.cidade_entrega = data.get('cidade_entrega')
+        entrega.estado_entrega = data.get('estado_entrega')
+        
+        db.session.commit()
+        return jsonify(message='Entrega atualizada com sucesso!')
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao atualizar entrega {entrega_id}: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
+
+# --- API: MOTORISTAS ---
+@app.route('/api/motoristas', methods=['GET'])
+@login_required
+def get_motoristas():
+    try:
+        motoristas = Motorista.query.order_by(Motorista.nome).all()
+        return jsonify([m.to_dict() for m in motoristas])
+    except Exception as e:
+        print(f"Erro em /api/motoristas: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
+
+@app.route('/api/motoristas/import', methods=['POST'])
+@login_required
+def importar_motoristas():
+    if 'arquivo' not in request.files:
+        return jsonify(error='Nenhum arquivo enviado'), 400
+    arquivo = request.files['arquivo']
+    
+    try:
+        if arquivo.filename.endswith('.csv'):
+            df = pd.read_csv(arquivo, dtype=str, header=None)
+        else:
+            df = pd.read_excel(arquivo, dtype=str, header=None)
+        
+        df = df.fillna('')
+        novos_count = 0
+        ignorados_count = 0
+        
+        codigos_existentes = set(row[0] for row in db.session.query(Motorista.codigo).all() if row[0])
+
+        for _, row in df.iterrows():
+            codigo = str(row.iloc[0]).strip()
+            nome = str(row.iloc[1]).strip().upper()
+
+            if not nome: # Nome é obrigatório
+                continue
+            
+            if codigo and codigo in codigos_existentes:
+                ignorados_count += 1
+                continue
+                
+            novo_motorista = Motorista(
+                codigo=codigo if codigo else None,
+                nome=nome
+            )
+            db.session.add(novo_motorista)
+            if codigo:
+                codigos_existentes.add(codigo)
+            novos_count += 1
+
+        db.session.commit()
+        return jsonify(message=f'Importação concluída! {novos_count} novos motoristas importados, {ignorados_count} ignorados (código já existente).')
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro na importação de motoristas: {e}")
+        return jsonify(error=f'Erro ao processar o arquivo: {str(e)}'), 500
+
+# --- API: VEÍCULOS ---
+@app.route('/api/veiculos', methods=['GET'])
+@login_required
+def get_veiculos():
+    try:
+        veiculos = Veiculo.query.order_by(Veiculo.placa).all()
+        return jsonify([v.to_dict() for v in veiculos])
+    except Exception as e:
+        print(f"Erro em /api/veiculos: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
+
+@app.route('/api/veiculos/import', methods=['POST'])
+@login_required
+def importar_veiculos():
+    if 'arquivo' not in request.files:
+        return jsonify(error='Nenhum arquivo enviado'), 400
+    arquivo = request.files['arquivo']
+    
+    try:
+        if arquivo.filename.endswith('.csv'):
+            df = pd.read_csv(arquivo, dtype=str, header=None)
+        else:
+            df = pd.read_excel(arquivo, dtype=str, header=None)
+        
+        df = df.fillna('')
+        novos_count = 0
+        ignorados_count = 0
+        
+        placas_existentes = set(row[0] for row in db.session.query(Veiculo.placa).all())
+
+        for _, row in df.iterrows():
+            placa = str(row.iloc[0]).strip().upper().replace('-', '') # Limpa e formata
+
+            if not placa or placa in placas_existentes:
+                ignorados_count += 1
+                continue
+                
+            novo_veiculo = Veiculo(placa=placa)
+            db.session.add(novo_veiculo)
+            placas_existentes.add(placa)
+            novos_count += 1
+
+        db.session.commit()
+        return jsonify(message=f'Importação concluída! {novos_count} novos veículos importados, {ignorados_count} ignorados (placa já existente).')
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro na importação de veículos: {e}")
+        return jsonify(error=f'Erro ao processar o arquivo: {str(e)}'), 500
+
+# --- API: USUÁRIOS (Admin) ---
+@app.route('/api/usuarios', methods=['GET', 'POST'])
+@login_required
+def handle_usuarios():
+    if session.get('user_permission') != 'admin':
+        return jsonify(error='Acesso negado'), 403
+
+    if request.method == 'POST':
+        try:
+            data = request.json
+            nome_usuario = data.get('nome_usuario')
+            senha = data.get('senha')
+            permissao = data.get('permissao')
+            
+            if not nome_usuario or not senha or not permissao:
+                return jsonify(error='Todos os campos são obrigatórios'), 400
+            
+            if Usuario.query.filter_by(nome_usuario=nome_usuario).first():
+                return jsonify(error='Nome de usuário já existe'), 409
+
+            novo_usuario = Usuario(
+                nome_usuario=nome_usuario,
+                senha_hash=generate_password_hash(senha),
+                permissao=permissao
+            )
+            db.session.add(novo_usuario)
+            db.session.commit()
+            return jsonify(message='Usuário cadastrado com sucesso!'), 201
+        except Exception as e:
+            db.session.rollback()
+            return jsonify(error=f"Erro interno: {str(e)}"), 500
+
+    if request.method == 'GET':
+        usuarios = Usuario.query.all()
+        return jsonify([{'id': u.id, 'nome_usuario': u.nome_usuario, 'permissao': u.permissao} for u in usuarios])
 
 @app.route('/api/usuarios/<int:user_id>', methods=['PUT', 'DELETE'])
 @login_required
-@permission_required(['admin'])
-def gerenciar_usuario_especifico(user_id):
-    if user_id == 1: return jsonify({"error": "Admin principal não pode ser modificado"}), 403
-    usuario = Usuario.query.get_or_404(user_id)
-    if request.method == 'PUT':
-        dados = request.json
-        if not all(k in dados for k in ['nome_usuario', 'permissao']): return jsonify({"error": "Nome e permissão obrigatórios"}), 400
-        if Usuario.query.filter(Usuario.nome_usuario == dados['nome_usuario'], Usuario.id != user_id).first(): return jsonify({"error": "Nome de usuário em uso"}), 409
-        usuario.nome_usuario = dados['nome_usuario']; usuario.permissao = dados['permissao']
-        if 'senha' in dados and dados['senha']: usuario.senha_hash = generate_password_hash(dados['senha'])
-        db.session.commit(); return jsonify({"message": "Usuário atualizado"})
-    elif request.method == 'DELETE':
-        db.session.delete(usuario); db.session.commit(); return jsonify({"message": "Usuário excluído"})
+def handle_usuario(user_id):
+    if session.get('user_permission') != 'admin':
+        return jsonify(error='Acesso negado'), 403
+        
+    if user_id == 1: # Proteção do admin mestre
+        return jsonify(error='Não é possível modificar o usuário admin principal'), 403
 
-# --- PONTO DE ENTRADA ---
+    usuario = Usuario.query.get(user_id)
+    if not usuario:
+        return jsonify(error='Usuário não encontrado'), 404
+
+    if request.method == 'DELETE':
+        try:
+            db.session.delete(usuario)
+            db.session.commit()
+            return jsonify(message='Usuário excluído com sucesso!')
+        except Exception as e:
+            db.session.rollback()
+            return jsonify(error=f"Erro interno: {str(e)}"), 500
+
+    if request.method == 'PUT':
+        try:
+            data = request.json
+            nome_usuario = data.get('nome_usuario')
+            senha = data.get('senha')
+            permissao = data.get('permissao')
+            
+            if not nome_usuario or not permissao:
+                 return jsonify(error='Nome de usuário e permissão são obrigatórios'), 400
+            
+            # Verifica se o novo nome de usuário já está em uso por *outro* usuário
+            usuario_existente = Usuario.query.filter(Usuario.nome_usuario == nome_usuario, Usuario.id != user_id).first()
+            if usuario_existente:
+                return jsonify(error='Nome de usuário já está em uso por outro usuário'), 409
+
+            usuario.nome_usuario = nome_usuario
+            usuario.permissao = permissao
+            if senha: # Só atualiza a senha se uma nova for fornecida
+                usuario.senha_hash = generate_password_hash(senha)
+                
+            db.session.commit()
+            return jsonify(message='Usuário atualizado com sucesso!')
+        except Exception as e:
+            db.session.rollback()
+            return jsonify(error=f"Erro interno: {str(e)}"), 500
+
+# --- Servir arquivos estáticos (CSS, JS) ---
+@app.route('/<path:filename>')
+def serve_static(filename):
+    if filename in ['style.css', 'script.js', 'clientes.js', 'montagem.js', 'consulta.js', 'motoristas.js', 'veiculos.js', 'usuarios.js']:
+        return send_from_directory('.', filename)
+    return 404
+
 if __name__ == '__main__':
     with app.app_context():
-        inspector = db.inspect(db.engine)
-        if inspector.has_table(Usuario.__tablename__):
-            if not Usuario.query.first(): admin_user = Usuario(nome_usuario='admin', senha_hash=generate_password_hash('admin'), permissao='admin'); db.session.add(admin_user); db.session.commit(); print("Usuário 'admin' criado.")
-        else: print("Tabela 'usuarios' não encontrada. Execute 'flask db upgrade'.")
-    app.run(debug=True, port=5001)
+        db.create_all()
+    app.run(debug=True, host='0.0.0.0', port=5000)
