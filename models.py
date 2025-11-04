@@ -1,5 +1,5 @@
 #
-# models.py (ATUALIZADO PARA V2 - CORRIGINDO ERROS 500)
+# models.py (VERSÃO 3 - CORRIGINDO AMBIGUIDADE DE RELAÇÃO)
 #
 from database import db
 
@@ -12,14 +12,12 @@ class Motorista(db.Model):
     # Relação com Carga
     cargas = db.relationship('Carga', back_populates='motorista_rel', lazy=True)
 
-    # <<< CORREÇÃO ADICIONADA AQUI >>>
     def to_dict(self):
         """Converte o objeto Motorista para um dicionário (JSON)."""
         return {
             'id': self.id,
             'codigo': self.codigo,
             'nome': self.nome,
-            # 'text' é usado pelo Select2 no frontend
             'text': f"{(self.codigo or '')} - {(self.nome or '').upper()}"
         }
 
@@ -31,13 +29,11 @@ class Veiculo(db.Model):
     # Relação com Carga
     cargas = db.relationship('Carga', back_populates='veiculo_rel', lazy=True)
 
-    # <<< CORREÇÃO ADICIONADA AQUI >>>
     def to_dict(self):
         """Converte o objeto Veiculo para um dicionário (JSON)."""
         return {
             'id': self.id,
             'placa': self.placa,
-            # 'text' é usado pelo Select2 no frontend
             'text': (self.placa or '').upper()
         }
 
@@ -51,18 +47,17 @@ class Cliente(db.Model):
     cidade = db.Column(db.String)
     estado = db.Column(db.String)
     observacoes = db.Column(db.String)
-    
-    # --- LINHA NOVA ADICIONADA ---
     is_remetente = db.Column(db.Boolean, default=False, nullable=False)
-    # --- FIM DA LINHA NOVA ---
     
     # Relação como Destinatário
+    # AQUI ESTÁ CORRETO: Especifica qual chave estrangeira 'Entrega' usa
     entregas_como_destinatario = db.relationship('Entrega', 
                                                  foreign_keys='Entrega.cliente_id', 
                                                  back_populates='cliente',
                                                  lazy=True)
     
     # Relação como Remetente
+    # AQUI ESTÁ CORRETO: Especifica qual chave estrangeira 'Entrega' usa
     entregas_como_remetente = db.relationship('Entrega', 
                                                foreign_keys='Entrega.remetente_id', 
                                                back_populates='remetente',
@@ -96,7 +91,6 @@ class Carga(db.Model):
                                cascade="all, delete-orphan", 
                                foreign_keys='Entrega.carga_id')
                                
-    # <<< CORREÇÃO ADICIONADA AQUI >>>
     def to_dict(self):
         """Converte o objeto Carga para um dicionário (JSON)."""
         return {
@@ -135,16 +129,15 @@ class Entrega(db.Model):
     carga = db.relationship('Carga', foreign_keys='Entrega.carga_id', back_populates='entregas')
 
     # Relação com o Destinatário
+    # <<< CORREÇÃO APLICADA AQUI: Removemos 'foreign_keys' >>>
     cliente = db.relationship('Cliente', 
-                          foreign_keys='Entrega.cliente_id', 
                           back_populates='entregas_como_destinatario')
 
     # Relação com o Remetente
+    # <<< CORREÇÃO APLICADA AQUI: Removemos 'foreign_keys' >>>
     remetente = db.relationship('Cliente', 
-                            foreign_keys='Entrega.remetente_id', 
                             back_populates='entregas_como_remetente')
 
-    # <<< CORREÇÃO ADICIONADA AQUI >>>
     def to_dict(self):
         """Converte o objeto Entrega para um dicionário (JSON)."""
         return {
