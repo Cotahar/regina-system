@@ -1,5 +1,5 @@
 #
-# models.py (ATUALIZADO PARA V2 - CORRIGINDO WARNINGS)
+# models.py (ATUALIZADO PARA V2 - CORRIGINDO ERROS 500)
 #
 from database import db
 
@@ -12,6 +12,17 @@ class Motorista(db.Model):
     # Relação com Carga
     cargas = db.relationship('Carga', back_populates='motorista_rel', lazy=True)
 
+    # <<< CORREÇÃO ADICIONADA AQUI >>>
+    def to_dict(self):
+        """Converte o objeto Motorista para um dicionário (JSON)."""
+        return {
+            'id': self.id,
+            'codigo': self.codigo,
+            'nome': self.nome,
+            # 'text' é usado pelo Select2 no frontend
+            'text': f"{(self.codigo or '')} - {(self.nome or '').upper()}"
+        }
+
 # MÓDULO 1: Novo modelo de Veículo
 class Veiculo(db.Model):
     __tablename__ = 'veiculos'
@@ -19,6 +30,16 @@ class Veiculo(db.Model):
     placa = db.Column(db.String, unique=True, nullable=False) 
     # Relação com Carga
     cargas = db.relationship('Carga', back_populates='veiculo_rel', lazy=True)
+
+    # <<< CORREÇÃO ADICIONADA AQUI >>>
+    def to_dict(self):
+        """Converte o objeto Veiculo para um dicionário (JSON)."""
+        return {
+            'id': self.id,
+            'placa': self.placa,
+            # 'text' é usado pelo Select2 no frontend
+            'text': (self.placa or '').upper()
+        }
 
 class Cliente(db.Model):
     __tablename__ = 'clientes'
@@ -74,6 +95,25 @@ class Carga(db.Model):
                                lazy=True, 
                                cascade="all, delete-orphan", 
                                foreign_keys='Entrega.carga_id')
+                               
+    # <<< CORREÇÃO ADICIONADA AQUI >>>
+    def to_dict(self):
+        """Converte o objeto Carga para um dicionário (JSON)."""
+        return {
+            'id': self.id,
+            'codigo_carga': self.codigo_carga,
+            'origem': self.origem,
+            'status': self.status,
+            'motorista_id': self.motorista_id,
+            'veiculo_id': self.veiculo_id,
+            'frete_pago': self.frete_pago,
+            'data_agendamento': self.data_agendamento,
+            'data_carregamento': self.data_carregamento,
+            'previsao_entrega': self.previsao_entrega,
+            'observacoes': self.observacoes,
+            'data_finalizacao': self.data_finalizacao
+        }
+
 
 class Entrega(db.Model):
     __tablename__ = 'entregas'
@@ -87,8 +127,8 @@ class Entrega(db.Model):
     valor_frete = db.Column(db.Float)
     peso_cubado = db.Column(db.Float, nullable=True)
     nota_fiscal = db.Column(db.String, nullable=True)
-    cidade_entrega = db.Column(db.String, nullable=True)
-    estado_entrega = db.Column(db.String, nullable=True)
+    cidade_entrega = db.Column(db.String, nullable=True) # Override
+    estado_entrega = db.Column(db.String, nullable=True) # Override
     is_last_delivery = db.Column(db.Integer, default=0) 
 
     # Relação com Carga
@@ -103,6 +143,23 @@ class Entrega(db.Model):
     remetente = db.relationship('Cliente', 
                             foreign_keys='Entrega.remetente_id', 
                             back_populates='entregas_como_remetente')
+
+    # <<< CORREÇÃO ADICIONADA AQUI >>>
+    def to_dict(self):
+        """Converte o objeto Entrega para um dicionário (JSON)."""
+        return {
+            'id': self.id,
+            'carga_id': self.carga_id,
+            'cliente_id': self.cliente_id,
+            'remetente_id': self.remetente_id,
+            'peso_bruto': self.peso_bruto,
+            'valor_frete': self.valor_frete,
+            'peso_cubado': self.peso_cubado,
+            'nota_fiscal': self.nota_fiscal,
+            'cidade_entrega': self.cidade_entrega,
+            'estado_entrega': self.estado_entrega,
+            'is_last_delivery': self.is_last_delivery
+        }
 
 class Usuario(db.Model):
     __tablename__ = 'usuarios'
