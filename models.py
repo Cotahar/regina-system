@@ -92,17 +92,17 @@ class Entrega(db.Model):
     is_last_delivery = db.Column(db.Integer, default=0) 
 
     # Relação com Carga
-    carga = db.relationship('Carga', foreign_keys=[carga_id], back_populates='entregas')
+    carga = db.relationship('Carga', foreign_keys='Entrega.carga_id', back_populates='entregas')
 
     # Relação com o Destinatário
     cliente = db.relationship('Cliente', 
-                              foreign_keys=[cliente_id], 
-                              back_populates='entregas_como_destinatario')
+                          foreign_keys='Entrega.cliente_id', 
+                          back_populates='entregas_como_destinatario')
 
     # Relação com o Remetente
     remetente = db.relationship('Cliente', 
-                                foreign_keys=[remetente_id], 
-                                back_populates='entregas_como_remetente')
+                            foreign_keys='Entrega.remetente_id', 
+                            back_populates='entregas_como_remetente')
 
 class Usuario(db.Model):
     __tablename__ = 'usuarios'
