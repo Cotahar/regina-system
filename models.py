@@ -81,7 +81,7 @@ class Entrega(db.Model):
     
     carga_id = db.Column(db.Integer, db.ForeignKey('cargas.id'), nullable=True) 
     cliente_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=False) # Destinatário
-    remetente_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=False) # Remetente
+    remetente_id = db.Column(db.Integer, db.ForeignKey('clientes.id'), nullable=True) # Remetente
     
     peso_bruto = db.Column(db.Float)
     valor_frete = db.Column(db.Float)

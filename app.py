@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from sqlalchemy.orm import joinedload
 
-from sqlalchemy import func 
+
 import traceback
 from dotenv import load_dotenv # 
 
