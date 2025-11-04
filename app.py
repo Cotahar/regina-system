@@ -1,4 +1,4 @@
-# app.py CORRIGIDO (À PROVA DE NULOS)
+# app.py CORRIGIDO (V7.2 - CORREÇÃO DE INDENTAÇÃO)
 
 import time
 import pandas as pd
@@ -304,7 +304,7 @@ def handle_cargas():
         try:
             status_filter = request.args.get('status')
             
-            # >>>>> CORREÇÃO 3: Query simplificada para evitar crash
+            # Filtra para não mostrar Rascunhos nem Finalizadas no painel
             base_query = Carga.query.filter(Carga.status != 'Rascunho', Carga.status != 'Finalizada')
 
             if status_filter:
@@ -313,7 +313,10 @@ def handle_cargas():
             cargas = base_query.order_by(Carga.data_carregamento.desc()).all()
             
             cargas_data = []
-for carga in cargas:
+            
+            # ***** INÍCIO DA CORREÇÃO DE INDENTAÇÃO *****
+            # Este bloco 'for' agora está DENTRO do 'try'
+            for carga in cargas:
                 carga_dict = carga.to_dict()
                 
                 # Dados das relações (acesso seguro)
@@ -349,8 +352,10 @@ for carga in cargas:
                 carga_dict['peso_total'] = peso_total_carga 
                 
                 cargas_data.append(carga_dict)
+            # ***** FIM DA CORREÇÃO DE INDENTAÇÃO *****
                 
             return jsonify(cargas_data)
+        
         except Exception as e:
             print(f"Erro em GET /api/cargas: {e}")
             traceback.print_exc() # Imprime o stack trace completo no log do servidor
@@ -872,6 +877,7 @@ def handle_usuario(user_id):
 def serve_static(filename):
     if filename in ['style.css', 'script.js', 'clientes.js', 'montagem.js', 'consulta.js', 'motoristas.js', 'veiculos.js', 'usuarios.js']:
         return send_from_directory('.', filename)
+    # Correção do bug do favicon.ico
     return "Arquivo não encontrado", 404
 
 if __name__ == '__main__':
