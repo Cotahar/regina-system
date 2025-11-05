@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${cliente.razao_social || 'N/A'}</td>
                         <td>${cliente.cidade || 'N/A'}</td>
                         <td>${cliente.estado || 'N/A'}</td>
-                        <td>(${cliente.ddd || ''}) ${cliente.telefone || ''}</td>
+                        <td>${cliente.telefone_completo || ''}</td>
                         <td><button class="btn-editar">Editar</button></td>`;
                     // **********************************************************
                     tabelaCorpo.appendChild(tr);

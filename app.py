@@ -195,13 +195,13 @@ def importar_clientes():
                 ignorados_count += 1
                 continue
             
-            # Verifica o tamanho da linha (len(row)) antes de tentar ler
+            # --- CORREÇÃO DE MAPEAMENTO APLICADA ---
             razao_social = str(row.iloc[1]).strip().upper() if len(row) > 1 else ''
-            cidade = str(row.iloc[2]).strip().upper() if len(row) > 2 else ''
-            estado = str(row.iloc[3]).strip().upper()[:2] if len(row) > 3 else ''
-            ddd = str(row.iloc[4]).strip()[:2] if len(row) > 4 else ''
-            telefone = str(row.iloc[5]).strip() if len(row) > 5 else ''
-            observacoes = str(row.iloc[6]).strip() if len(row) > 6 else '' # <-- Agora é seguro
+            ddd = str(row.iloc[2]).strip()[:2] if len(row) > 2 else ''             # <-- Correto (C)
+            telefone = str(row.iloc[3]).strip() if len(row) > 3 else ''           # <-- Correto (D)
+            cidade = str(row.iloc[4]).strip().upper() if len(row) > 4 else ''       # <-- Correto (E)
+            estado = str(row.iloc[5]).strip().upper()[:2] if len(row) > 5 else ''   # <-- Correto (F)
+            observacoes = str(row.iloc[6]).strip() if len(row) > 6 else '' # <-- Correto (G, se existir)
 
             # Garante que clientes sem razão social não sejam importados
             if not razao_social:
@@ -259,7 +259,6 @@ def update_cliente(cliente_id):
 @app.route('/api/cargas', methods=['GET', 'POST'])
 @login_required
 def handle_cargas():
-    # --- POST (Criação da Carga Rápida V1) ---
 # --- POST (Criação de Carga V2 - Pendente) ---
     if request.method == 'POST':
         try:
@@ -313,6 +312,7 @@ def handle_cargas():
             
             # ***** INÍCIO DA CORREÇÃO DE INDENTAÇÃO *****
             # Este bloco 'for' agora está DENTRO do 'try'
+            # Este bloco 'for' agora está DENTRO do 'try'
             for carga in cargas:
                 carga_dict = carga.to_dict()
                 
@@ -324,28 +324,41 @@ def handle_cargas():
                 carga_dict['entregas'] = [e.to_dict() for e in carga.entregas]
                 carga_dict['num_entregas'] = len(carga.entregas)
                 
-                # --- CORREÇÃO DE PESO E DESTINO ---
+                # --- CORREÇÃO DE PESO E DESTINO (V2) ---
                 peso_total_carga = 0.0
                 destinos_set = set()
-                
+                destino_principal_str = None # <-- Guarda o destino marcado
+
                 for e in carga.entregas:
                     # 1. Acumula o peso
                     if e.peso_bruto:
                         peso_total_carga += e.peso_bruto
 
-                    # 2. Define destinos
-                    if e.cliente: # Garante que a entrega tem um cliente associado
-                        cidade_str = (e.cliente.cidade or "").upper()
-                        estado_str = (e.cliente.estado or "").upper()
-                        if cidade_str or estado_str:
-                            destinos_set.add(f"{cidade_str}-{estado_str}")
+                    # 2. Define destinos (Priorizando o override)
+                    cidade_final = e.cidade_entrega or (e.cliente.cidade if e.cliente else None)
+                    estado_final = e.estado_entrega or (e.cliente.estado if e.cliente else None)
+
+                    cidade_str = (cidade_final or "").upper()
+                    estado_str = (estado_final or "").upper()
+                    
+                    destino_formatado = None
+                    if cidade_str or estado_str: # Evita adicionar "- " se ambos forem nulos
+                        destino_formatado = f"{cidade_str}-{estado_str}"
+                        destinos_set.add(destino_formatado)
+                    
+                    # 3. Verifica se esta é a entrega principal (marcada com o radio button)
+                    if e.is_last_delivery == 1 and destino_formatado:
+                        destino_principal_str = destino_formatado
                 
                 destinos_list = sorted(list(destinos_set)) 
             
                 carga_dict['destinos'] = destinos_list
-                carga_dict['destino_principal'] = destinos_list[0] if destinos_list else 'N/A'
                 
-                # 3. Adiciona o peso total ao dicionário
+                # 4. Define o destino principal
+                # Se um foi marcado, usa ele. Senão, usa o primeiro da lista alfabética.
+                carga_dict['destino_principal'] = destino_principal_str or (destinos_list[0] if destinos_list else 'N/A')
+                
+                # 5. Adiciona o peso total ao dicionário
                 carga_dict['peso_total'] = peso_total_carga 
                 
                 cargas_data.append(carga_dict)
@@ -624,6 +637,69 @@ def update_carga_status(carga_id):
         db.session.rollback()
         print(f"Erro ao atualizar status da carga {carga_id}: {e}")
         return jsonify(error=f"Erro interno: {str(e)}"), 500
+        
+# --- API: Edição de Entregas (Dentro do Modal de Carga) ---
+@app.route('/api/cargas/<int:carga_id>/entregas', methods=['POST', 'DELETE'])
+@login_required
+def handle_carga_entregas(carga_id):
+    carga = Carga.query.get(carga_id)
+    if not carga:
+        return jsonify(error='Carga não encontrada'), 404
+        
+    # --- Adiciona uma nova entrega (Coleta Rápida V1) ---
+    if request.method == 'POST':
+        try:
+            data = request.json
+            cliente_id = data.get('cliente_id')
+            
+            # Precisamos encontrar o Remetente Padrão (DEPÓSITO)
+            # (A lógica do V1 não envia um remetente)
+            remetente_padrao = Cliente.query.filter_by(is_remetente=True).first()
+            if not remetente_padrao:
+                 return jsonify(error='Nenhum cliente marcado como Remetente foi encontrado. Cadastre um.'), 400
+                 
+            cliente = Cliente.query.get(cliente_id)
+            if not cliente:
+                 return jsonify(error='Cliente (Destinatário) não encontrado.'), 404
+
+            nova_entrega = Entrega(
+                carga_id=carga.id,
+                cliente_id=cliente.id,
+                remetente_id=remetente_padrao.id, # Usa o primeiro remetente encontrado
+                peso_bruto=data.get('peso_bruto'),
+                valor_frete=data.get('valor_frete'),
+                cidade_entrega=cliente.cidade, # Padrão do cliente
+                estado_entrega=cliente.estado # Padrão do cliente
+            )
+            db.session.add(nova_entrega)
+            db.session.commit()
+            return jsonify(message='Entrega rápida adicionada com sucesso!'), 201
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Erro em POST /api/cargas/<id>/entregas: {e}")
+            return jsonify(error=f"Erro interno: {str(e)}"), 500
+
+    # --- Remove uma entrega (Devolve para Disponíveis) ---
+    if request.method == 'DELETE':
+        try:
+            data = request.json
+            entrega_id = data.get('entrega_id')
+            entrega = Entrega.query.get(entrega_id)
+            
+            if not entrega or entrega.carga_id != carga.id:
+                return jsonify(error='Entrega não encontrada nesta carga'), 404
+            
+            # Desvincula a entrega da carga (ela volta para "Disponíveis")
+            entrega.carga_id = None
+            db.session.commit()
+            return jsonify(message='Entrega devolvida para "Disponíveis".')
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Erro em DELETE /api/cargas/<id>/entregas: {e}")
+            return jsonify(error=f"Erro interno: {str(e)}"), 500
+            
 # --- API: ENTREGAS (Disponíveis e Edição) ---
 @app.route('/api/entregas/disponiveis', methods=['GET', 'POST'])
 @login_required
