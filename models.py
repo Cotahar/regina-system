@@ -88,7 +88,7 @@ class Carga(db.Model):
     entregas = db.relationship('Entrega', 
                                back_populates='carga',
                                lazy=True, 
-                               cascade="all, delete-orphan", 
+                               cascade="save-update, merge", 
                                foreign_keys='Entrega.carga_id')
                                
     def to_dict(self):

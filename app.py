@@ -540,6 +540,61 @@ def montar_carga_rascunho():
         print(f"Erro em /api/cargas/montar: {e}")
         return jsonify(error=f"Erro interno: {str(e)}"), 500
 
+@app.route('/api/cargas/<int:carga_id>/montar', methods=['PUT'])
+@login_required
+def update_rascunho(carga_id):
+    try:
+        data = request.json
+        # IDs que o frontend quer que estejam na carga
+        frontend_ids = set(data.get('entrega_ids', []))
+        
+        carga = Carga.query.filter_by(id=carga_id, status='Rascunho').first()
+        if not carga:
+            return jsonify(error='Rascunho não encontrado'), 404
+
+        # IDs que estão atualmente na carga no banco
+        current_ids_in_db = {e.id for e in carga.entregas}
+
+        # 1. Encontra o que precisa ser ADICIONADO
+        ids_to_add = frontend_ids - current_ids_in_db
+        if ids_to_add:
+            # Verifica se as entregas a adicionar estão REALMENTE disponíveis
+            entregas_to_add = Entrega.query.filter(
+                Entrega.id.in_(ids_to_add), 
+                Entrega.carga_id == None
+            ).all()
+
+            # Se a contagem for diferente, alguma entrega foi "roubada" por outra carga
+            if len(entregas_to_add) != len(ids_to_add):
+                db.session.rollback()
+                return jsonify(error='Uma ou mais entregas selecionadas já estão em outra carga. Atualize a lista.'), 409
+            
+            # Adiciona as novas entregas à carga
+            for entrega in entregas_to_add:
+                entrega.carga_id = carga.id
+
+        # 2. Encontra o que precisa ser REMOVIDO
+        ids_to_remove = current_ids_in_db - frontend_ids
+        if ids_to_remove:
+            # Desvincula as entregas removidas (devolve para "Disponíveis")
+            Entrega.query.filter(
+                Entrega.id.in_(ids_to_remove), 
+                Entrega.carga_id == carga.id
+            ).update({'carga_id': None}, synchronize_session=False)
+
+        # 3. Atualiza a origem
+        if 'origem' in data:
+            carga.origem = data.get('origem', carga.origem).upper()
+
+        db.session.commit()
+        return jsonify(message=f'Rascunho {carga.codigo_carga} atualizado com sucesso!', carga_id=carga.id), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro em PUT /api/cargas/<id>/montar: {e}")
+        traceback.print_exc()
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
+
 @app.route('/api/cargas/rascunhos', methods=['GET'])
 @login_required
 def get_rascunhos():
