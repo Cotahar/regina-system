@@ -71,6 +71,35 @@ def get_session():
         user_name=session.get('user_name'),
         user_permission=session.get('user_permission')
     )
+#
+# COLE ESTE NOVO BLOCO DE CÓDIGO (APROX. LINHA 73)
+#
+
+@app.route('/api/verify-password', methods=['POST'])
+@login_required
+def verify_password():
+    try:
+        data = request.json
+        senha_digitada = data.get('password')
+        
+        # Pega o ID do usuário que está logado na sessão
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify(error='Sessão não encontrada'), 401
+            
+        usuario = Usuario.query.get(user_id)
+        if not usuario:
+            return jsonify(error='Usuário não encontrado'), 401
+        
+        # Compara a senha digitada com a senha hasheada no banco
+        if check_password_hash(usuario.senha_hash, senha_digitada):
+            return jsonify(message='Senha correta!'), 200
+        else:
+            return jsonify(error='Senha incorreta'), 401
+            
+    except Exception as e:
+        print(f"Erro em /api/verify-password: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
 
 # --- ROTAS DAS PÁGINAS (HTML) ---
 @app.route('/')
