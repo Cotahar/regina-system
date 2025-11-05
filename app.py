@@ -168,14 +168,14 @@ def get_clientes():
         print(f"Erro em /api/clientes: {e}")
         return jsonify(error=f"Erro interno ao buscar clientes: {str(e)}"), 500
 
-@app.route('/api/clientes', methods=['POST'])
+@app.route('/api/clientes/import', methods=['POST'])
 @login_required
 def importar_clientes():
     if 'arquivo' not in request.files:
         return jsonify(error='Nenhum arquivo enviado'), 400
     arquivo = request.files['arquivo']
     
-    try:
+    try: # <--- O 'try' começa aqui
         if arquivo.filename.endswith('.csv'):
             df = pd.read_csv(arquivo, dtype=str)
         else:
@@ -187,18 +187,26 @@ def importar_clientes():
         
         codigos_existentes = set(row[0] for row in db.session.query(Cliente.codigo_cliente).all())
 
+        # ***** CORREÇÃO DE INDENTAÇÃO APLICADA AQUI *****
+        # Este loop agora está DENTRO do 'try'
         for _, row in df.iterrows():
             codigo = str(row.iloc[0]).strip()
             if not codigo or codigo in codigos_existentes:
                 ignorados_count += 1
                 continue
-                
-            razao_social = str(row.iloc[1]).strip().upper()
-            cidade = str(row.iloc[2]).strip().upper()
-            estado = str(row.iloc[3]).strip().upper()[:2]
-            ddd = str(row.iloc[4]).strip()[:2]
-            telefone = str(row.iloc[5]).strip()
-            observacoes = str(row.iloc[6]).strip()
+            
+            # Verifica o tamanho da linha (len(row)) antes de tentar ler
+            razao_social = str(row.iloc[1]).strip().upper() if len(row) > 1 else ''
+            cidade = str(row.iloc[2]).strip().upper() if len(row) > 2 else ''
+            estado = str(row.iloc[3]).strip().upper()[:2] if len(row) > 3 else ''
+            ddd = str(row.iloc[4]).strip()[:2] if len(row) > 4 else ''
+            telefone = str(row.iloc[5]).strip() if len(row) > 5 else ''
+            observacoes = str(row.iloc[6]).strip() if len(row) > 6 else '' # <-- Agora é seguro
+
+            # Garante que clientes sem razão social não sejam importados
+            if not razao_social:
+                ignorados_count += 1
+                continue
 
             novo_cliente = Cliente(
                 codigo_cliente=codigo,
@@ -217,12 +225,12 @@ def importar_clientes():
         db.session.commit()
         return jsonify(message=f'Importação concluída! {novos_count} novos clientes importados, {ignorados_count} ignorados (código já existente).')
 
-    except Exception as e:
+    except Exception as e: # <--- O 'except' correspondente
         db.session.rollback()
         print(f"Erro na importação de clientes: {e}")
         traceback.print_exc()
         return jsonify(error=f'Erro ao processar o arquivo: {str(e)}'), 500
-
+        
 @app.route('/api/clientes/<int:cliente_id>', methods=['PUT'])
 @login_required
 def update_cliente(cliente_id):
@@ -252,51 +260,40 @@ def update_cliente(cliente_id):
 @login_required
 def handle_cargas():
     # --- POST (Criação da Carga Rápida V1) ---
+# --- POST (Criação de Carga V2 - Pendente) ---
     if request.method == 'POST':
         try:
             data = request.json
-            cliente_id = data.get('cliente_id')
-            peso_bruto = data.get('peso_bruto')
-            
-            # Busca o remetente padrão V1
-            remetente_padrao = Cliente.query.filter_by(codigo_cliente='000-REMETENTE-V1').first()
-            if not remetente_padrao:
-                return jsonify(error="Cliente '000-REMETENTE-V1' não cadastrado. Crie este cliente na tela de Clientes e marque-o como Remetente."), 400
+            origem = data.get('origem')
 
-            cliente = Cliente.query.get(cliente_id)
-            if not cliente:
-                 return jsonify(error="Cliente (Destinatário) não encontrado."), 404
+            if not origem:
+                return jsonify(error="Origem é obrigatória."), 400
 
-            # Cria a Carga (Rascunho)
+            # Cria a nova Carga já como Pendente
             nova_carga = Carga(
-                codigo_carga=f"RASC-{int(time.time())}",
-                origem=remetente_padrao.cidade.upper() if remetente_padrao.cidade else 'ORIGEM V1',
-                status='Rascunho'
+                codigo_carga=f"CARGA-{int(time.time())}",
+                origem=origem.upper(),
+                status='Pendente' 
             )
             db.session.add(nova_carga)
-            db.session.flush() # Pega o ID da Carga antes de commitar
+            db.session.commit() 
 
-            # Cria a Entrega
-            nova_entrega = Entrega(
-                carga_id=nova_carga.id,
-                cliente_id=cliente.id,
-                remetente_id=remetente_padrao.id,
-                peso_bruto=peso_bruto,
-                cidade_entrega=cliente.cidade, # Usa dados do cliente
-                estado_entrega=cliente.estado # Usa dados do cliente
-            )
-            db.session.add(nova_entrega)
+            # O frontend (script.js) espera o objeto da carga de volta
+            # para chamar adicionarCartaoNaTela()
+            carga_dict = nova_carga.to_dict()
+            carga_dict['motorista_nome'] = None
+            carga_dict['placa_veiculo'] = None
+            carga_dict['entregas'] = []
+            carga_dict['num_entregas'] = 0
+            carga_dict['destinos'] = []
+            carga_dict['destino_principal'] = 'N/A'
+            carga_dict['peso_total'] = 0.0
             
-            # Confirma a Carga (Muda status)
-            nova_carga.status = 'Pendente'
-            nova_carga.codigo_carga = f"CARGA-{int(time.time())}"
-            
-            db.session.commit()
-            return jsonify(message=f'Carga {nova_carga.codigo_carga} criada com sucesso!'), 201
+            return jsonify(carga_dict), 201 # Retorna o objeto da carga
 
         except Exception as e:
             db.session.rollback()
-            print(f"Erro em POST /api/cargas (V1): {e}")
+            print(f"Erro em POST /api/cargas (V2): {e}")
             return jsonify(error=f"Erro interno: {str(e)}"), 500
             
     # --- GET (Listagem Painel Principal) ---
@@ -466,8 +463,9 @@ def get_carga_detalhes(carga_id):
                 'remetente_cidade': (entrega.remetente.cidade or 'N/A') if entrega.remetente else 'N/A', 
                 # Dados do Destinatário (Cliente)
                 'razao_social': (entrega.cliente.razao_social or 'N/A') if entrega.cliente else 'N/A',
-                'cidade': (entrega.cliente.cidade or '') if entrega.cliente else '',
-                'estado': (entrega.cliente.estado or '') if entrega.cliente else '',
+                # A cidade final é o override (se existir) OU a padrão do cliente
+                'cidade': entrega.cidade_entrega or (entrega.cliente.cidade or '') if entrega.cliente else (entrega.cidade_entrega or ''),
+                'estado': entrega.estado_entrega or (entrega.cliente.estado or '') if entrega.cliente else (entrega.estado_entrega or ''),
                 'ddd': (entrega.cliente.ddd or '') if entrega.cliente else '',
                 'telefone': (entrega.cliente.telefone or '') if entrega.cliente else '',
                 'obs_cliente': (entrega.cliente.observacoes or '') if entrega.cliente else '',

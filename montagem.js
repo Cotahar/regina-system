@@ -49,8 +49,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const formatarMoeda = (v) => (v === null || v === undefined) ? 'R$ 0,00' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
     const formatarPeso = (v) => (v === null || v === undefined || v == 0) ? '0,00 kg' : `${new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v)} kg`;
     const parseDecimal = (valor) => { if (typeof valor !== 'string' || !valor) return null; const v = valor.replace('R$ ', '').replace(/\./g, '').replace(',', '.'); const n = parseFloat(v); return isNaN(n) ? null : n; };
-    const mascaraDecimal = (input) => { if (!input) return; const f = (v) => { v = v.replace(/\D/g, ''); if (v === '') return ''; let n = parseFloat(v) / 100; return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n); }; input.addEventListener('input', (e) => { e.target.value = f(e.target.value); }); input.value = f(input.value); };
+	const mascaraDecimal = (input) => {
+        if (!input) return;
 
+        // Evento 1: Ao digitar (input)
+        input.addEventListener('input', (e) => {
+            let v = e.target.value;
+            // Permite apenas dígitos e UMA vírgula
+            v = v.replace(/[^\d,]/g, ''); 
+            const parts = v.split(',');
+            if (parts.length > 2) {
+                v = parts[0] + ',' + parts.slice(1).join('');
+            }
+            // Limita o decimal a 2 casas
+            if (parts.length === 2 && parts[1].length > 2) {
+                v = parts[0] + ',' + parts[1].substring(0, 2);
+            }
+            // Adiciona pontos de milhar na parte inteira
+            parts[0] = new Intl.NumberFormat('pt-BR').format(parseInt(parts[0].replace(/\D/g, ''), 10) || 0);
+            
+            e.target.value = parts.length > 1 ? parts.join(',') : parts[0];
+        });
+
+        // Evento 2: Ao sair (blur) - Formata para ,00 (como você sugeriu)
+        input.addEventListener('blur', (e) => {
+            let v = e.target.value;
+            if (v === '') return;
+            
+            // Usa a função parseDecimal que já existe
+            let num = parseDecimal(v); // (Ex: "23.000,3" -> 23000.3)
+            if (num === null) num = 0;
+            
+            // Formata (ex: 23000.3 -> "23.000,30" / 23000 -> "23.000,00")
+            e.target.value = new Intl.NumberFormat('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(num);
+        });
+    };
     // --- FUNÇÕES DE CARREGAMENTO ---
     
     // ***** FUNÇÃO ALTERADA *****
@@ -222,9 +258,9 @@ document.addEventListener('DOMContentLoaded', () => {
         selectEditRemetente.val(entrega.remetente_id).trigger('change'); // Pré-seleciona o remetente
         
         document.getElementById('edit-disp-destinatario-nome').textContent = entrega.destinatario_nome || 'N/A';
-        document.getElementById('edit-disp-peso-bruto').value = (entrega.peso_bruto || 0).toString().replace('.', ',');
-        document.getElementById('edit-disp-valor-frete').value = (entrega.valor_frete || 0).toString().replace('.', ',');
-        document.getElementById('edit-disp-peso-cubado').value = (entrega.peso_cubado || 0).toString().replace('.', ',');
+		document.getElementById('edit-disp-peso-bruto').value = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(entrega.peso_bruto || 0);
+        document.getElementById('edit-disp-valor-frete').value = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(entrega.valor_frete || 0);
+        document.getElementById('edit-disp-peso-cubado').value = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(entrega.peso_cubado || 0);
         document.getElementById('edit-disp-nota-fiscal').value = entrega.nota_fiscal || '';
         document.getElementById('edit-disp-cidade').value = entrega.cidade_entrega_override || ''; 
         document.getElementById('edit-disp-estado').value = entrega.estado_entrega_override || ''; 

@@ -472,7 +472,7 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
     box-shadow: 0 8px 16px 0 rgba(0,0,0,0.4);
     z-index: 100; /* Sobrepor outros itens */
     border-radius: 8px;
-    margin-top: 5px; /* Espaço do botão */
+    margin-top: 0px; /* Espaço do botão */
     right: 0; /* Alinha à direita do container */
 }
 

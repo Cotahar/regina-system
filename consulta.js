@@ -32,25 +32,44 @@ document.addEventListener('DOMContentLoaded', () => {
         return isNaN(numero) ? null : numero;
     };
 
-    const mascaraDecimal = (input) => {
+const mascaraDecimal = (input) => {
         if (!input) return;
-        const formatValue = (value) => {
-            value = value.replace(/\D/g, '');
-            if (value === '') return '';
-            let num = parseFloat(value) / 100;
-            return new Intl.NumberFormat('pt-BR', {
+
+        // Evento 1: Ao digitar (input)
+        input.addEventListener('input', (e) => {
+            let v = e.target.value;
+            // Permite apenas dígitos e UMA vírgula
+            v = v.replace(/[^\d,]/g, ''); 
+            const parts = v.split(',');
+            if (parts.length > 2) {
+                v = parts[0] + ',' + parts.slice(1).join('');
+            }
+            // Limita o decimal a 2 casas
+            if (parts.length === 2 && parts[1].length > 2) {
+                v = parts[0] + ',' + parts[1].substring(0, 2);
+            }
+            // Adiciona pontos de milhar na parte inteira
+            parts[0] = new Intl.NumberFormat('pt-BR').format(parseInt(parts[0].replace(/\D/g, ''), 10) || 0);
+            
+            e.target.value = parts.length > 1 ? parts.join(',') : parts[0];
+        });
+
+        // Evento 2: Ao sair (blur) - Formata para ,00 (como você sugeriu)
+        input.addEventListener('blur', (e) => {
+            let v = e.target.value;
+            if (v === '') return;
+            
+            // Usa a função parseDecimal que já existe
+            let num = parseDecimal(v); // (Ex: "23.000,3" -> 23000.3)
+            if (num === null) num = 0;
+            
+            // Formata (ex: 23000.3 -> "23.000,30" / 23000 -> "23.000,00")
+            e.target.value = new Intl.NumberFormat('pt-BR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             }).format(num);
-        };
-
-        input.addEventListener('input', (e) => {
-            e.target.value = formatValue(e.target.value);
         });
-         // Formata o valor inicial, se houver
-        input.value = formatValue(input.value);
     };
-
     // --- LÓGICA DE MODAIS ---
 	const fecharModais = () => {
         modalDetalhes.style.display = 'none';
@@ -458,9 +477,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById('edit-entrega-id').value = entrega.id;
 		selectEditRemetente.val(entrega.remetente_id).trigger('change'); // <-- ADICIONE ESTA LINHA
-        document.getElementById('edit-peso-bruto').value = (entrega.peso_bruto || 0).toString().replace('.', ',');
-        document.getElementById('edit-valor-frete').value = (entrega.valor_frete || 0).toString().replace('.', ',');
-        document.getElementById('edit-peso-cobrado').value = (entrega.peso_cobrado || 0).toString().replace('.', ',');
+		document.getElementById('edit-peso-bruto').value = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(entrega.peso_bruto || 0);
+        document.getElementById('edit-valor-frete').value = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(entrega.valor_frete || 0);
+        document.getElementById('edit-peso-cobrado').value = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(entrega.peso_cubado || 0); // Corrigido para peso_cubado
         document.getElementById('edit-cidade-entrega').value = entrega.cidade_entrega_override || '';
         document.getElementById('edit-estado-entrega').value = entrega.estado_entrega_override || '';
 
