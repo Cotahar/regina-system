@@ -12,7 +12,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let cargaAtual = null;
     let listaDeClientes = [];
-    // Módulo 4: Variáveis para Motoristas/Veículos
+	const selectEditRemetente = $('#edit-remetente-carga');
+	let listaDeRemetentesSelect2 = [];
     let listaDeMotoristas = [];
     let listaDeVeiculos = [];
     let sessaoUsuario = null;
@@ -456,6 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!entrega) { alert('Erro: Entrega não encontrada.'); return; }
 
         document.getElementById('edit-entrega-id').value = entrega.id;
+		selectEditRemetente.val(entrega.remetente_id).trigger('change'); // <-- ADICIONE ESTA LINHA
         document.getElementById('edit-peso-bruto').value = (entrega.peso_bruto || 0).toString().replace('.', ',');
         document.getElementById('edit-valor-frete').value = (entrega.valor_frete || 0).toString().replace('.', ',');
         document.getElementById('edit-peso-cobrado').value = (entrega.peso_cobrado || 0).toString().replace('.', ',');
@@ -552,10 +554,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    document.getElementById('form-editar-entrega').addEventListener('submit', async (e) => {
+		document.getElementById('form-editar-entrega').addEventListener('submit', async (e) => {
         e.preventDefault();
         const entregaId = document.getElementById('edit-entrega-id').value;
         const dados = {
+            remetente_id: selectEditRemetente.val(), // <-- ADICIONE ESTA LINHA
             peso_bruto: parseDecimal(document.getElementById('edit-peso-bruto').value),
             valor_frete: parseDecimal(document.getElementById('edit-valor-frete').value),
             peso_cobrado: parseDecimal(document.getElementById('edit-peso-cobrado').value),
@@ -729,8 +732,19 @@ document.addEventListener('DOMContentLoaded', () => {
             listaDeClientes = await clientesRes.json();
             listaDeMotoristas = await motoristasRes.json();
             listaDeVeiculos = await veiculosRes.json();
+            
+            // --- CÓDIGO SINCRONIZADO (igual ao script.js) ---
+            listaDeRemetentesSelect2 = listaDeClientes
+                .filter(c => c.is_remetente === true)
+                .map(c => ({ id: c.id, text: c.text }));
 
-            // Popula o filtro de clientes
+            // Inicializa o dropdown escondido do modal de edição
+            selectEditRemetente.select2({
+                placeholder: 'Selecione um remetente',
+                data: listaDeRemetentesSelect2,
+                dropdownParent: $('#modal-editar-entrega') // Anexa ao modal
+            });
+
             const filtroClienteSelect = $('#filtro-cliente');
             filtroClienteSelect.select2({
                 placeholder: 'Todos os Clientes',

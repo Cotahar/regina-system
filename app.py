@@ -705,24 +705,42 @@ def update_entrega(entrega_id):
         if not entrega:
             return jsonify(error='Entrega não encontrada'), 404
 
-        # Atualiza campos
-        entrega.remetente_id = data.get('remetente_id')
-        entrega.peso_bruto = data.get('peso_bruto')
-        entrega.valor_frete = data.get('valor_frete')
-        entrega.peso_cubado = data.get('peso_cubado')
-        entrega.nota_fiscal = data.get('nota_fiscal')
+        # --- CORREÇÃO: Atualização parcial ---
+        # Itera por todos os campos que podem ser enviados e atualiza
+        # apenas aqueles que vieram na requisição.
         
-        # Campos de override
-        entrega.cidade_entrega = data.get('cidade_entrega')
-        entrega.estado_entrega = data.get('estado_entrega')
-        
+        if 'remetente_id' in data:
+            entrega.remetente_id = data['remetente_id']
+        if 'peso_bruto' in data:
+            entrega.peso_bruto = data['peso_bruto']
+        if 'valor_frete' in data:
+            entrega.valor_frete = data['valor_frete']
+        if 'peso_cubado' in data:
+            entrega.peso_cubado = data['peso_cubado']
+        if 'peso_cobrado' in data: # Campo que faltava no backend
+             entrega.peso_cobrado = data['peso_cobrado']
+        if 'nota_fiscal' in data:
+            entrega.nota_fiscal = data['nota_fiscal']
+        if 'cidade_entrega' in data:
+            entrega.cidade_entrega = data['cidade_entrega']
+        if 'estado_entrega' in data:
+            entrega.estado_entrega = data['estado_entrega']
+            
+        # Esta é a correção para o BUG 1 (Radio Button)
+        if 'is_last_delivery' in data:
+            # Zera a flag em todas as entregas desta carga
+            Entrega.query.filter_by(carga_id=entrega.carga_id).update({'is_last_delivery': 0})
+            db.session.flush()
+            # Define a flag apenas para a entrega clicada
+            entrega.is_last_delivery = 1
+
         db.session.commit()
         return jsonify(message='Entrega atualizada com sucesso!')
     except Exception as e:
         db.session.rollback()
         print(f"Erro ao atualizar entrega {entrega_id}: {e}")
         return jsonify(error=f"Erro interno: {str(e)}"), 500
-
+        
 # --- API: MOTORISTAS ---
 @app.route('/api/motoristas', methods=['GET'])
 @login_required
