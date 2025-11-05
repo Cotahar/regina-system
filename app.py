@@ -36,12 +36,12 @@ def login_required(f):
         if 'user_id' not in session:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return jsonify(error='Sessão expirada, faça login novamente.'), 401
-            return redirect(url_for('login'))
+            return redirect(url_for('login_page'))
         return f(*args, **kwargs)
     return decorated_function
 
 # --- ROTAS DE AUTENTICAÇÃO E SESSÃO ---
-@app.route('/API/login', methods=['POST'])
+@app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
     nome_usuario = data.get('nome_usuario')
