@@ -664,10 +664,10 @@ def handle_entregas_disponiveis():
                     'cliente_id': e.cliente_id,
                     'remetente_nome': (e.remetente.razao_social or 'N/A') if e.remetente else 'N/A',
                     'destinatario_nome': (e.cliente.razao_social or 'N/A') if e.cliente else 'N/A',
-                    'cidade_entrega': e.cidade_entrega_override or (e.cliente.cidade if e.cliente else ''),
-                    'estado_entrega': e.estado_entrega_override or (e.cliente.estado if e.cliente else ''),
-                    'cidade_entrega_override': e.cidade_entrega, # Campo de override explícito
-                    'estado_entrega_override': e.estado_entrega, # Campo de override explícito
+                    'cidade_entrega': e.cidade_entrega or (e.cliente.cidade if e.cliente else ''),
+                    'estado_entrega': e.estado_entrega or (e.cliente.estado if e.cliente else ''),
+                    'cidade_entrega_override': e.cidade_entrega, 
+                    'estado_entrega_override': e.estado_entrega,
                     'peso_bruto': e.peso_bruto,
                     'valor_frete': e.valor_frete,
                     'peso_cubado': e.peso_cubado,
