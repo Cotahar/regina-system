@@ -41,7 +41,7 @@ def login_required(f):
     return decorated_function
 
 # --- ROTAS DE AUTENTICAÇÃO E SESSÃO ---
-@app.route('/api/login', methods=['POST'])
+@app.route('/login', methods=['POST'])
 def login():
     data = request.json
     nome_usuario = data.get('nome_usuario')
@@ -588,9 +588,9 @@ def confirmar_rascunho(carga_id):
         print(f"Erro ao confirmar rascunho {carga_id}: {e}")
         return jsonify(error=f"Erro interno: {str(e)}"), 500
         
-    @app.route('/api/cargas/<int:carga_id>/status', methods=['PUT'])
-    @login_required
-    def update_carga_status(carga_id):
+@app.route('/api/cargas/<int:carga_id>/status', methods=['PUT'])
+@login_required
+def update_carga_status(carga_id):
     try:
         data = request.json
         carga = Carga.query.get(carga_id)
