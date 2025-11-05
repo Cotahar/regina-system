@@ -41,7 +41,7 @@ def login_required(f):
     return decorated_function
 
 # --- ROTAS DE AUTENTICAÇÃO E SESSÃO ---
-@app.route('/login', methods=['POST'])
+@app.route('/API/login', methods=['POST'])
 def login():
     data = request.json
     nome_usuario = data.get('nome_usuario')
