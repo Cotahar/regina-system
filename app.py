@@ -587,7 +587,45 @@ def confirmar_rascunho(carga_id):
         db.session.rollback()
         print(f"Erro ao confirmar rascunho {carga_id}: {e}")
         return jsonify(error=f"Erro interno: {str(e)}"), 500
+        
+    @app.route('/api/cargas/<int:carga_id>/status', methods=['PUT'])
+    @login_required
+    def update_carga_status(carga_id):
+    try:
+        data = request.json
+        carga = Carga.query.get(carga_id)
+        if not carga:
+            return jsonify(error='Carga não encontrada'), 404
 
+        # Atualiza todos os campos que podem vir do frontend
+        # (salvar, agendar, iniciar-transito, finalizar)
+        if 'status' in data:
+            carga.status = data['status']
+        if 'data_agendamento' in data:
+            carga.data_agendamento = data['data_agendamento'] or None
+        if 'data_carregamento' in data:
+            carga.data_carregamento = data['data_carregamento'] or None
+        if 'previsao_entrega' in data:
+            carga.previsao_entrega = data['previsao_entrega'] or None
+        if 'data_finalizacao' in data:
+            carga.data_finalizacao = data['data_finalizacao'] or None
+        if 'motorista_id' in data:
+            carga.motorista_id = data['motorista_id'] or None
+        if 'veiculo_id' in data:
+            carga.veiculo_id = data['veiculo_id'] or None
+        if 'origem' in data:
+            carga.origem = data.get('origem', carga.origem).upper()
+        if 'observacoes' in data:
+            carga.observacoes = data.get('observacoes', carga.observacoes)
+        if 'frete_pago' in data:
+            carga.frete_pago = data.get('frete_pago', carga.frete_pago)
+
+        db.session.commit()
+        return jsonify(message='Status da carga atualizado com sucesso!')
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao atualizar status da carga {carga_id}: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
 # --- API: ENTREGAS (Disponíveis e Edição) ---
 @app.route('/api/entregas/disponiveis', methods=['GET', 'POST'])
 @login_required
