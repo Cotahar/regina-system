@@ -586,3 +586,7 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
     font-size: 14px; /* Tamanho da fonte padrão do botão */
     padding: 10px 15px; /* Padding padrão do botão */
 }
+.input-error {
+    border: 2px solid #ef4444 !important; /* Vermelho erro, !important para sobrepor */
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.5); /* Brilho vermelho */
+}

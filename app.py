@@ -154,14 +154,25 @@ def usuarios_page():
 @login_required
 def get_clientes_detalhes():
     try:
-        clientes = Cliente.query.order_by(Cliente.razao_social).all()
+        # --- INÍCIO DA OTIMIZAÇÃO (CORREÇÃO 4.2) ---
+        # Faz um JOIN e conta as entregas em uma única query
+        query_result = db.session.query(
+            Cliente,
+            func.count(Entrega.id)
+        ).outerjoin(
+            Entrega, Entrega.cliente_id == Cliente.id
+        ).group_by(
+            Cliente.id
+        ).order_by(
+            Cliente.razao_social
+        ).all()
+
         clientes_data = []
-        for c in clientes:
-            entregas_count = Entrega.query.filter_by(cliente_id=c.id).count()
-            
-            # >>>>> CORREÇÃO 1: Adicionado `(c.razao_social or '')` para evitar erro .upper() em Nulos
+        # Agora 'c' é o Cliente e 'entregas_count' é a contagem
+        for c, entregas_count in query_result: 
+
             text = f"{(c.codigo_cliente or '')} - {(c.razao_social or '').upper()}"
-            
+
             clientes_data.append({
                 'id': c.id,
                 'codigo_cliente': c.codigo_cliente,
@@ -170,14 +181,21 @@ def get_clientes_detalhes():
                 'cidade': c.cidade,
                 'estado': c.estado,
                 'is_remetente': c.is_remetente,
-                'entregas_count': entregas_count,
-                'text': text
+                'entregas_count': entregas_count, # A contagem vem do JOIN
+                'text': text,
+
+                # Adiciona os campos que o dataset do JS precisa (CORREÇÃO 4.1)
+                'ddd': c.ddd,
+                'telefone': c.telefone,
+                'observacoes': c.observacoes
             })
+        # --- FIM DA OTIMIZAÇÃO ---
+
         return jsonify(clientes_data)
     except Exception as e:
         print(f"Erro em /api/clientes/detalhes: {e}")
+        traceback.print_exc() # Adiciona log de erro
         return jsonify(error=f"Erro interno ao buscar clientes: {str(e)}"), 500
-
 
 @app.route('/api/clientes', methods=['GET'])
 @login_required
@@ -351,12 +369,15 @@ def handle_cargas():
                 
                 # Processamento de entregas
                 carga_dict['entregas'] = [e.to_dict() for e in carga.entregas]
-                carga_dict['num_entregas'] = len(carga.entregas)
                 
                 # --- CORREÇÃO DE PESO E DESTINO (V2) ---
                 peso_total_carga = 0.0
                 destinos_set = set()
                 destino_principal_str = None # <-- Guarda o destino marcado
+                
+                # ***** INÍCIO DA CORREÇÃO DO BUG 2 *****
+                destinos_unicos_count = set() # Novo set para contagem real
+                # ***** FIM DA CORREÇÃO DO BUG 2 *****
 
                 for e in carga.entregas:
                     # 1. Acumula o peso
@@ -369,6 +390,13 @@ def handle_cargas():
 
                     cidade_str = (cidade_final or "").upper()
                     estado_str = (estado_final or "").upper()
+                    
+                    # ***** INÍCIO DA CORREÇÃO DO BUG 2 *****
+                    # Chave única: "ID_CLIENTE_CIDADE_ESTADO"
+                    cliente_id = e.cliente_id
+                    chave_unica = f"{cliente_id}_{cidade_str}_{estado_str}"
+                    destinos_unicos_count.add(chave_unica)
+                    # ***** FIM DA CORREÇÃO DO BUG 2 *****
                     
                     destino_formatado = None
                     if cidade_str or estado_str: # Evita adicionar "- " se ambos forem nulos
@@ -390,6 +418,11 @@ def handle_cargas():
                 # 5. Adiciona o peso total ao dicionário
                 carga_dict['peso_total'] = peso_total_carga 
                 
+                # ***** INÍCIO DA CORREÇÃO DO BUG 2 *****
+                # 6. Define o número real de entregas (destinos únicos)
+                carga_dict['num_entregas'] = len(destinos_unicos_count)
+                # ***** FIM DA CORREÇÃO DO BUG 2 *****
+                
                 cargas_data.append(carga_dict)
             # ***** FIM DA CORREÇÃO DE INDENTAÇÃO *****
                 
@@ -399,7 +432,7 @@ def handle_cargas():
             print(f"Erro em GET /api/cargas: {e}")
             traceback.print_exc() # Imprime o stack trace completo no log do servidor
             return jsonify(error=f"Erro interno ao buscar cargas: {str(e)}"), 500
-
+            
 @app.route('/api/cargas/consulta', methods=['GET'])
 @login_required
 def get_cargas_consulta():
@@ -441,12 +474,29 @@ def get_cargas_consulta():
             
             # >>>>> CORREÇÃO 6: Lógica de destinos "à prova de nulos"
             destinos_set = set()
+            
+            # ***** INÍCIO DA CORREÇÃO DO BUG 2 *****
+            destinos_unicos_count = set() # Novo set para contagem real
+            # ***** FIM DA CORREÇÃO DO BUG 2 *****
+            
             for e in carga.entregas:
-                if e.cliente: # Garante que a entrega tem um cliente associado
-                    cidade_str = (e.cliente.cidade or "").upper() # (ou "") garante que .upper() não falhe
-                    estado_str = (e.cliente.estado or "").upper()
-                    if cidade_str or estado_str: # Evita adicionar "- " se ambos forem nulos
-                        destinos_set.add(f"{cidade_str}-{estado_str}")
+                # Lógica de destino (incluindo override)
+                cidade_final = e.cidade_entrega or (e.cliente.cidade if e.cliente else None)
+                estado_final = e.estado_entrega or (e.cliente.estado if e.cliente else None)
+
+                cidade_str = (cidade_final or "").upper()
+                estado_str = (estado_final or "").upper()
+                
+                if cidade_str or estado_str: # Evita adicionar "- " se ambos forem nulos
+                    destinos_set.add(f"{cidade_str}-{estado_str}")
+                    
+                # ***** INÍCIO DA CORREÇÃO DO BUG 2 *****
+                # Chave única: "ID_CLIENTE_CIDADE_ESTADO"
+                cliente_id = e.cliente_id
+                chave_unica = f"{cliente_id}_{cidade_str}_{estado_str}"
+                destinos_unicos_count.add(chave_unica)
+                # ***** FIM DA CORREÇÃO DO BUG 2 *****
+                        
             destinos = sorted(list(destinos_set))
 
             cargas_data.append({
@@ -456,7 +506,11 @@ def get_cargas_consulta():
                 'origem': carga.origem,
                 'destino_principal': destinos[0] if destinos else 'N/A',
                 'motorista_nome': carga.motorista_rel.nome if carga.motorista_rel else 'N/A',
-                'num_entregas': len(carga.entregas),
+                
+                # ***** INÍCIO DA CORREÇÃO DO BUG 2 *****
+                'num_entregas': len(destinos_unicos_count), # Usa a contagem real
+                # ***** FIM DA CORREÇÃO DO BUG 2 *****
+                
                 'peso_total_bruto': peso_total_bruto,
                 'data_finalizacao': carga.data_finalizacao,
                 
@@ -477,8 +531,7 @@ def get_cargas_consulta():
         print(f"Erro em /api/cargas/consulta: {e}")
         traceback.print_exc()
         return jsonify(error=f"Erro interno ao consultar cargas: {str(e)}"), 500
-
-
+        
 @app.route('/api/cargas/<int:carga_id>', methods=['GET'])
 @login_required
 def get_carga_detalhes(carga_id):
@@ -681,6 +734,39 @@ def confirmar_rascunho(carga_id):
     except Exception as e:
         db.session.rollback()
         print(f"Erro ao confirmar rascunho {carga_id}: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
+        
+@app.route('/api/cargas/<int:carga_id>/devolver-rascunho', methods=['PUT'])
+@login_required
+def devolver_para_rascunho(carga_id):
+    try:
+        carga = Carga.query.get(carga_id)
+        if not carga:
+            return jsonify(error='Carga não encontrada'), 404
+        
+        # Só pode devolver se estiver Pendente ou Agendada
+        if carga.status not in ['Pendente', 'Agendada']:
+            return jsonify(error=f'Não é possível devolver uma carga com status {carga.status}.'), 400
+
+        # Atualiza o status e o código
+        carga.status = 'Rascunho'
+        carga.codigo_carga = f"RASC-{int(time.time())}" # Gera um novo código de Rascunho
+        
+        # Limpa os dados da viagem anterior
+        carga.motorista_id = None
+        carga.veiculo_id = None
+        carga.data_agendamento = None
+        carga.data_carregamento = None
+        carga.previsao_entrega = None
+        
+        db.session.commit()
+        # Retorna o JSON que o JavaScript espera
+        return jsonify(message='Carga devolvida para Rascunho. Redirecionando...')
+        
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao devolver para rascunho {carga_id}: {e}")
+        traceback.print_exc()
         return jsonify(error=f"Erro interno: {str(e)}"), 500
         
 @app.route('/api/cargas/<int:carga_id>/status', methods=['PUT'])

@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     tr.dataset.ddd = cliente.ddd || '';
                     tr.dataset.telefone = cliente.telefone || '';
                     tr.dataset.observacoes = cliente.observacoes || '';
+					tr.dataset.is_remetente = cliente.is_remetente;
 
                     // ***** CORREÇÃO AQUI: Usa os nomes corretos das colunas *****
                     tr.innerHTML = `

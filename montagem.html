@@ -101,17 +101,22 @@
         <div id="coluna-disponiveis">
             <div class="card-lista-clientes">
                 <h2>Entregas Disponíveis para Montagem</h2>
-                <div class="form-acao" style="margin-bottom: 15px;">
-                    <input type="text" id="pesquisa-disponiveis" placeholder="Buscar Remetente, Destinatário, Nota..." style="width: 100%;">
+               <div class="filtro-grid" style="margin-bottom: 15px;">
+                    <input type="text" id="pesquisa-disponiveis" placeholder="Busca Geral (Remet, Dest, Nota)...">
+                    <input type="text" id="filtro-remetente" placeholder="Filtrar Remetente...">
+                    <input type="text" id="filtro-destinatario" placeholder="Filtrar Destinatário...">
+                    <input type="text" id="filtro-cidade" placeholder="Filtrar Cidade...">
+                    <input type="text" id="filtro-estado" placeholder="Filtrar UF...">
                 </div>
                 <div class="tabela-wrapper" style="max-height: 60vh;">
                     <table id="tabela-disponiveis">
+                        <table id="tabela-disponiveis">
                         <thead>
                             <tr>
                                 <th><input type="checkbox" id="select-all-disponiveis" title="Selecionar Todos"></th>
-                                <th>Remetente</th>
-                                <th>Destinatário</th>
-                                <th>Cidade/UF</th>
+                                <th data-sort-key="remetente_nome" style="cursor: pointer;">Remetente</th>
+                                <th data-sort-key="destinatario_nome" style="cursor: pointer;">Destinatário</th>
+                                <th data-sort-key="cidade_entrega" style="cursor: pointer;">Cidade/UF</th>
                                 <th>Peso Bruto</th>
                                 <th>Nota Fiscal</th>
                                 <th>Ações</th>

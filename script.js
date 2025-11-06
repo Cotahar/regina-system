@@ -100,7 +100,7 @@ const mascaraDecimal = (input) => {
 
     // --- LÓGICA PRINCIPAL ---
     
-    // ***** FUNÇÃO ALTERADA *****
+// ***** FUNÇÃO ALTERADA (PARA ORDENAÇÃO) *****
     async function carregarDadosIniciais() {
         try {
             const [sessionRes, clientesRes, motoristasRes, veiculosRes, cargasRes] = await Promise.all([
@@ -139,11 +139,45 @@ const mascaraDecimal = (input) => {
             
             const cargas = await cargasRes.json();
             document.querySelectorAll('.lista-cargas').forEach(lista => lista.innerHTML = '');
-            cargas.forEach(adicionarCartaoNaTela);
+            
+            // --- INÍCIO DA LÓGICA DE ORDENAÇÃO ---
+            
+            // 1. Separa as cargas por status
+            const pendentes = cargas.filter(c => c.status === 'Pendente');
+            const agendadas = cargas.filter(c => c.status === 'Agendada');
+            const emTransito = cargas.filter(c => c.status === 'Em Trânsito');
+
+            // 2. Ordena as listas
+            
+            // Pendentes: Pela ID (mais nova primeiro)
+            pendentes.sort((a, b) => b.id - a.id);
+
+            // Agendadas: Pela data de agendamento (mais próxima primeiro)
+            agendadas.sort((a, b) => {
+                // Joga datas nulas para o fim da lista
+                const dataA = a.data_agendamento ? new Date(a.data_agendamento) : new Date('9999-12-31');
+                const dataB = b.data_agendamento ? new Date(b.data_agendamento) : new Date('9999-12-31');
+                return dataA - dataB;
+            });
+
+            // Em Trânsito: Pela previsão de entrega (mais próxima primeiro)
+            emTransito.sort((a, b) => {
+                // Joga datas nulas para o fim da lista
+                const dataA = a.previsao_entrega ? new Date(a.previsao_entrega) : new Date('9999-12-31');
+                const dataB = b.previsao_entrega ? new Date(b.previsao_entrega) : new Date('9999-12-31');
+                return dataA - dataB;
+            });
+
+            // 3. Renderiza as cargas já ordenadas
+            pendentes.forEach(adicionarCartaoNaTela);
+            agendadas.forEach(adicionarCartaoNaTela);
+            emTransito.forEach(adicionarCartaoNaTela);
+            
+            // --- FIM DA LÓGICA DE ORDENAÇÃO ---
+            
         } catch (error) { console.error("Erro ao carregar dados iniciais:", error); }
     }
     // ***** FIM DA ALTERAÇÃO *****
-
 
     function adicionarCartaoNaTela(carga) {
         const cartao = document.createElement('div');
@@ -200,7 +234,7 @@ const mascaraDecimal = (input) => {
         }
     }
 
-    function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
+function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         const { detalhes_carga, entregas } = cargaAtual;
         const statusClass = detalhes_carga.status.toLowerCase().replace(/\s+/g, '-');
         const podeEditarGeral = ['admin', 'operador'].includes(sessaoUsuario.user_permission);
@@ -244,6 +278,9 @@ const mascaraDecimal = (input) => {
 
 
         const pesoTotalGeral = entregas.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
+        // --- CÁLCULO (JÁ CORRIGIDO) ---
+        const cubadoTotalGeral = entregas.reduce((acc, e) => acc + (e.peso_cubado || e.peso_bruto || 0), 0);
+        // --- FIM DO CÁLCULO ---
         const freteTotalGeral = entregas.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
         let secaoDados, secaoAcoes;
 
@@ -251,10 +288,9 @@ const mascaraDecimal = (input) => {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
                 <div class="campo-form"><label>Origem</label><input type="text" id="detalhe-origem" value="${detalhes_carga.origem || ''}"></div>
                 <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
-                <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
+                <div class="campo-form"><label>Peso Cubado</label><p>${formatarPeso(cubadoTotalGeral)}</p></div> <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
                 <div class="campo-form"><label>Frete Pago</label><input type="text" id="detalhe-frete-pago" value="${formatarMoeda(detalhes_carga.frete_pago).replace('R$ ','')}" inputmode="decimal"></div>
-                <div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div>
-            </div></div>`;
+                <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div> </div></div>`;
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao-agendar">
                 <label for="detalhe-agendamento">Data do Agendamento:</label>
                 <input type="date" id="detalhe-agendamento" value="${formatarDataParaInput(detalhes_carga.data_agendamento)}">
@@ -265,10 +301,9 @@ const mascaraDecimal = (input) => {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
                 <div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div>
                 <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
-                <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
+                <div class="campo-form"><label>Peso Cubado</label><p>${formatarPeso(cubadoTotalGeral)}</p></div> <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
                 <div class="campo-form"><label>Frete Pago</label><input type="text" id="detalhe-frete-pago" value="${formatarMoeda(detalhes_carga.frete_pago).replace('R$ ','')}" inputmode="decimal"></div>
-                <div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div>
-                <div class="campo-form"><label for="select-motorista">Motorista</label><select id="select-motorista" style="width: 100%;"></select></div>
+                <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div> <div class="campo-form"><label for="select-motorista">Motorista</label><select id="select-motorista" style="width: 100%;"></select></div>
                 <div class="campo-form"><label for="select-veiculo">Veículo</label><select id="select-veiculo" style="width: 100%;"></select></div>
             </div></div>`;
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao">`;
@@ -290,10 +325,9 @@ const mascaraDecimal = (input) => {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
                 <div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div>
                 <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
-                <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
+                <div class="campo-form"><label>Peso Cubado</label><p>${formatarPeso(cubadoTotalGeral)}</p></div> <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
                  <div class="campo-form"><label>Frete Pago</label><input type="text" id="detalhe-frete-pago" value="${formatarMoeda(detalhes_carga.frete_pago).replace('R$ ','')}" inputmode="decimal"></div>
-                <div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div>
-                <div class="campo-form"><label>Motorista</label><p>${detalhes_carga.motorista_nome || 'N/A'}</p></div>
+                <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div> <div class="campo-form"><label>Motorista</label><p>${detalhes_carga.motorista_nome || 'N/A'}</p></div>
                 <div class="campo-form"><label>Placa</label><p>${detalhes_carga.veiculo_placa || 'N/A'}</p></div>
                 <div class="campo-form"><label>Carregamento</label><p>${formatarData(detalhes_carga.data_carregamento)}</p></div>
                 <div class="campo-form"><label>Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div>
@@ -306,10 +340,9 @@ const mascaraDecimal = (input) => {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
                 <div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div>
                 <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
-                <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
+                <div class="campo-form"><label>Peso Cubado</label><p>${formatarPeso(cubadoTotalGeral)}</p></div> <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
                 <div class="campo-form"><label>Frete Pago</label><p>${formatarMoeda(detalhes_carga.frete_pago)}</p></div>
-                <div class="campo-form"><label>Qtd. Entregas</label><p>${entregas.length}</p></div>
-                <div class="campo-form"><label>Motorista</label><p>${detalhes_carga.motorista_nome || 'N/A'}</p></div>
+                <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div> <div class="campo-form"><label>Motorista</label><p>${detalhes_carga.motorista_nome || 'N/A'}</p></div>
                 <div class="campo-form"><label>Placa</label><p>${detalhes_carga.veiculo_placa || 'N/A'}</p></div>
                 <div class="campo-form"><label>Carregamento</label><p>${formatarData(detalhes_carga.data_carregamento)}</p></div>
                  <div class="campo-form"><label>Finalização</label><p>${formatarData(detalhes_carga.data_finalizacao)}</p></div>
@@ -357,8 +390,20 @@ const mascaraDecimal = (input) => {
 
         const tabelaCorpoEntregas = document.getElementById('tabela-entregas-corpo');
         tabelaCorpoEntregas.innerHTML = '';
-        if (Object.keys(entregasAgrupadas).length > 0) {
-             Object.values(entregasAgrupadas).forEach((grupo, index) => {
+        
+        // --- INÍCIO DA CORREÇÃO DE ORDENAÇÃO (BUG 5) ---
+        // 1. Converte o objeto de grupos em um array
+        const gruposOrdenados = Object.values(entregasAgrupadas);
+        
+        // 2. Ordena o array pela razao_social
+        gruposOrdenados.sort((a, b) => {
+            return (a.razao_social || '').localeCompare(b.razao_social || '');
+        });
+        
+        // 3. Itera sobre o array JÁ ORDENADO
+        if (gruposOrdenados.length > 0) {
+             gruposOrdenados.forEach((grupo, index) => {
+        // --- FIM DA CORREÇÃO DE ORDENAÇÃO (BUG 5) ---
                 const isChecked = grupo.sub_entregas.some(se => se.is_last_delivery);
                 const radioId = `ultima-entrega-grupo-${grupo.id}`; 
 
@@ -433,7 +478,7 @@ const mascaraDecimal = (input) => {
             if (btnAddEntrega) btnAddEntrega.click();
         }
     }
-    
+
     function configurarEventListenersDeAcoesGerais() {
         document.querySelector('[data-acao="salvar"]')?.addEventListener('click', handleSalvarAlteracoes);
         document.querySelector('[data-acao="agendar"]')?.addEventListener('click', handleAgendar);

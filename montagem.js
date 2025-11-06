@@ -16,6 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const tabelaDisponiveisCorpo = document.getElementById('tabela-disponiveis-corpo');
     const inputPesquisaDisponiveis = document.getElementById('pesquisa-disponiveis');
+	const inputFiltroRemetente = document.getElementById('filtro-remetente');
+	const inputFiltroDestinatario = document.getElementById('filtro-destinatario');
+	const inputFiltroCidade = document.getElementById('filtro-cidade');
+	const inputFiltroEstado = document.getElementById('filtro-estado');
     const selectAllCheckbox = document.getElementById('select-all-disponiveis');
 
     const spanTotalEntregas = document.getElementById('total-entregas-selecionadas');
@@ -44,6 +48,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let entregasDisponiveis = [];
     let sessaoUsuario = null;
     let rascunhoCarregadoId = null;
+	let sortState = {
+        key: 'id', // Ordenação padrão por ID
+        direction: 'asc'
+    };
 
     // --- FUNÇÕES DE FORMATAÇÃO ---
     const formatarMoeda = (v) => (v === null || v === undefined) ? 'R$ 0,00' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -122,8 +130,99 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // ***** FIM DAS ALTERAÇÕES *****
     
-    async function carregarEntregasDisponiveis() { try { const r = await fetch('/api/entregas/disponiveis'); if (!r.ok) throw new Error('Falha'); entregasDisponiveis = await r.json(); renderizarTabelaDisponiveis(); atualizarTotaisMontagem(); } catch (e) { console.error(e); tabelaDisponiveisCorpo.innerHTML = `<tr><td colspan="7">Erro ao carregar.</td></tr>`; } }
-    
+// --- FUNÇÃO DE RENDERIZAÇÃO (AGORA COM MULTI-FILTRO) ---
+function renderizarTabelaDisponiveis() {
+    tabelaDisponiveisCorpo.innerHTML = '';
+
+    // 1. Pega o valor de todos os filtros
+    const buscaGeral = inputPesquisaDisponiveis.value.toUpperCase();
+    const filtroRemetente = inputFiltroRemetente.value.toUpperCase();
+    const filtroDestinatario = inputFiltroDestinatario.value.toUpperCase();
+    const filtroCidade = inputFiltroCidade.value.toUpperCase();
+    const filtroEstado = inputFiltroEstado.value.toUpperCase();
+
+    // 2. Filtra a lista principal
+    const f = entregasDisponiveis.filter(e => {
+        // Define os campos de busca (protegendo contra nulos)
+        const rN = (e.remetente_nome || '').toUpperCase();
+        const dN = (e.destinatario_nome || '').toUpperCase();
+        const nF = (e.nota_fiscal || '').toUpperCase();
+        const cE = (e.cidade_entrega || '').toUpperCase();
+        const eE = (e.estado_entrega || '').toUpperCase();
+
+        // 3. Verifica se a entrega passa em TODOS os filtros
+
+        // O Filtro Geral procura em 3 campos
+        const passaGeral = (buscaGeral === '') || rN.includes(buscaGeral) || dN.includes(buscaGeral) || nF.includes(buscaGeral);
+
+        // Os filtros específicos
+        const passaRemetente = (filtroRemetente === '') || rN.includes(filtroRemetente);
+        const passaDestinatario = (filtroDestinatario === '') || dN.includes(filtroDestinatario);
+        const passaCidade = (filtroCidade === '') || cE.includes(filtroCidade);
+        const passaEstado = (filtroEstado === '') || eE.includes(filtroEstado);
+
+        return passaGeral && passaRemetente && passaDestinatario && passaCidade && passaEstado;
+    });
+	f.sort((a, b) => {
+        let valA = a[sortState.key] || '';
+        let valB = b[sortState.key] || '';
+        
+        // Trata strings
+        if (typeof valA === 'string') {
+            valA = valA.toUpperCase();
+            valB = (valB || '').toUpperCase();
+        }
+        
+        let comparison = 0;
+        if (valA > valB) {
+            comparison = 1;
+        } else if (valA < valB) {
+            comparison = -1;
+        }
+        
+        return (sortState.direction === 'asc' ? comparison : -comparison);
+    });
+
+    if (f.length === 0) {
+        tabelaDisponiveisCorpo.innerHTML = '<tr><td colspan="7">Nenhuma entrega disponível encontrada para estes filtros.</td></tr>';
+        return;
+    }
+
+    f.forEach(e => {
+        const tr = document.createElement('tr');
+        tr.dataset.id = e.id;
+        if (e.selecionada) { tr.classList.add('highlight-row'); }
+        tr.innerHTML = `
+            <td><input type="checkbox" class="select-entrega" data-id="${e.id}" ${e.selecionada ? 'checked' : ''}></td>
+            <td>${e.remetente_nome || 'N/A'}</td>
+            <td>${e.destinatario_nome || 'N/A'}</td>
+            <td>${e.cidade_entrega || 'N/A'}-${e.estado_entrega || 'N/A'}</td>
+            <td>${formatarPeso(e.peso_bruto)}</td>
+            <td>${e.nota_fiscal || 'N/A'}</td>
+            <td>
+                <button class="btn-editar btn-editar-disponivel" data-id="${e.id}">Editar</button>
+                <button class="btn-excluir-entrega btn-excluir-disponivel" data-id="${e.id}">Excluir</button>
+            </td>`;
+        tabelaDisponiveisCorpo.appendChild(tr);
+    });
+
+    // 4. Re-anexa os listeners para os novos botões/checkboxes
+    document.querySelectorAll('.select-entrega').forEach(cb => cb.addEventListener('change', atualizarTotaisMontagem));
+    document.querySelectorAll('.btn-editar-disponivel').forEach(b => b.addEventListener('click', handleAbrirModalEditarDisp));
+    document.querySelectorAll('.btn-excluir-disponivel').forEach(b => b.addEventListener('click', handleExcluirEntregaDisp));
+}    
+	async function carregarEntregasDisponiveis() { 
+        try { 
+            const r = await fetch('/api/entregas/disponiveis'); 
+            if (!r.ok) throw new Error('Falha'); 
+            entregasDisponiveis = await r.json(); 
+            renderizarTabelaDisponiveis(); 
+            atualizarTotaisMontagem(); 
+        } catch (e) { 
+            console.error(e); 
+            tabelaDisponiveisCorpo.innerHTML = `<tr><td colspan="7">Erro ao carregar.</td></tr>`; 
+        } 
+    }
     async function carregarRascunhos() { try { const r = await fetch('/api/cargas/rascunhos'); if (!r.ok) throw new Error('Falha'); const rascs = await r.json(); listaRascunhosCorpo.innerHTML = ''; if (rascs.length === 0) { listaRascunhosCorpo.innerHTML = '<ul><li>Nenhum rascunho salvo.</li></ul>'; return; } const ul = document.createElement('ul'); rascs.forEach(rc => { const li = document.createElement('li'); li.innerHTML = `<span>${rc.codigo_carga} (${rc.origem}) - ${rc.num_entregas} entrega(s)</span><div><button class="btn-editar btn-carregar-rascunho" data-id="${rc.id}">Carregar</button><button class="btn-acao-verde btn-confirmar-rascunho" data-id="${rc.id}">Confirmar</button><button class="btn-excluir-entrega btn-excluir-rascunho" data-id="${rc.id}">Excluir</button></div>`; ul.appendChild(li); }); listaRascunhosCorpo.appendChild(ul); document.querySelectorAll('.btn-carregar-rascunho').forEach(b => b.addEventListener('click', handleCarregarRascunho)); document.querySelectorAll('.btn-confirmar-rascunho').forEach(b => b.addEventListener('click', handleConfirmarRascunho)); document.querySelectorAll('.btn-excluir-rascunho').forEach(b => b.addEventListener('click', handleExcluirRascunho)); } catch (e) { console.error(e); exibirMensagem(mensagemRascunho, `Erro ao carregar rascunhos: ${e.message}`, 'erro'); } }
     
     async function handleCarregarRascunho(event) {
@@ -161,22 +260,73 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- FUNÇÕES DE RENDERIZAÇÃO ---
-    function renderizarTabelaDisponiveis() { tabelaDisponiveisCorpo.innerHTML=''; const t=inputPesquisaDisponiveis.value.toUpperCase(); const f=entregasDisponiveis.filter(e=>{const rN=e.remetente_nome?e.remetente_nome.toUpperCase():''; const dN=e.destinatario_nome?e.destinatario_nome.toUpperCase():''; const n=e.nota_fiscal?e.nota_fiscal.toUpperCase():''; return rN.includes(t)||dN.includes(t)||n.includes(t);}); if(f.length===0){tabelaDisponiveisCorpo.innerHTML='<tr><td colspan="7">Nenhuma entrega disponível encontrada.</td></tr>'; return;} f.forEach(e=>{const tr=document.createElement('tr'); tr.dataset.id=e.id; if(e.selecionada){tr.classList.add('highlight-row');} tr.innerHTML=`<td><input type="checkbox" class="select-entrega" data-id="${e.id}" ${e.selecionada?'checked':''}></td><td>${e.remetente_nome||'N/A'}</td><td>${e.destinatario_nome||'N/A'}</td><td>${e.cidade_entrega||'N/A'}-${e.estado_entrega||'N/A'}</td><td>${formatarPeso(e.peso_bruto)}</td><td>${e.nota_fiscal||'N/A'}</td><td><button class="btn-editar btn-editar-disponivel" data-id="${e.id}">Editar</button><button class="btn-excluir-entrega btn-excluir-disponivel" data-id="${e.id}">Excluir</button></td>`; tabelaDisponiveisCorpo.appendChild(tr);}); document.querySelectorAll('.select-entrega').forEach(cb=>cb.addEventListener('change',atualizarTotaisMontagem)); document.querySelectorAll('.btn-editar-disponivel').forEach(b=>b.addEventListener('click',handleAbrirModalEditarDisp)); document.querySelectorAll('.btn-excluir-disponivel').forEach(b=>b.addEventListener('click',handleExcluirEntregaDisp)); }
+
 
     // --- FUNÇÕES DE AÇÃO / MANIPULAÇÃO ---
     function exibirMensagem(el, msg, tipo='sucesso') { el.textContent=msg; el.style.color=tipo==='erro'?'#ef4444':(tipo==='aviso'?'#fde047':'#22c55e'); if(tipo!=='aviso'){setTimeout(()=>{if(el.textContent===msg){el.textContent='';}},5000);} }
     async function handleAddEntrega(event) { event.preventDefault(); const d={remetente_id:selectRemetente.val(),cliente_id:selectDestinatario.val(),peso_bruto:parseDecimal(inputPesoBruto.value),valor_frete:parseDecimal(inputValorFrete.value),peso_cubado:parseDecimal(inputPesoCubado.value),nota_fiscal:inputNotaFiscal.value.toUpperCase()||null,cidade_entrega:inputCidadeEntrega.value.toUpperCase()||null,estado_entrega:inputEstadoEntrega.value.toUpperCase()||null}; if(!d.remetente_id||!d.cliente_id||d.peso_bruto===null){exibirMensagem(mensagemCadastro,'Remetente, Destinatário e Peso Bruto são obrigatórios.','erro'); return;} try {const r=await fetch('/api/entregas/disponiveis',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}); const res=await r.json(); if(!r.ok) throw new Error(res.error||'Falha ao adicionar entrega'); exibirMensagem(mensagemCadastro,res.message); formAddEntrega.reset(); selectRemetente.val(null).trigger('change'); selectDestinatario.val(null).trigger('change'); await carregarEntregasDisponiveis();} catch(e){exibirMensagem(mensagemCadastro,`Erro: ${e.message}`,'erro');} }
-    function atualizarTotaisMontagem() { const cS=document.querySelectorAll('.select-entrega:checked'); let tE=0,tP=0,tC=0,tF=0; cS.forEach(cb=>{const eId=cb.dataset.id; const e=entregasDisponiveis.find(en=>en.id==parseInt(eId)); if(e){tE++;tP+=e.peso_bruto||0;tC+=e.peso_cubado||0;tF+=e.valor_frete||0; cb.closest('tr').classList.add('highlight-row');} else {console.warn(`Não foi possível encontrar a entrega com ID ${eId} na lista 'entregasDisponiveis'.`);}}); document.querySelectorAll('.select-entrega:not(:checked)').forEach(cb=>{cb.closest('tr').classList.remove('highlight-row');}); spanTotalEntregas.textContent=tE; spanTotalPeso.textContent=formatarPeso(tP); spanTotalCubado.textContent=formatarPeso(tC); spanTotalFrete.textContent=formatarMoeda(tF); const origemPreenchida = inputOrigemPrincipal && inputOrigemPrincipal.value.trim() !== ''; btnSalvarRascunho.disabled = !(tE > 0 && origemPreenchida); }
-    async function handleSalvarRascunho() {
+function atualizarTotaisMontagem() { 
+        const cS=document.querySelectorAll('.select-entrega:checked'); 
+        let tE=0,tP=0,tC=0,tF=0; 
+        cS.forEach(cb=>{
+            const eId=cb.dataset.id; 
+            const e=entregasDisponiveis.find(en=>en.id==parseInt(eId)); 
+            if(e){
+                tE++;
+                tP+=e.peso_bruto||0;
+                
+                // --- CORREÇÃO AQUI ---
+                tC += (e.peso_cubado || e.peso_bruto || 0); 
+                // --- FIM DA CORREÇÃO ---
+                
+                tF+=e.valor_frete||0; 
+                cb.closest('tr').classList.add('highlight-row');
+            } else {
+                console.warn(`Não foi possível encontrar a entrega com ID ${eId} na lista 'entregasDisponiveis'.`);
+            }
+        }); 
+        document.querySelectorAll('.select-entrega:not(:checked)').forEach(cb=>{cb.closest('tr').classList.remove('highlight-row');}); 
+        spanTotalEntregas.textContent=tE; 
+        spanTotalPeso.textContent=formatarPeso(tP); 
+        spanTotalCubado.textContent=formatarPeso(tC); // Agora usará o cálculo corrigido
+        spanTotalFrete.textContent=formatarMoeda(tF); 
+        
+        // --- INÍCIO DA CORREÇÃO DE FOCO ---
+        // 1. Remove a classe de erro assim que o usuário digita algo
+        if (inputOrigemPrincipal && inputOrigemPrincipal.value.trim() !== '') {
+            inputOrigemPrincipal.classList.remove('input-error');
+        }
+        
+        // 2. O botão agora só depende de ter entregas selecionadas
+        btnSalvarRascunho.disabled = !(tE > 0); 
+        // --- FIM DA CORREÇÃO DE FOCO ---
+    }
+async function handleSalvarRascunho() {
         const oP = inputOrigemPrincipal.value.toUpperCase();
-        if (!oP) { exibirMensagem(mensagemMontagem, 'Informe a Origem Principal da Carga.', 'erro'); return; }
+        
+        // --- INÍCIO DA CORREÇÃO DE FOCO ---
+        if (!oP) { 
+            exibirMensagem(mensagemMontagem, 'Informe a Origem Principal da Carga.', 'erro'); 
+            inputOrigemPrincipal.classList.add('input-error'); // Adiciona borda vermelha
+            inputOrigemPrincipal.focus(); // Foca no campo para o usuário
+            return; // Para a execução
+        }
+        // --- FIM DA CORREÇÃO DE FOCO ---
+        
         const ids = Array.from(document.querySelectorAll('.select-entrega:checked')).map(cb => parseInt(cb.dataset.id));
-        if (ids.length === 0) { exibirMensagem(mensagemMontagem, 'Selecione pelo menos uma entrega.', 'erro'); return; }
+        
+        // Esta verificação agora é secundária, mas boa de manter
+        if (ids.length === 0) { 
+            exibirMensagem(mensagemMontagem, 'Selecione pelo menos uma entrega.', 'erro'); 
+            return; 
+        }
+        
         const dados = { origem: oP, entrega_ids: ids }; 
         btnSalvarRascunho.textContent = 'Salvando...';
         btnSalvarRascunho.disabled = true;
+        
         try {
+            // ... (O restante da função continua igual) ...
             if (rascunhoCarregadoId) {
                 exibirMensagem(mensagemMontagem, 'Atualizando... Liberando entregas do rascunho anterior.', 'aviso');
                 const deleteRes = await fetch(`/api/cargas/${rascunhoCarregadoId}/rascunho`, { method: 'DELETE' });
@@ -199,8 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnSalvarRascunho.textContent = 'Salvar Rascunho';
             atualizarTotaisMontagem(); 
         }
-    }
-    
+    }    
     async function handleConfirmarRascunho(event) {
         const cargaId = event.target.dataset.id;
         if (!confirm(`Tem certeza que deseja confirmar o rascunho ${cargaId}? Ele será movido para Pendentes.`)) return;
@@ -319,10 +468,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleExcluirEntregaDisp(event) { const eId=event.target.dataset.id; if(!confirm('Tem certeza que deseja excluir esta entrega disponível?')) return; try {const r=await fetch(`/api/entregas/disponiveis/${eId}`,{method:'DELETE'}); const res=await r.json(); if(!r.ok) throw new Error(res.error||'Falha ao excluir'); exibirMensagem(mensagemMontagem,res.message); await carregarEntregasDisponiveis();} catch(e){exibirMensagem(mensagemMontagem,`Erro: ${e.message}`,'erro');} }
+	function inicializarSortersTabela() {
+        document.querySelectorAll('#tabela-disponiveis th[data-sort-key]').forEach(header => {
+            header.style.userSelect = 'none'; // Impede seleção de texto ao clicar
+            header.addEventListener('click', () => {
+                const sortKey = header.dataset.sortKey;
+                
+                // 1. Define a nova direção
+                if (sortState.key === sortKey) {
+                    // Se já está clicado, inverte a direção
+                    sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    // Se é uma nova coluna, reseta para 'asc'
+                    sortState.key = sortKey;
+                    sortState.direction = 'asc';
+                }
+                
+                // 2. Atualiza o visual dos cabeçalhos (remove setas antigas)
+                document.querySelectorAll('#tabela-disponiveis th[data-sort-key]').forEach(th => {
+                    th.textContent = th.textContent.replace(' ▾', '').replace(' ▴', '');
+                });
+                
+                // 3. Adiciona a seta nova
+                header.textContent += (sortState.direction === 'asc' ? ' ▴' : ' ▾');
 
+                // 4. Re-renderiza a tabela com a nova ordem
+                renderizarTabelaDisponiveis();
+            });
+        });
+    }
     // --- LISTENERS GERAIS ---
     if (formAddEntrega) formAddEntrega.addEventListener('submit', handleAddEntrega);
     if (inputPesquisaDisponiveis) inputPesquisaDisponiveis.addEventListener('input', renderizarTabelaDisponiveis);
+	if (inputFiltroRemetente) inputFiltroRemetente.addEventListener('input', renderizarTabelaDisponiveis);
+	if (inputFiltroDestinatario) inputFiltroDestinatario.addEventListener('input', renderizarTabelaDisponiveis);
+	if (inputFiltroCidade) inputFiltroCidade.addEventListener('input', renderizarTabelaDisponiveis);
+	if (inputFiltroEstado) inputFiltroEstado.addEventListener('input', renderizarTabelaDisponiveis);
     if (selectAllCheckbox) selectAllCheckbox.addEventListener('change', (e) => { document.querySelectorAll('.select-entrega').forEach(cb => { cb.checked = e.target.checked; }); atualizarTotaisMontagem(); });
     if (inputOrigemPrincipal) inputOrigemPrincipal.addEventListener('input', atualizarTotaisMontagem);
     if (btnSalvarRascunho) btnSalvarRascunho.addEventListener('click', handleSalvarRascunho); else console.error("Elemento btn-salvar-rascunho não encontrado");
@@ -336,6 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
         carregarClientes(); // <-- Esta função agora também inicializa o select do modal
         carregarEntregasDisponiveis();
         carregarRascunhos();
+		inicializarSortersTabela();
       fetch('/api/session').then(res => res.json()).then(data => {
         if(typeof sessaoUsuario !== 'undefined') sessaoUsuario = data; 
         
