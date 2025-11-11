@@ -100,7 +100,7 @@ const mascaraDecimal = (input) => {
 
     // --- LÓGICA PRINCIPAL ---
     
-// ***** FUNÇÃO ALTERADA (PARA ORDENAÇÃO) *****
+// ***** FUNÇÃO ALTERADA (PARA ORDENAÇÃO E PERFORMANCE DE RENDERIZAÇÃO) *****
     async function carregarDadosIniciais() {
         try {
             const [sessionRes, clientesRes, motoristasRes, veiculosRes, cargasRes] = await Promise.all([
@@ -140,50 +140,57 @@ const mascaraDecimal = (input) => {
             const cargas = await cargasRes.json();
             document.querySelectorAll('.lista-cargas').forEach(lista => lista.innerHTML = '');
             
-            // --- INÍCIO DA LÓGICA DE ORDENAÇÃO ---
-            
             // 1. Separa as cargas por status
             const pendentes = cargas.filter(c => c.status === 'Pendente');
             const agendadas = cargas.filter(c => c.status === 'Agendada');
             const emTransito = cargas.filter(c => c.status === 'Em Trânsito');
 
-            // 2. Ordena as listas
-            
-            // Pendentes: Pela ID (mais nova primeiro)
+            // 2. Ordena as listas (já estava assim)
             pendentes.sort((a, b) => b.id - a.id);
-
-            // Agendadas: Pela data de agendamento (mais próxima primeiro)
             agendadas.sort((a, b) => {
-                // Joga datas nulas para o fim da lista
                 const dataA = a.data_agendamento ? new Date(a.data_agendamento) : new Date('9999-12-31');
                 const dataB = b.data_agendamento ? new Date(b.data_agendamento) : new Date('9999-12-31');
                 return dataA - dataB;
             });
-
-            // Em Trânsito: Pela previsão de entrega (mais próxima primeiro)
             emTransito.sort((a, b) => {
-                // Joga datas nulas para o fim da lista
                 const dataA = a.previsao_entrega ? new Date(a.previsao_entrega) : new Date('9999-12-31');
                 const dataB = b.previsao_entrega ? new Date(b.previsao_entrega) : new Date('9999-12-31');
                 return dataA - dataB;
             });
 
-            // 3. Renderiza as cargas já ordenadas
-            pendentes.forEach(adicionarCartaoNaTela);
-            agendadas.forEach(adicionarCartaoNaTela);
-            emTransito.forEach(adicionarCartaoNaTela);
+            // --- INÍCIO DA OTIMIZAÇÃO DE RENDERIZAÇÃO ---
             
-            // --- FIM DA LÓGICA DE ORDENAÇÃO ---
+            // 3. Pega as colunas
+            const pendenteCol = document.getElementById('pendente');
+            const agendadaCol = document.getElementById('agendada');
+            const emTransitoCol = document.getElementById('em-transito');
+
+            // 4. Acumula o HTML em strings (em memória)
+            let pendenteHTML = '';
+            let agendadaHTML = '';
+            let emTransitoHTML = '';
+
+            pendentes.forEach(carga => {
+                pendenteHTML += criarCartaoHTML(carga);
+            });
+            agendadas.forEach(carga => {
+                agendadaHTML += criarCartaoHTML(carga);
+            });
+            emTransito.forEach(carga => {
+                emTransitoHTML += criarCartaoHTML(carga);
+            });
+
+            // 5. Adiciona ao DOM (apenas 3 operações de "pintura")
+            pendenteCol.innerHTML = pendenteHTML || '<p>Nenhum cartão pendente.</p>';
+            agendadaCol.innerHTML = agendadaHTML || '<p>Nenhum cartão agendado.</p>';
+            emTransitoCol.innerHTML = emTransitoHTML || '<p>Nenhum cartão em trânsito.</p>';
+            
+            // --- FIM DA OTIMIZAÇÃO ---
             
         } catch (error) { console.error("Erro ao carregar dados iniciais:", error); }
     }
-    // ***** FIM DA ALTERAÇÃO *****
-
-    function adicionarCartaoNaTela(carga) {
-        const cartao = document.createElement('div');
-        cartao.className = 'cartao-carga';
-        cartao.dataset.id = carga.id;
-
+		
+	function criarCartaoHTML(carga) {
         let dataExtraHtml = '';
         if (carga.status === 'Agendada' && carga.data_agendamento) {
             dataExtraHtml = `<span class="cartao-data">Ag: ${formatarData(carga.data_agendamento)}</span>`;
@@ -197,27 +204,19 @@ const mascaraDecimal = (input) => {
         listaInfo += `<li><strong>Origem:</strong> ${carga.origem}</li>`;
 
 		if (carga.destino_principal) {
-        // A API já envia o destino formatado (ex: "CIDADE-UF")
-        listaInfo += `<li><strong>Destino:</strong> ${carga.destino_principal}</li>`;
+            listaInfo += `<li><strong>Destino:</strong> ${carga.destino_principal}</li>`;
 		}
 		if (carga.status === 'Agendada' || carga.status === 'Em Trânsito') {
             if (carga.motorista_nome) { 
-        listaInfo += `<li><strong>Motorista:</strong> ${carga.motorista_nome} (${carga.placa_veiculo || 'N/A'})</li>`;
+                listaInfo += `<li><strong>Motorista:</strong> ${carga.motorista_nome} (${carga.placa_veiculo || 'N/A'})</li>`;
 			}
         }
         listaInfo += `<li><strong>Nº Entregas:</strong> ${carga.num_entregas || 0}</li>`;
         listaInfo += `<li><strong>Peso Total:</strong> ${formatarPeso(carga.peso_total)}</li>`;
         listaInfo += '</ul>';
 
-        cartao.innerHTML = cabecalhoCartao + listaInfo;
-
-        const colunaId = carga.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
-        const coluna = document.getElementById(colunaId);
-        if (coluna) {
-            coluna.appendChild(cartao);
-        } else {
-            console.error(`Coluna com ID '${colunaId}' não encontrada para o status '${carga.status}'`);
-        }
+        // Retorna a string HTML completa do cartão
+        return `<div class="cartao-carga" data-id="${carga.id}">${cabecalhoCartao}${listaInfo}</div>`;
     }
 
     async function abrirModalDetalhes(id, reabrirFormularioEntrega = false) {
