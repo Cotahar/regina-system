@@ -13,6 +13,7 @@
         body {
             background-color: #555; /* Fundo cinza para a tela */
             color: #111;
+            font-family: 'Inter', sans-serif;
         }
         .espelho-container {
             width: 21cm; /* Tamanho A4 */
@@ -21,8 +22,7 @@
             margin: 20px auto;
             background-color: #FFF;
             box-shadow: 0 0 15px rgba(0,0,0,0.5);
-            font-family: 'Inter', sans-serif;
-            box-sizing: border-box; /* Garante que o padding não aumente o width */
+            box-sizing: border-box; 
         }
         .espelho-header {
             display: flex;
@@ -57,57 +57,61 @@
             border-bottom: 1px solid #CCC;
             padding-bottom: 5px;
         }
-        .lista-entregas, .lista-coletas {
-            list-style: none;
-            padding: 0;
-            margin: 0;
+
+        /* --- NOVOS ESTILOS DE TABELA --- */
+        .espelho-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
         }
-        .lista-entregas li, .lista-coletas li {
-            display: flex;
-            justify-content: space-between;
-            padding: 4px 0;
+        .espelho-table th, .espelho-table td {
+            border: 1px solid #CCC;
+            padding: 8px 10px;
+            font-size: 12px;
+            text-align: left;
+        }
+        .espelho-table th {
+            background-color: #F4F4F4;
+            font-weight: 700;
             font-size: 13px;
         }
-        .lista-entregas li strong, .lista-coletas li strong {
-            font-weight: 600;
-        }
-        .total-geral {
-            display: flex;
-            justify-content: flex-end;
-            margin-top: 10px;
-            font-size: 14px;
-            font-weight: 700;
-            border-top: 1px solid #000;
-            padding-top: 5px;
+        /* Coluna de Peso (alinhada à direita) */
+        .espelho-table th:last-child, .espelho-table td:last-child {
+            text-align: right;
+            width: 120px; /* Largura fixa para peso */
         }
         
-        /* Estilos de Coleta */
+        /* Tabela de coletas (fonte menor) */
+        .table-coleta th {
+            font-size: 12px;
+            background-color: #FAFAFA;
+        }
+        .table-coleta td {
+            font-size: 11px;
+            padding: 6px 10px;
+        }
+        
+        /* Rodapé da Tabela */
+        .espelho-table tfoot td {
+            font-weight: 700;
+            background-color: #F4F4F4;
+            text-align: right;
+        }
+        /* --- FIM DOS NOVOS ESTILOS --- */
+        
         .coleta-bloco {
             margin-bottom: 20px;
+            page-break-inside: avoid; /* Tenta não quebrar o bloco da coleta */
         }
         .coleta-bloco h3 {
             font-size: 15px;
             margin: 0 0 5px 0;
             font-weight: 700;
         }
-        .coleta-bloco .lista-coletas li {
-            padding-left: 15px; /* Indentação */
-            font-size: 12px;
-        }
-        .total-coleta {
-            display: flex;
-            justify-content: flex-end;
-            font-size: 12px;
-            font-weight: 600;
-            border-top: 1px dashed #AAA;
-            padding-top: 3px;
-            margin-top: 3px;
-        }
 
-        /* Estilos de Observações */
         .obs-texto {
             font-size: 13px;
-            white-space: pre-wrap; /* Preserva quebras de linha */
+            white-space: pre-wrap; 
             background: #FAFAFA;
             border: 1px solid #EEE;
             padding: 10px;
@@ -118,26 +122,23 @@
         /* --- Estilos de Impressão --- */
         @media print {
             body {
-                background-color: #FFF; /* Remove o fundo cinza */
+                background-color: #FFF;
                 margin: 0;
                 padding: 0;
             }
             .no-print {
-                display: none; /* Esconde o botão de imprimir */
+                display: none; 
             }
             .espelho-container {
                 width: 100%;
                 min-height: 0;
                 margin: 0;
                 padding: 0;
-                box-shadow: none; /* Remove sombra */
+                box-shadow: none; 
                 border: none;
             }
             .espelho-secao {
-                page-break-inside: avoid; /* Tenta não quebrar seções no meio */
-            }
-            .coleta-bloco {
-                 page-break-inside: avoid;
+                page-break-inside: avoid;
             }
         }
     </style>
@@ -167,17 +168,30 @@
 
         <div class="espelho-secao">
             <h2>Lista de Entregas ({{ total_destinos }} Destinos)</h2>
-            <ul class="lista-entregas">
-                {% for entrega in lista_entregas %}
-                <li>
-                    <span>{{ entrega.cliente }} ({{ entrega.cidade_uf }})</span>
-                    <strong>{{ "%.2f"|format(entrega.peso) }} kg</strong>
-                </li>
-                {% endfor %}
-            </ul>
-            <div class="total-geral">
-                Peso Total Carga: {{ "%.2f"|format(peso_total_carga) }} kg
-            </div>
+            <table class="espelho-table">
+                <thead>
+                    <tr>
+                        <th>Cliente (Destino)</th>
+                        <th>Cidade / UF</th>
+                        <th>Peso</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for entrega in lista_entregas %}
+                    <tr>
+                        <td>{{ entrega.cliente }}</td>
+                        <td>{{ entrega.cidade_uf }}</td>
+                        <td>{{ "%.2f"|format(entrega.peso) }} kg</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2">Peso Total Carga</td>
+                        <td>{{ "%.2f"|format(peso_total_carga) }} kg</td>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
         
         <div class="espelho-secao">
@@ -189,20 +203,34 @@
 
         <div class="espelho-secao">
             <h2>Lista de Coletas (Detalhado)</h2>
+            
             {% for remetente_nome, dados_coleta in lista_coletas %}
                 <div class="coleta-bloco">
                     <h3>Coleta: {{ remetente_nome }}</h3>
-                    <ul class="lista-coletas">
-                        {% for entrega in dados_coleta.entregas %}
-                        <li>
-                            <span>- {{ entrega.cliente }} ({{ entrega.cidade_uf }})</span>
-                            <strong>{{ "%.2f"|format(entrega.peso) }} kg</strong>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                    <div class="total-coleta">
-                        Total (Coleta): {{ "%.2f"|format(dados_coleta.total_peso) }} kg
-                    </div>
+                    <table class="espelho-table table-coleta">
+                        <thead>
+                            <tr>
+                                <th>Cliente (Destino)</th>
+                                <th>Cidade / UF</th>
+                                <th>Peso</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entrega in dados_coleta.entregas %}
+                            <tr>
+                                <td>{{ entrega.cliente }}</td>
+                                <td>{{ entrega.cidade_uf }}</td>
+                                <td>{{ "%.2f"|format(entrega.peso) }} kg</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2">Total (Coleta)</td>
+                                <td>{{ "%.2f"|format(dados_coleta.total_peso) }} kg</td>
+                            </tr>
+                        </tfoot>
+                    </table>
                 </div>
             {% endfor %}
         </div>
