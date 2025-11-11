@@ -3,14 +3,13 @@
 import time
 import pandas as pd
 import os
-from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for
+from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for, render_template
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func, or_
 import traceback
-
 from dotenv import load_dotenv
 
 from database import db
@@ -302,12 +301,12 @@ def update_cliente(cliente_id):
         print(f"Erro ao atualizar cliente {cliente_id}: {e}")
         return jsonify(error=f'Erro interno: {str(e)}'), 500
 
-# --- API: CARGAS ---
 @app.route('/api/cargas', methods=['GET', 'POST'])
 @login_required
 def handle_cargas():
 # --- POST (Criação de Carga V2 - Pendente) ---
     if request.method == 'POST':
+        # ... (A parte do POST continua idêntica) ...
         try:
             data = request.json
             origem = data.get('origem')
@@ -347,90 +346,74 @@ def handle_cargas():
         try:
             status_filter = request.args.get('status')
             
+            # --- INÍCIO DA OTIMIZAÇÃO (LENTIDÃO) ---
             # Filtra para não mostrar Rascunhos nem Finalizadas no painel
-            base_query = Carga.query.filter(Carga.status != 'Rascunho', Carga.status != 'Finalizada')
+            base_query = Carga.query.options(
+                joinedload(Carga.motorista_rel), 
+                joinedload(Carga.veiculo_rel), 
+                joinedload(Carga.entregas).joinedload(Entrega.cliente) # Carrega entregas E o cliente de cada entrega
+            ).filter(Carga.status != 'Rascunho', Carga.status != 'Finalizada')
+            # --- FIM DA OTIMIZAÇÃO ---
 
             if status_filter:
                 base_query = base_query.filter(Carga.status == status_filter)
                 
-            cargas = base_query.order_by(Carga.data_carregamento.desc()).all()
+            # A ordenação das colunas do painel é feita no script.js, 
+            # então a ordem do backend não é crítica aqui.
+            cargas = base_query.order_by(Carga.id.desc()).all()
             
             cargas_data = []
             
-            # ***** INÍCIO DA CORREÇÃO DE INDENTAÇÃO *****
-            # Este bloco 'for' agora está DENTRO do 'try'
-            # Este bloco 'for' agora está DENTRO do 'try'
             for carga in cargas:
                 carga_dict = carga.to_dict()
                 
-                # Dados das relações (acesso seguro)
+                # Dados das relações (agora vêm do joinedload, sem novas queries)
                 carga_dict['motorista_nome'] = carga.motorista_rel.nome if carga.motorista_rel else None
                 carga_dict['placa_veiculo'] = carga.veiculo_rel.placa if carga.veiculo_rel else None
                 
-                # Processamento de entregas
+                # Processamento de entregas (agora vêm do joinedload)
                 carga_dict['entregas'] = [e.to_dict() for e in carga.entregas]
                 
-                # --- CORREÇÃO DE PESO E DESTINO (V2) ---
+                # --- (Lógica de contagem de entregas e peso - já corrigida) ---
                 peso_total_carga = 0.0
                 destinos_set = set()
-                destino_principal_str = None # <-- Guarda o destino marcado
-                
-                # ***** INÍCIO DA CORREÇÃO DO BUG 2 *****
-                destinos_unicos_count = set() # Novo set para contagem real
-                # ***** FIM DA CORREÇÃO DO BUG 2 *****
+                destino_principal_str = None 
+                destinos_unicos_count = set() 
 
                 for e in carga.entregas:
-                    # 1. Acumula o peso
                     if e.peso_bruto:
                         peso_total_carga += e.peso_bruto
 
-                    # 2. Define destinos (Priorizando o override)
                     cidade_final = e.cidade_entrega or (e.cliente.cidade if e.cliente else None)
                     estado_final = e.estado_entrega or (e.cliente.estado if e.cliente else None)
-
                     cidade_str = (cidade_final or "").upper()
                     estado_str = (estado_final or "").upper()
                     
-                    # ***** INÍCIO DA CORREÇÃO DO BUG 2 *****
-                    # Chave única: "ID_CLIENTE_CIDADE_ESTADO"
                     cliente_id = e.cliente_id
                     chave_unica = f"{cliente_id}_{cidade_str}_{estado_str}"
                     destinos_unicos_count.add(chave_unica)
-                    # ***** FIM DA CORREÇÃO DO BUG 2 *****
                     
                     destino_formatado = None
-                    if cidade_str or estado_str: # Evita adicionar "- " se ambos forem nulos
+                    if cidade_str or estado_str: 
                         destino_formatado = f"{cidade_str}-{estado_str}"
                         destinos_set.add(destino_formatado)
                     
-                    # 3. Verifica se esta é a entrega principal (marcada com o radio button)
                     if e.is_last_delivery == 1 and destino_formatado:
                         destino_principal_str = destino_formatado
                 
                 destinos_list = sorted(list(destinos_set)) 
-            
                 carga_dict['destinos'] = destinos_list
-                
-                # 4. Define o destino principal
-                # Se um foi marcado, usa ele. Senão, usa o primeiro da lista alfabética.
                 carga_dict['destino_principal'] = destino_principal_str or (destinos_list[0] if destinos_list else 'N/A')
-                
-                # 5. Adiciona o peso total ao dicionário
                 carga_dict['peso_total'] = peso_total_carga 
-                
-                # ***** INÍCIO DA CORREÇÃO DO BUG 2 *****
-                # 6. Define o número real de entregas (destinos únicos)
                 carga_dict['num_entregas'] = len(destinos_unicos_count)
-                # ***** FIM DA CORREÇÃO DO BUG 2 *****
                 
                 cargas_data.append(carga_dict)
-            # ***** FIM DA CORREÇÃO DE INDENTAÇÃO *****
                 
             return jsonify(cargas_data)
         
         except Exception as e:
             print(f"Erro em GET /api/cargas: {e}")
-            traceback.print_exc() # Imprime o stack trace completo no log do servidor
+            traceback.print_exc() 
             return jsonify(error=f"Erro interno ao buscar cargas: {str(e)}"), 500
             
 @app.route('/api/cargas/consulta', methods=['GET'])
@@ -584,6 +567,84 @@ def get_carga_detalhes(carga_id):
         print(f"Erro em /api/cargas/<id>: {e}")
         traceback.print_exc()
         return jsonify(error=f"Erro interno: {str(e)}"), 500
+        
+#
+# --- NOVA ROTA DO ESPELHO DE CARGA (VERSÃO HTML) ---
+#
+@app.route('/cargas/<int:carga_id>/espelho_impressao')
+@login_required
+def get_carga_espelho_html(carga_id):
+    try:
+        # 1. Buscar a carga e todos os dados relacionados de uma vez
+        carga = Carga.query.options(
+            joinedload(Carga.motorista_rel),
+            joinedload(Carga.veiculo_rel),
+            joinedload(Carga.entregas).joinedload(Entrega.cliente),
+            joinedload(Carga.entregas).joinedload(Entrega.remetente)
+        ).get(carga_id)
+
+        if not carga:
+            return "Carga não encontrada", 404
+
+        # 2. Processar os dados (Agrupamentos e Totais)
+        entregas_agrupadas = {}
+        coletas_por_remetente = {}
+        peso_total_carga = 0.0
+
+        for e in carga.entregas:
+            peso_bruto = e.peso_bruto or 0
+            peso_total_carga += peso_bruto
+            cliente_nome = (e.cliente.razao_social or 'N/A') if e.cliente else 'N/A'
+            cidade_final = e.cidade_entrega or (e.cliente.cidade if e.cliente else 'N/A')
+            estado_final = e.estado_entrega or (e.cliente.estado if e.cliente else 'N/A')
+            destino_key = f"{cliente_nome}_{cidade_final}_{estado_final}"
+
+            if destino_key not in entregas_agrupadas:
+                entregas_agrupadas[destino_key] = {
+                    'cliente': cliente_nome,
+                    'cidade_uf': f"{cidade_final}-{estado_final}",
+                    'peso': 0.0
+                }
+            entregas_agrupadas[destino_key]['peso'] += peso_bruto
+            remetente_nome = (e.remetente.razao_social or 'SEM REMETENTE') if e.remetente else 'SEM REMETENTE'
+
+            if remetente_nome not in coletas_por_remetente:
+                coletas_por_remetente[remetente_nome] = {
+                    'entregas': {},
+                    'total_peso': 0.0
+                }
+            coletas_por_remetente[remetente_nome]['total_peso'] += peso_bruto
+
+            if destino_key not in coletas_por_remetente[remetente_nome]['entregas']:
+                coletas_por_remetente[remetente_nome]['entregas'][destino_key] = {
+                    'cliente': cliente_nome,
+                    'cidade_uf': f"{cidade_final}-{estado_final}",
+                    'peso': 0.0
+                }
+
+            coletas_por_remetente[remetente_nome]['entregas'][destino_key]['peso'] += peso_bruto
+
+        lista_entregas = sorted(entregas_agrupadas.values(), key=lambda x: x['cliente'])
+        lista_coletas = sorted(coletas_por_remetente.items(), key=lambda x: x[0]) 
+
+        # Ordena as sub-entregas dentro de cada coleta
+        for rem_nome, dados_coleta in lista_coletas:
+            dados_coleta['entregas'] = sorted(dados_coleta['entregas'].values(), key=lambda x: x['cliente'])
+
+        # 3. Renderizar o template HTML
+        return render_template(
+            'espelho.html',
+            carga=carga,
+            lista_entregas=lista_entregas,
+            lista_coletas=lista_coletas,
+            peso_total_carga=peso_total_carga,
+            total_destinos=len(lista_entregas)
+        )
+
+    except Exception as e:
+        print(f"Erro ao gerar espelho HTML da carga {carga_id}: {e}")
+        traceback.print_exc()
+        return f"Erro interno: {str(e)}", 500
         
 # --- API: MONTAGEM (RASCUNHOS) ---
 @app.route('/api/cargas/montar', methods=['POST'])
@@ -778,8 +839,26 @@ def update_carga_status(carga_id):
         if not carga:
             return jsonify(error='Carga não encontrada'), 404
 
+        # --- INÍCIO DA TRAVA DE ADMIN (REGREDIR STATUS) ---
+        if 'status' in data:
+            novo_status = data['status']
+            status_atual = carga.status
+            
+            # Define as ações de "regressão" que SÃO SOMENTE DE ADMIN
+            is_regressao_admin_only = (
+                (status_atual == 'Finalizada' and novo_status == 'Em Trânsito') or
+                (status_atual == 'Em Trânsito' and novo_status == 'Agendada')
+            )
+            
+            # Se for uma dessas e o user NÃO for admin, bloqueia.
+            if is_regressao_admin_only and session.get('user_permission') != 'admin':
+                return jsonify(error='Apenas administradores podem regredir o status da carga.'), 403
+            
+            # A regressão 'Agendada' -> 'Pendente' (Cancelar Agendamento) 
+            # é permitida para todos, então não é incluída na verificação acima.
+        # --- FIM DA TRAVA DE ADMIN ---
+
         # Atualiza todos os campos que podem vir do frontend
-        # (salvar, agendar, iniciar-transito, finalizar)
         if 'status' in data:
             carga.status = data['status']
         if 'data_agendamento' in data:
@@ -806,7 +885,7 @@ def update_carga_status(carga_id):
     except Exception as e:
         db.session.rollback()
         print(f"Erro ao atualizar status da carga {carga_id}: {e}")
-        return jsonify(error=f"Erro interno: {str(e)}"), 500
+        return jsonify(error=f"Erro interno: {str(e)}"), 500        
         
 # --- API: Edição de Entregas (Dentro do Modal de Carga) ---
 @app.route('/api/cargas/<int:carga_id>/entregas', methods=['POST', 'DELETE'])
@@ -870,11 +949,11 @@ def handle_carga_entregas(carga_id):
             print(f"Erro em DELETE /api/cargas/<id>/entregas: {e}")
             return jsonify(error=f"Erro interno: {str(e)}"), 500
             
-# --- API: ENTREGAS (Disponíveis e Edição) ---
 @app.route('/api/entregas/disponiveis', methods=['GET', 'POST'])
 @login_required
 def handle_entregas_disponiveis():
     if request.method == 'POST':
+        # ... (A parte do POST continua idêntica) ...
         try:
             data = request.json
             nova_entrega = Entrega(
@@ -898,10 +977,16 @@ def handle_entregas_disponiveis():
 
     if request.method == 'GET':
         try:
-            entregas = Entrega.query.filter_by(carga_id=None).all()
+            # --- INÍCIO DA OTIMIZAÇÃO (LENTIDÃO) ---
+            entregas = Entrega.query.options(
+                joinedload(Entrega.remetente), 
+                joinedload(Entrega.cliente)
+            ).filter_by(carga_id=None).all()
+            # --- FIM DA OTIMIZAÇÃO ---
+            
             entregas_data = []
             for e in entregas:
-                # >>>>> CORREÇÃO 9: Acesso seguro (à prova de nulos)
+                # Agora o e.remetente e e.cliente vêm do JOIN, sem novas queries
                 entregas_data.append({
                     'id': e.id,
                     'remetente_id': e.remetente_id,
@@ -923,7 +1008,7 @@ def handle_entregas_disponiveis():
             print(f"Erro em GET /api/entregas/disponiveis: {e}")
             traceback.print_exc()
             return jsonify(error=f"Erro interno: {str(e)}"), 500
-
+            
 @app.route('/api/entregas/disponiveis/<int:entrega_id>', methods=['DELETE'])
 @login_required
 def delete_entrega_disponivel(entrega_id):

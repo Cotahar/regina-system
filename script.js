@@ -318,7 +318,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             </div>
             <div class="acoes-container">
                 <button class="btn-acao" data-acao="iniciar-transito">Iniciar Trânsito</button>
-                <button class="btn-acao-secundario" data-acao="cancelar-agendamento">Cancelar Agendamento</button>
+				<button class="btn-acao-secundario" data-acao="cancelar-agendamento">Cancelar Agendamento</button>
                 <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
             </div></div>`;
         } else if (detalhes_carga.status === 'Em Trânsito') {
@@ -333,9 +333,11 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                 <div class="campo-form"><label>Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div>
             </div></div>`;
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="acoes-container">
-                <button class="btn-acao-finalizar" data-acao="finalizar">Finalizar Carga</button>
-                <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
-            </div></div>`;
+            <button class="btn-acao-finalizar" data-acao="finalizar">Finalizar Carga</button>
+            ${(sessaoUsuario.user_permission === 'admin') ? 
+                `<button class="btn-acao-secundario" data-acao="regredir-para-agendada">Devolver para Agendada</button>` : ''}
+            <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
+        </div></div>`;
         } else { // Finalizada
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
                 <div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div>
@@ -347,7 +349,11 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                 <div class="campo-form"><label>Carregamento</label><p>${formatarData(detalhes_carga.data_carregamento)}</p></div>
                  <div class="campo-form"><label>Finalização</label><p>${formatarData(detalhes_carga.data_finalizacao)}</p></div>
             </div></div>`;
-            secaoAcoes = '';
+				if (sessaoUsuario.user_permission === 'admin') {
+					secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status (Admin)</h4><div class="acoes-container">
+						<button class="btn-acao-secundario" data-acao="regredir-para-transito">Devolver para Em Trânsito</button>
+					</div></div>`;
+				}
         }
 
         // ***** INÍCIO DA ALTERAÇÃO (Estilo e Botão) *****
@@ -361,8 +367,14 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         // ***** FIM DA ALTERAÇÃO *****
 
         detalhesConteudo.innerHTML = `
-            <div id="detalhes-header"><h2>${detalhes_carga.codigo_carga}</h2><span class="status-${statusClass}">${detalhes_carga.status}</span></div>
-            <div class="modal-body-grid">
+			<div id="detalhes-header">
+              <h2>${detalhes_carga.codigo_carga}</h2>
+              <div class="form-acao">
+                  <button id="btn-imprimir-espelho" class="btn-navegacao">🖨️ Imprimir Espelho</button>
+                  <span class="status-${statusClass}">${detalhes_carga.status}</span>
+              </div>
+			</div>           
+			<div class="modal-body-grid">
                 ${secaoDados}
                 <details class="detalhes-secao secao-expansivel" open> <summary><h4>Resumo de Coletas (${Object.keys(coletasPorRemetente).length})</h4></summary>
                     <ul class="lista-resumo">${resumoColetasHtml || '<li>Nenhuma coleta encontrada.</li>'}</ul>
@@ -485,9 +497,10 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         document.querySelector('[data-acao="iniciar-transito"]')?.addEventListener('click', handleIniciarTransito);
         document.querySelector('[data-acao="cancelar-agendamento"]')?.addEventListener('click', handleCancelarAgendamento);
         document.querySelector('[data-acao="finalizar"]')?.addEventListener('click', handleFinalizarCarga);
-        
+        document.querySelector('[data-acao="regredir-para-agendada"]')?.addEventListener('click', handleRegredirParaAgendada);
+        document.querySelector('[data-acao="regredir-para-transito"]')?.addEventListener('click', handleRegredirParaTransito);
         document.getElementById('btn-add-entrega')?.addEventListener('click', abrirFormAddEntregaV1);
-        
+        document.getElementById('btn-imprimir-espelho')?.addEventListener('click', handleImprimirEspelho);
         // ***** NOVO LISTENER (V2.1) *****
         document.getElementById('btn-devolver-rascunho')?.addEventListener('click', handleDevolverRascunho);
     }
@@ -683,6 +696,15 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         if (!confirm('Tem certeza? A carga voltará para "Pendentes".')) return;
         enviarAtualizacaoStatus({ status: 'Pendente', data_agendamento: null });
     }
+	async function handleRegredirParaAgendada() {
+        if (!confirm('ADMIN: Tem certeza que deseja devolver esta carga para "Agendada"?')) return;
+        enviarAtualizacaoStatus({ status: 'Agendada' });
+    }
+
+    async function handleRegredirParaTransito() {
+        if (!confirm('ADMIN: Tem certeza que deseja reabrir esta carga para "Em Trânsito"?')) return;
+        enviarAtualizacaoStatus({ status: 'Em Trânsito', data_finalizacao: null }); // Limpa a data de finalização
+    }
 
     function handleAgendar() {
         const dataAgendamento = document.getElementById('detalhe-agendamento').value;
@@ -779,6 +801,11 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             document.getElementById('form-nova-carga').reset();
         } catch (error) { console.error("Erro ao criar carga:", error); }
     });
-
+	function handleImprimirEspelho() {
+		if (!cargaAtual || !cargaAtual.detalhes_carga) return;
+		const cargaId = cargaAtual.detalhes_carga.id;
+		// Abre o PDF em uma nova aba (o navegador vai tratar o download)
+		window.open(`/cargas/${cargaId}/espelho_impressao`, '_blank'); // <-- CORRIGIDO
+	}
     carregarDadosIniciais();
 });

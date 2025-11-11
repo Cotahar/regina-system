@@ -89,7 +89,7 @@ const mascaraDecimal = (input) => {
     });
 
     // --- LÓGICA PRINCIPAL ---
-    const buscarCargas = async (page = 1) => {
+	const buscarCargas = async (page = 1) => {
         const params = new URLSearchParams({ page });
         const codigo = document.getElementById('filtro-codigo').value;
         const motorista = document.getElementById('filtro-motorista').value;
@@ -108,19 +108,27 @@ const mascaraDecimal = (input) => {
         if (origem) params.append('origem', origem);
         if (status) params.append('status', status);
         if (clienteId) params.append('cliente_id', clienteId);
-        if (dataCarregamentoInicio && dataCarregamentoFim) {
+        
+        // --- INÍCIO DA CORREÇÃO DO FILTRO DE DATA ---
+        if (dataCarregamentoInicio) {
             params.append('data_carregamento_inicio', dataCarregamentoInicio);
+        }
+        if (dataCarregamentoFim) {
             params.append('data_carregamento_fim', dataCarregamentoFim);
         }
-        if (dataFinalizacaoInicio && dataFinalizacaoFim) {
+        if (dataFinalizacaoInicio) {
             params.append('data_finalizacao_inicio', dataFinalizacaoInicio);
+        }
+        if (dataFinalizacaoFim) {
             params.append('data_finalizacao_fim', dataFinalizacaoFim);
         }
+        // --- FIM DA CORREÇÃO DO FILTRO DE DATA ---
 
         mensagemDiv.textContent = 'Buscando...';
         tabelaCorpo.innerHTML = `<tr><td colspan="8">Buscando...</td></tr>`;
         paginacaoContainer.innerHTML = '';
-
+        
+        // ... (o restante da função try/catch continua idêntico) ...
         try {
             const response = await fetch(`/api/cargas/consulta?${params.toString()}`);
             if (!response.ok) throw new Error('Falha na busca.');
@@ -289,9 +297,11 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                 <div class="campo-form"><label>Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div>
             </div></div>`;
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="acoes-container">
-                <button class="btn-acao-finalizar" data-acao="finalizar">Finalizar Carga</button>
-                <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
-            </div></div>`;
+            <button class="btn-acao-finalizar" data-acao="finalizar">Finalizar Carga</button>
+            ${(sessaoUsuario.user_permission === 'admin') ? 
+                `<button class="btn-acao-secundario" data-acao="regredir-para-agendada">Devolver para Agendada</button>` : ''}
+            <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
+			</div></div>`;
         } else { // Finalizada
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
                 <div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div>
@@ -303,7 +313,12 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                 <div class="campo-form"><label>Carregamento</label><p>${formatarData(detalhes_carga.data_carregamento)}</p></div>
                  <div class="campo-form"><label>Finalização</label><p>${formatarData(detalhes_carga.data_finalizacao)}</p></div>
             </div></div>`;
-            secaoAcoes = '';
+            secaoAcoes = ''; // Padrão
+				if (sessaoUsuario.user_permission === 'admin') {
+					secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status (Admin)</h4><div class="acoes-container">
+						<button class="btn-acao-secundario" data-acao="regredir-para-transito">Devolver para Em Trânsito</button>
+					</div></div>`;
+				}
         }
 
         // ***** INÍCIO DA ALTERAÇÃO DOS BOTÕES (IDÊNTICA AO script.js) *****
@@ -317,7 +332,13 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         // ***** FIM DA ALTERAÇÃO DOS BOTÕES *****
 
         detalhesConteudo.innerHTML = `
-            <div id="detalhes-header"><h2>${detalhes_carga.codigo_carga}</h2><span class="status-${statusClass}">${detalhes_carga.status}</span></div>
+            <div id="detalhes-header">
+              <h2>${detalhes_carga.codigo_carga}</h2>
+              <div class="form-acao">
+                  <button id="btn-imprimir-espelho" class="btn-navegacao">🖨️ Imprimir Espelho</button>
+                  <span class="status-${statusClass}">${detalhes_carga.status}</span>
+              </div>
+			</div>
             <div class="modal-body-grid">
                 ${secaoDados}
                 <details class="detalhes-secao secao-expansivel" open> <summary><h4>Resumo de Coletas (${Object.keys(coletasPorRemetente).length})</h4></summary>
@@ -440,10 +461,11 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         document.querySelector('[data-acao="iniciar-transito"]')?.addEventListener('click', handleIniciarTransito);
         document.querySelector('[data-acao="cancelar-agendamento"]')?.addEventListener('click', handleCancelarAgendamento);
         document.querySelector('[data-acao="finalizar"]')?.addEventListener('click', handleFinalizarCarga);
-        
+        document.querySelector('[data-acao="regredir-para-agendada"]')?.addEventListener('click', handleRegredirParaAgendada);
+        document.querySelector('[data-acao="regredir-para-transito"]')?.addEventListener('click', handleRegredirParaTransito);
         // Listener do botão V1 (Coleta Rápida)
         document.getElementById('btn-add-entrega')?.addEventListener('click', abrirFormAddEntregaV1);
-        
+        document.getElementById('btn-imprimir-espelho')?.addEventListener('click', handleImprimirEspelho);
         // ***** INÍCIO DO NOVO LISTENER (IDÊNTICO AO script.js) *****
         // Listener do botão V2.1 (Devolver para Montagem)
         document.getElementById('btn-devolver-rascunho')?.addEventListener('click', handleDevolverRascunho);
@@ -635,6 +657,15 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         if (!confirm('Tem certeza? A carga voltará para "Pendentes".')) return;
         enviarAtualizacaoStatus({ status: 'Pendente', data_agendamento: null });
     }
+	async function handleRegredirParaAgendada() {
+        if (!confirm('ADMIN: Tem certeza que deseja devolver esta carga para "Agendada"?')) return;
+        enviarAtualizacaoStatus({ status: 'Agendada' });
+    }
+
+    async function handleRegredirParaTransito() {
+        if (!confirm('ADMIN: Tem certeza que deseja reabrir esta carga para "Em Trânsito"?')) return;
+        enviarAtualizacaoStatus({ status: 'Em Trânsito', data_finalizacao: null }); // Limpa a data de finalização
+    }
 
     function handleAgendar() {
         const dataAgendamento = document.getElementById('detalhe-agendamento').value;
@@ -786,6 +817,14 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             mensagemDiv.textContent = "Erro ao carregar dados iniciais. Tente recarregar a página.";
         }
     }
+	
+	function handleImprimirEspelho() {
+		if (!cargaAtual || !cargaAtual.detalhes_carga) return;
+		const cargaId = cargaAtual.detalhes_carga.id;
+		window.open(`/cargas/${cargaId}/espelho_impressao`, '_blank'); // <-- CORRIGIDO
+	}
+
+form.addEventListener('submit', (event) => {
 
     carregarDadosIniciaisConsulta();
 });

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espelho de Carga: {{ carga.codigo_carga }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        body {
+            background-color: #555; /* Fundo cinza para a tela */
+            color: #111;
+        }
+        .espelho-container {
+            width: 21cm; /* Tamanho A4 */
+            min-height: 29.7cm;
+            padding: 1.5cm;
+            margin: 20px auto;
+            background-color: #FFF;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            font-family: 'Inter', sans-serif;
+            box-sizing: border-box; /* Garante que o padding não aumente o width */
+        }
+        .espelho-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
+        .espelho-header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .espelho-header span {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .dados-viagem {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px 15px;
+            font-size: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #CCC;
+        }
+        .espelho-secao {
+            margin-top: 25px;
+        }
+        .espelho-secao h2 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            border-bottom: 1px solid #CCC;
+            padding-bottom: 5px;
+        }
+        .lista-entregas, .lista-coletas {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .lista-entregas li, .lista-coletas li {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 13px;
+        }
+        .lista-entregas li strong, .lista-coletas li strong {
+            font-weight: 600;
+        }
+        .total-geral {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            border-top: 1px solid #000;
+            padding-top: 5px;
+        }
+        
+        /* Estilos de Coleta */
+        .coleta-bloco {
+            margin-bottom: 20px;
+        }
+        .coleta-bloco h3 {
+            font-size: 15px;
+            margin: 0 0 5px 0;
+            font-weight: 700;
+        }
+        .coleta-bloco .lista-coletas li {
+            padding-left: 15px; /* Indentação */
+            font-size: 12px;
+        }
+        .total-coleta {
+            display: flex;
+            justify-content: flex-end;
+            font-size: 12px;
+            font-weight: 600;
+            border-top: 1px dashed #AAA;
+            padding-top: 3px;
+            margin-top: 3px;
+        }
+
+        /* Estilos de Observações */
+        .obs-texto {
+            font-size: 13px;
+            white-space: pre-wrap; /* Preserva quebras de linha */
+            background: #FAFAFA;
+            border: 1px solid #EEE;
+            padding: 10px;
+            border-radius: 4px;
+            min-height: 50px;
+        }
+
+        /* --- Estilos de Impressão --- */
+        @media print {
+            body {
+                background-color: #FFF; /* Remove o fundo cinza */
+                margin: 0;
+                padding: 0;
+            }
+            .no-print {
+                display: none; /* Esconde o botão de imprimir */
+            }
+            .espelho-container {
+                width: 100%;
+                min-height: 0;
+                margin: 0;
+                padding: 0;
+                box-shadow: none; /* Remove sombra */
+                border: none;
+            }
+            .espelho-secao {
+                page-break-inside: avoid; /* Tenta não quebrar seções no meio */
+            }
+            .coleta-bloco {
+                 page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body class="espelho-body">
+
+    <div class="espelho-container">
+        
+        <div class="espelho-header no-print" style="margin-bottom: 15px;">
+            <button class="btn-acao-verde" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+            <button class="btn-navegacao-secundario" onclick="window.close()">Fechar Janela</button>
+        </div>
+        
+        <div class="espelho-header">
+            <h1>Espelho: {{ carga.codigo_carga }}</h1>
+            <span>Origem: {{ carga.origem }}</span>
+        </div>
+
+        <div class="espelho-secao">
+            <div class="dados-viagem">
+                <span><strong>Motorista:</strong> {{ carga.motorista_rel.nome if carga.motorista_rel else 'N/A' }}</span>
+                <span><strong>Placa:</strong> {{ carga.veiculo_rel.placa if carga.veiculo_rel else 'N/A' }}</span>
+                <span><strong>Peso Total:</strong> {{ "%.2f"|format(peso_total_carga) }} kg</span>
+                <span><strong>Total Destinos:</strong> {{ total_destinos }}</span>
+            </div>
+        </div>
+
+        <div class="espelho-secao">
+            <h2>Lista de Entregas ({{ total_destinos }} Destinos)</h2>
+            <ul class="lista-entregas">
+                {% for entrega in lista_entregas %}
+                <li>
+                    <span>{{ entrega.cliente }} ({{ entrega.cidade_uf }})</span>
+                    <strong>{{ "%.2f"|format(entrega.peso) }} kg</strong>
+                </li>
+                {% endfor %}
+            </ul>
+            <div class="total-geral">
+                Peso Total Carga: {{ "%.2f"|format(peso_total_carga) }} kg
+            </div>
+        </div>
+        
+        <div class="espelho-secao">
+            <h2>Observações da Carga</h2>
+            <div class="obs-texto">
+                {{ carga.observacoes or 'Nenhuma observação.' }}
+            </div>
+        </div>
+
+        <div class="espelho-secao">
+            <h2>Lista de Coletas (Detalhado)</h2>
+            {% for remetente_nome, dados_coleta in lista_coletas %}
+                <div class="coleta-bloco">
+                    <h3>Coleta: {{ remetente_nome }}</h3>
+                    <ul class="lista-coletas">
+                        {% for entrega in dados_coleta.entregas %}
+                        <li>
+                            <span>- {{ entrega.cliente }} ({{ entrega.cidade_uf }})</span>
+                            <strong>{{ "%.2f"|format(entrega.peso) }} kg</strong>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <div class="total-coleta">
+                        Total (Coleta): {{ "%.2f"|format(dados_coleta.total_peso) }} kg
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+    </div>
+</body>
+</html>
