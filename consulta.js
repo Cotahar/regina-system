@@ -70,6 +70,19 @@ const mascaraDecimal = (input) => {
             }).format(num);
         });
     };
+	const calcularFretePorTonelada = (pesoInput, tonInput, freteInput) => {
+    const pesoBruto = parseDecimal(pesoInput.value) || 0;
+    const valorTon = parseDecimal(tonInput.value) || 0;
+
+    if (pesoBruto > 0 && valorTon > 0) {
+        const freteCalculado = (pesoBruto / 1000) * valorTon;
+        // Formata e insere no campo Frete
+        freteInput.value = new Intl.NumberFormat('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(freteCalculado);
+    }
+	};
     // --- LÓGICA DE MODAIS ---
 	const fecharModais = () => {
         modalDetalhes.style.display = 'none';
@@ -250,11 +263,15 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         // (IDÊNTICA AO script.js, pois o modal é o mesmo)
         if (detalhes_carga.status === 'Pendente') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
-                <div class="campo-form"><label>Origem</label><input type="text" id="detalhe-origem" value="${detalhes_carga.origem || ''}"></div>
-                <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
-                <div class="campo-form"><label>Peso Cubado</label><p>${formatarPeso(cubadoTotalGeral)}</p></div> <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
-                <div class="campo-form"><label>Frete Pago</label><input type="text" id="detalhe-frete-pago" value="${formatarMoeda(detalhes_carga.frete_pago).replace('R$ ','')}" inputmode="decimal"></div>
-                <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div> </div></div>`;
+            <div class="campo-form"><label>Origem</label><input type="text" id="detalhe-origem" value="${detalhes_carga.origem || ''}"></div>
+            <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
+            <div class="campo-form"><label>Peso Cubado</label><p>${formatarPeso(cubadoTotalGeral)}</p></div>
+            <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
+            <div class="campo-form"><label>Frete Pago</label><input type="text" id="detalhe-frete-pago" value="${formatarMoeda(detalhes_carga.frete_pago).replace('R$ ','')}" inputmode="decimal"></div>
+            <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div>
+            <div class="campo-form"><label for="select-motorista">Motorista</label><select id="select-motorista" style="width: 100%;"></select></div>
+            <div class="campo-form"><label for="select-veiculo">Veículo</label><select id="select-veiculo" style="width: 100%;"></select></div>
+			</div></div>`;
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao-agendar">
                 <label for="detalhe-agendamento">Data do Agendamento:</label>
                 <input type="date" id="detalhe-agendamento" value="${formatarDataParaInput(detalhes_carga.data_agendamento)}">
@@ -488,17 +505,25 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             <button type="button" class="btn-navegacao-secundario" id="cancelar-add-entrega-v1">Cancelar</button>
         </form>`;
         $('#select-cliente-v1').select2({ placeholder: 'Selecione um cliente', dropdownParent: $('#form-add-entrega-container'), data: listaDeClientes });
+		const pesoV1 = document.getElementById('entrega-peso-bruto-v1');
+		const tonV1 = document.getElementById('entrega-valor-tonelada-v1');
+		const freteV1 = document.getElementById('entrega-valor-frete-v1');
+		const vTonListenerV1 = () => calcularFretePorTonelada(pesoV1, tonV1, freteV1);
+			tonV1.addEventListener('blur', vTonListenerV1);
+			pesoV1.addEventListener('blur', vTonListenerV1);
+
+			mascaraDecimal(pesoV1);
+			mascaraDecimal(freteV1);
+			mascaraDecimal(tonV1);
+			mascaraDecimal(document.getElementById('entrega-peso-cobrado-v1'));
         document.getElementById('form-nova-entrega').addEventListener('submit', salvarNovaEntregaV1);
-         document.getElementById('cancelar-add-entrega-v1').addEventListener('click', () => {
+        document.getElementById('cancelar-add-entrega-v1').addEventListener('click', () => {
              container.innerHTML = '';
              // Mostra os dois botões novamente
              document.getElementById('btn-add-entrega').style.display = 'inline-flex';
              if (btnDevolver) btnDevolver.style.display = 'inline-flex';
         });
 
-        mascaraDecimal(document.getElementById('entrega-peso-bruto-v1'));
-        mascaraDecimal(document.getElementById('entrega-valor-frete-v1'));
-        mascaraDecimal(document.getElementById('entrega-peso-cobrado-v1'));
     }
 
      // --- FUNÇÃO PARA ABRIR MODAL DE EDIÇÃO DE LINHA DE ENTREGA ---
@@ -649,7 +674,16 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             body: JSON.stringify({ password: senha })
         });
         if (response.ok) {
-            enviarAtualizacaoStatus({ status: 'Finalizada', data_finalizacao: getHojeFormatado() });
+            // --- INÍCIO DA CORREÇÃO ---
+            let dados = {
+                 observacoes: document.getElementById('obs-carga').value,
+                 frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+                 previsao_entrega: document.getElementById('detalhe-previsao').value || null
+            };
+            dados.status = 'Finalizada';
+            dados.data_finalizacao = getHojeFormatado();
+            enviarAtualizacaoStatus(dados);
+            // --- FIM DA CORREÇÃO ---
         } else { alert("Senha incorreta!"); }
     }
 
@@ -670,7 +704,17 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
     function handleAgendar() {
         const dataAgendamento = document.getElementById('detalhe-agendamento').value;
         if (!dataAgendamento) { alert('A data de agendamento é obrigatória.'); return; }
-        enviarAtualizacaoStatus({ status: 'Agendada', data_agendamento: dataAgendamento });
+        
+        // --- INÍCIO DA CORREÇÃO ---
+        let dados = {
+             observacoes: document.getElementById('obs-carga').value,
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+             origem: document.getElementById('detalhe-origem').value,
+             data_agendamento: dataAgendamento
+        };
+        dados.status = 'Agendada';
+        enviarAtualizacaoStatus(dados);
+        // --- FIM DA CORREÇÃO ---
     }
 
     function handleIniciarTransito() {
@@ -678,14 +722,25 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         const veiculoId = $('#select-veiculo').val();
         const dataCarregamento = document.getElementById('detalhe-carregamento').value;
         if (!motoristaId || !veiculoId || !dataCarregamento) { alert('Motorista, Veículo e Data de Carregamento são obrigatórios.'); return; }
+
+        // --- INÍCIO DA CORREÇÃO ---
+        let dados = {
+             observacoes: document.getElementById('obs-carga').value,
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+             previsao_entrega: document.getElementById('detalhe-previsao').value || null
+        };
+        const campoAgendamentoEdit = document.getElementById('detalhe-agendamento-edit');
+        if (campoAgendamentoEdit) {
+            dados.data_agendamento = campoAgendamentoEdit.value || null;
+        }
         
-        // ***** CORREÇÃO DE BUGZINHO AQUI: Estava faltando 'status:' *****
-        enviarAtualizacaoStatus({ 
-            status: 'Em Trânsito', // <-- ADICIONADO
-            motorista_id: motoristaId, 
-            veiculo_id: veiculoId, 
-            data_carregamento: dataCarregamento 
-        });
+        dados.status = 'Em Trânsito';
+        dados.motorista_id = motoristaId;
+        dados.veiculo_id = veiculoId;
+        dados.data_carregamento = dataCarregamento;
+        
+        enviarAtualizacaoStatus(dados);
+        // --- FIM DA CORREÇÃO ---
     }
 
     function handleSalvarAlteracoes() {
@@ -696,9 +751,13 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         };
 
         if(detalhes_carga.status === 'Pendente') {
-            dados.origem = document.getElementById('detalhe-origem').value;
-            dados.data_agendamento = document.getElementById('detalhe-agendamento').value || null;
-        } else if (detalhes_carga.status === 'Agendada') {
+        dados.origem = document.getElementById('detalhe-origem').value;
+        dados.data_agendamento = document.getElementById('detalhe-agendamento').value || null;
+        // --- LINHAS NOVAS ABAIXO ---
+        dados.motorista_id = $('#select-motorista').val() || null;
+        dados.veiculo_id = $('#select-veiculo').val() || null;
+        // --- FIM DA ADIÇÃO ---
+		} else if (detalhes_carga.status === 'Agendada') {
             dados.motorista_id = $('#select-motorista').val() || null;
             dados.veiculo_id = $('#select-veiculo').val() || null;
             dados.data_carregamento = document.getElementById('detalhe-carregamento').value || null;
@@ -731,7 +790,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
 
      // --- Inicialização Select2 (Módulo 4) ---
     function inicializarSelect2MotoristaVeiculo() {
-         if (cargaAtual?.detalhes_carga?.status === 'Agendada') {
+        if (['Pendente', 'Agendada'].includes(cargaAtual?.detalhes_carga?.status)) {
             $('#select-motorista').select2({
                 placeholder: 'Selecione um motorista',
                 allowClear: true,
