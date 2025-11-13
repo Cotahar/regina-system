@@ -385,6 +385,7 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
 #coluna-cadastro, #coluna-disponiveis { display: flex; flex-direction: column; gap: 20px; }
 #coluna-cadastro .card-lista-clientes, #coluna-disponiveis .card-lista-clientes { flex-grow: 1; } /* Faz os cards ocuparem altura disponível */
 .grid-col-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.grid-col-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; }
 .divisor-form { border: none; border-top: 1px solid #475569; margin: 20px 0; }
 #tabela-disponiveis th:first-child, #tabela-disponiveis td:first-child { width: 40px; text-align: center; } /* Checkbox */
 #tabela-disponiveis td { font-size: 0.9em; }

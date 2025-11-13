@@ -72,7 +72,18 @@ const mascaraDecimal = (input) => {
             }).format(num);
         });
     };
+	const calcularFretePorTonelada = (pesoInput, tonInput, freteInput) => {
+    const pesoBruto = parseDecimal(pesoInput.value) || 0;
+    const valorTon = parseDecimal(tonInput.value) || 0;
 
+		if (pesoBruto > 0 && valorTon > 0) {
+			const freteCalculado = (pesoBruto / 1000) * valorTon;
+			freteInput.value = new Intl.NumberFormat('pt-BR', {
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2
+			}).format(freteCalculado);
+		}
+	};
     // --- LÓGICA DE MODAIS ---
     const fecharModais = () => {
         modalNovaCarga.style.display = 'none';
@@ -695,7 +706,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
     });
     // ***** FIM DA ALTERAÇÃO *****
 
-    async function handleFinalizarCarga() {
+	async function handleFinalizarCarga() {
         const senha = prompt("Para finalizar a carga, insira sua senha de usuário:");
         if (senha === null) return;
         const response = await fetch('/api/verify-password', {
@@ -709,7 +720,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             let dados = {
                  observacoes: document.getElementById('obs-carga').value,
                  frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
-                 previsao_entrega: document.getElementById('detalhe-previsao').value || null
+                 previsao_entrega: document.getElementById('detalhe-previsao')?.value || null // Adiciona o '?' para o caso de não existir
             };
             
             // Adiciona os dados da finalização
@@ -720,7 +731,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             // --- FIM DA CORREÇÃO ---
         } else { alert("Senha incorreta!"); }
     }
-
+	
     async function handleCancelarAgendamento() {
         if (!confirm('Tem certeza? A carga voltará para "Pendentes".')) return;
         enviarAtualizacaoStatus({ status: 'Pendente', data_agendamento: null });
@@ -735,7 +746,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         enviarAtualizacaoStatus({ status: 'Em Trânsito', data_finalizacao: null }); // Limpa a data de finalização
     }
 
-    function handleAgendar() {
+function handleAgendar() {
         const dataAgendamento = document.getElementById('detalhe-agendamento').value;
         if (!dataAgendamento) { alert('A data de agendamento é obrigatória.'); return; }
         
@@ -745,7 +756,10 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
              observacoes: document.getElementById('obs-carga').value,
              frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
              origem: document.getElementById('detalhe-origem').value,
-             data_agendamento: dataAgendamento // Adiciona a data específica
+             data_agendamento: dataAgendamento, // Adiciona a data específica
+             // Adiciona motorista/veiculo se já tiver sido preenchido
+             motorista_id: $('#select-motorista').val() || null,
+             veiculo_id: $('#select-veiculo').val() || null
         };
         
         // Adiciona o status do agendamento
@@ -783,7 +797,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         enviarAtualizacaoStatus(dados);
         // --- FIM DA CORREÇÃO ---
     }
-
+	
     function handleSalvarAlteracoes() {
         const { detalhes_carga } = cargaAtual;
         let dados = {

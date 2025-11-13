@@ -96,18 +96,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }).format(num);
         });
     };
-	const calcularFretePorTonelada = (pesoInput, tonInput, freteInput) => {
-    const pesoBruto = parseDecimal(pesoInput.value) || 0;
+	const calcularFretePorTonelada = (pesoBrutoInput, pesoCubadoInput, tonInput, freteInput) => {
+    const pesoBruto = parseDecimal(pesoBrutoInput.value) || 0;
+    const pesoCubado = parseDecimal(pesoCubadoInput.value) || 0;
     const valorTon = parseDecimal(tonInput.value) || 0;
 
-		if (pesoBruto > 0 && valorTon > 0) {
-			const freteCalculado = (pesoBruto / 1000) * valorTon;
-			// Formata e insere no campo Frete
-			freteInput.value = new Intl.NumberFormat('pt-BR', {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2
-			}).format(freteCalculado);
-		}
+    // --- LÓGICA ATUALIZADA ---
+    // Usa Peso Cubado se for > 0, senão usa Peso Bruto
+    const pesoBase = (pesoCubado > 0) ? pesoCubado : pesoBruto;
+    // --- FIM DA ATUALIZAÇÃO ---
+
+    if (pesoBase > 0 && valorTon > 0) {
+        const freteCalculado = (pesoBase / 1000) * valorTon;
+        // Formata e insere no campo Frete
+        freteInput.value = new Intl.NumberFormat('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(freteCalculado);
+    }
 	};
     // --- FUNÇÕES DE CARREGAMENTO ---
     
@@ -521,6 +527,7 @@ async function handleSalvarRascunho() {
 	const vTonListener = () => calcularFretePorTonelada(inputPesoBruto, inputValorTonelada, inputValorFrete);
 	if (inputValorTonelada) inputValorTonelada.addEventListener('blur', vTonListener);
 	if (inputPesoBruto) inputPesoBruto.addEventListener('blur', vTonListener);
+	if (inputPesoCubado) inputPesoCubado.addEventListener('blur', vTonListener);
     if (selectAllCheckbox) selectAllCheckbox.addEventListener('change', (e) => { document.querySelectorAll('.select-entrega').forEach(cb => { cb.checked = e.target.checked; }); atualizarTotaisMontagem(); });
     if (inputOrigemPrincipal) inputOrigemPrincipal.addEventListener('input', atualizarTotaisMontagem);
     if (btnSalvarRascunho) btnSalvarRascunho.addEventListener('click', handleSalvarRascunho); else console.error("Elemento btn-salvar-rascunho não encontrado");

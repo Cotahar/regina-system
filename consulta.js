@@ -681,7 +681,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             let dados = {
                  observacoes: document.getElementById('obs-carga').value,
                  frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
-                 previsao_entrega: document.getElementById('detalhe-previsao').value || null
+                 previsao_entrega: document.getElementById('detalhe-previsao')?.value || null
             };
             dados.status = 'Finalizada';
             dados.data_finalizacao = getHojeFormatado();
@@ -704,22 +704,20 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         enviarAtualizacaoStatus({ status: 'Em Trânsito', data_finalizacao: null }); // Limpa a data de finalização
     }
 
-    function handleAgendar() {
+function handleAgendar() {
         const dataAgendamento = document.getElementById('detalhe-agendamento').value;
         if (!dataAgendamento) { alert('A data de agendamento é obrigatória.'); return; }
         
         // --- INÍCIO DA CORREÇÃO ---
-        // Captura todos os outros dados da tela (como em salvar)
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
              frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
              origem: document.getElementById('detalhe-origem').value,
-             data_agendamento: dataAgendamento // Adiciona a data específica
+             data_agendamento: dataAgendamento,
+             motorista_id: $('#select-motorista').val() || null,
+             veiculo_id: $('#select-veiculo').val() || null
         };
-        
-        // Adiciona o status do agendamento
         dados.status = 'Agendada';
-        
         enviarAtualizacaoStatus(dados);
         // --- FIM DA CORREÇÃO ---
     }
@@ -731,19 +729,16 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         if (!motoristaId || !veiculoId || !dataCarregamento) { alert('Motorista, Veículo e Data de Carregamento são obrigatórios.'); return; }
 
         // --- INÍCIO DA CORREÇÃO ---
-        // Captura todos os outros dados da tela (como em salvar)
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
              frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
              previsao_entrega: document.getElementById('detalhe-previsao').value || null
         };
-        // Adiciona dados de agendamento (caso o admin tenha editado)
         const campoAgendamentoEdit = document.getElementById('detalhe-agendamento-edit');
         if (campoAgendamentoEdit) {
             dados.data_agendamento = campoAgendamentoEdit.value || null;
         }
         
-        // Adiciona os dados do trânsito
         dados.status = 'Em Trânsito';
         dados.motorista_id = motoristaId;
         dados.veiculo_id = veiculoId;
@@ -752,7 +747,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         enviarAtualizacaoStatus(dados);
         // --- FIM DA CORREÇÃO ---
     }
-
+	
     function handleSalvarAlteracoes() {
          const { detalhes_carga } = cargaAtual;
         let dados = {
