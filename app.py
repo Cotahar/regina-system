@@ -170,7 +170,7 @@ def get_clientes_detalhes():
         # Agora 'c' é o Cliente e 'entregas_count' é a contagem
         for c, entregas_count in query_result: 
 
-            text = f"{(c.codigo_cliente or '')} - {(c.razao_social or '').upper()}"
+            text = f"{(c.razao_social or '').upper()} ({(c.cidade or 'N/A')}-{(c.estado or 'N/A')})"
 
             clientes_data.append({
                 'id': c.id,
@@ -204,7 +204,7 @@ def get_clientes():
         # Simplificado para o Select2
         clientes_data = [{
             'id': c.id, 
-            'text': f"{(c.codigo_cliente or '')} - {(c.razao_social or '').upper()}", # >>>>> CORREÇÃO 2: Proteção contra Nulos
+            'text': f"{(c.razao_social or '').upper()} ({(c.cidade or 'N/A')}-{(c.estado or 'N/A')})",
             'cidade': c.cidade,
             'estado': c.estado,
             'is_remetente': c.is_remetente
@@ -900,12 +900,11 @@ def handle_carga_entregas(carga_id):
         try:
             data = request.json
             cliente_id = data.get('cliente_id')
-            
-            # Precisamos encontrar o Remetente Padrão (DEPÓSITO)
-            # (A lógica do V1 não envia um remetente)
-            remetente_padrao = Cliente.query.filter_by(is_remetente=True).first()
-            if not remetente_padrao:
-                 return jsonify(error='Nenhum cliente marcado como Remetente foi encontrado. Cadastre um.'), 400
+            remetente_id = data.get('remetente_id') # <-- LINHA NOVA
+
+            # Validação (se o frontend não enviar por algum motivo)
+            if not remetente_id:
+                 return jsonify(error='Remetente não foi selecionado.'), 400
                  
             cliente = Cliente.query.get(cliente_id)
             if not cliente:
@@ -914,7 +913,7 @@ def handle_carga_entregas(carga_id):
             nova_entrega = Entrega(
                 carga_id=carga.id,
                 cliente_id=cliente.id,
-                remetente_id=remetente_padrao.id, # Usa o primeiro remetente encontrado
+                remetente_id=remetente_id,
                 peso_bruto=data.get('peso_bruto'),
                 valor_frete=data.get('valor_frete'),
                 cidade_entrega=cliente.cidade, # Padrão do cliente

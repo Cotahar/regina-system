@@ -385,6 +385,7 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
 #coluna-cadastro, #coluna-disponiveis { display: flex; flex-direction: column; gap: 20px; }
 #coluna-cadastro .card-lista-clientes, #coluna-disponiveis .card-lista-clientes { flex-grow: 1; } /* Faz os cards ocuparem altura disponível */
 .grid-col-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.grid-col-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; }
 .divisor-form { border: none; border-top: 1px solid #475569; margin: 20px 0; }
 #tabela-disponiveis th:first-child, #tabela-disponiveis td:first-child { width: 40px; text-align: center; } /* Checkbox */
 #tabela-disponiveis td { font-size: 0.9em; }
@@ -576,12 +577,6 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
     display: block;
 }
 
-/* ***** CORREÇÃO BOTÃO EDITAR CARGA NA MONTAGEM (IMAGEM bc3c62) ***** */
-/*
-  O botão "Editar Carga na Montagem" estava usando a classe "btn-editar".
-  Agora, ele usará "btn-navegacao", mas precisamos de um ajuste
-  para que ele não fique desproporcional dentro do modal.
-*/
 .entregas-header .btn-navegacao {
     font-size: 14px; /* Tamanho da fonte padrão do botão */
     padding: 10px 15px; /* Padding padrão do botão */
@@ -590,3 +585,5 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
     border: 2px solid #ef4444 !important; /* Vermelho erro, !important para sobrepor */
     box-shadow: 0 0 5px rgba(239, 68, 68, 0.5); /* Brilho vermelho */
 }
+.grid-col-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+

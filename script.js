@@ -72,7 +72,18 @@ const mascaraDecimal = (input) => {
             }).format(num);
         });
     };
+	const calcularFretePorTonelada = (pesoInput, tonInput, freteInput) => {
+    const pesoBruto = parseDecimal(pesoInput.value) || 0;
+    const valorTon = parseDecimal(tonInput.value) || 0;
 
+		if (pesoBruto > 0 && valorTon > 0) {
+			const freteCalculado = (pesoBruto / 1000) * valorTon;
+			freteInput.value = new Intl.NumberFormat('pt-BR', {
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2
+			}).format(freteCalculado);
+		}
+	};
     // --- LÓGICA DE MODAIS ---
     const fecharModais = () => {
         modalNovaCarga.style.display = 'none';
@@ -285,11 +296,15 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
 
         if (detalhes_carga.status === 'Pendente') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
-                <div class="campo-form"><label>Origem</label><input type="text" id="detalhe-origem" value="${detalhes_carga.origem || ''}"></div>
-                <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
-                <div class="campo-form"><label>Peso Cubado</label><p>${formatarPeso(cubadoTotalGeral)}</p></div> <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
-                <div class="campo-form"><label>Frete Pago</label><input type="text" id="detalhe-frete-pago" value="${formatarMoeda(detalhes_carga.frete_pago).replace('R$ ','')}" inputmode="decimal"></div>
-                <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div> </div></div>`;
+            <div class="campo-form"><label>Origem</label><input type="text" id="detalhe-origem" value="${detalhes_carga.origem || ''}"></div>
+            <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
+            <div class="campo-form"><label>Peso Cubado</label><p>${formatarPeso(cubadoTotalGeral)}</p></div>
+            <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
+            <div class="campo-form"><label>Frete Pago</label><input type="text" id="detalhe-frete-pago" value="${formatarMoeda(detalhes_carga.frete_pago).replace('R$ ','')}" inputmode="decimal"></div>
+            <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div>
+            <div class="campo-form"><label for="select-motorista">Motorista</label><select id="select-motorista" style="width: 100%;"></select></div>
+            <div class="campo-form"><label for="select-veiculo">Veículo</label><select id="select-veiculo" style="width: 100%;"></select></div>
+        </div></div>`;
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao-agendar">
                 <label for="detalhe-agendamento">Data do Agendamento:</label>
                 <input type="date" id="detalhe-agendamento" value="${formatarDataParaInput(detalhes_carga.data_agendamento)}">
@@ -324,10 +339,12 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
                 <div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div>
                 <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
-                <div class="campo-form"><label>Peso Cubado</label><p>${formatarPeso(cubadoTotalGeral)}</p></div> <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
+                <div class="campo-form"><label>Peso Cubado</label><p>${formatarPeso(cubadoTotalGeral)}</p></div>
+                <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
                  <div class="campo-form"><label>Frete Pago</label><input type="text" id="detalhe-frete-pago" value="${formatarMoeda(detalhes_carga.frete_pago).replace('R$ ','')}" inputmode="decimal"></div>
-                <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div> <div class="campo-form"><label>Motorista</label><p>${detalhes_carga.motorista_nome || 'N/A'}</p></div>
-                <div class="campo-form"><label>Placa</label><p>${detalhes_carga.veiculo_placa || 'N/A'}</p></div>
+                <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div>
+                <div class="campo-form"><label>Motorista</label><p>${detalhes_carga.motorista_nome || 'N/A'}</p></div>
+                <div class="campo-form"><label>Placa</label><p>${detalhes_carga.placa_veiculo || 'N/A'}</p></div>
                 <div class="campo-form"><label>Carregamento</label><p>${formatarData(detalhes_carga.data_carregamento)}</p></div>
                 <div class="campo-form"><label>Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div>
             </div></div>`;
@@ -511,26 +528,47 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
 
         const container = document.getElementById('form-add-entrega-container');
         container.innerHTML = `<form id="form-nova-entrega" class="form-acao">
-            <select id="select-cliente-v1" style="width: 250px;"></select>
-            <input type="text" id="entrega-peso-bruto-v1" placeholder="Peso Bruto *" inputmode="decimal" required>
-            <input type="text" id="entrega-valor-frete-v1" placeholder="Valor Frete" inputmode="decimal">
-            <button type="submit">Salvar Entrega</button>
-            <button type="button" class="btn-navegacao-secundario" id="cancelar-add-entrega-v1">Cancelar</button>
-        </form>`;
+        <select id="select-remetente-v1" style="width: 250px;"></select>
+
+        <select id="select-cliente-v1" style="width: 250px;"></select>
+        <input type="text" id="entrega-peso-bruto-v1" placeholder="Peso Bruto *" inputmode="decimal" required>
+
+        <div class="grid-col-2" style="gap: 5px; flex-grow: 1;">
+            <div><input type="text" id="entrega-valor-tonelada-v1" placeholder="Valor/Ton" inputmode="decimal" style="margin-bottom: 0; width: 100%;"></div>
+            <div><input type="text" id="entrega-valor-frete-v1" placeholder="Valor Frete" inputmode="decimal" style="margin-bottom: 0; width: 100%;"></div>
+        </div>
+
+        <button type="submit">Salvar Entrega</button>
+        <button type="button" class="btn-navegacao-secundario" id="cancelar-add-entrega-v1">Cancelar</button>
+		</form>`;
         
         // Filtra clientes que NÃO são remetentes para o V1
         const listaDestinatarios = listaDeClientes.filter(c => c.is_remetente === false);
         
-        $('#select-cliente-v1').select2({ placeholder: 'Selecione um cliente', dropdownParent: $('#form-add-entrega-container'), data: listaDestinatarios });
+		$('#select-remetente-v1').select2({ 
+			placeholder: 'Selecione o Remetente *', 
+			dropdownParent: $('#form-add-entrega-container'), 
+			data: listaDeRemetentesSelect2 
+		});
+
+		$('#select-cliente-v1').select2({ placeholder: 'Selecione o Destinatário *', dropdownParent: $('#form-add-entrega-container'), data: listaDestinatarios });
+		const pesoV1 = document.getElementById('entrega-peso-bruto-v1');
+		const tonV1 = document.getElementById('entrega-valor-tonelada-v1');
+		const freteV1 = document.getElementById('entrega-valor-frete-v1');
+
+		const vTonListenerV1 = () => calcularFretePorTonelada(pesoV1, tonV1, freteV1);
+		tonV1.addEventListener('blur', vTonListenerV1);
+		pesoV1.addEventListener('blur', vTonListenerV1);
+
+		mascaraDecimal(pesoV1);
+		mascaraDecimal(freteV1);
+		mascaraDecimal(tonV1);
         document.getElementById('form-nova-entrega').addEventListener('submit', salvarNovaEntregaV1);
         document.getElementById('cancelar-add-entrega-v1').addEventListener('click', () => {
              container.innerHTML = '';
              document.getElementById('btn-add-entrega').style.display = 'inline-flex';
              if (btnDevolver) btnDevolver.style.display = 'inline-flex';
         });
-
-        mascaraDecimal(document.getElementById('entrega-peso-bruto-v1'));
-        mascaraDecimal(document.getElementById('entrega-valor-frete-v1'));
     }
 
     // ***** FUNÇÃO ALTERADA *****
@@ -619,18 +657,21 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
     async function salvarNovaEntregaV1(e) {
         e.preventDefault();
         const dados = {
+			remetente_id: $('#select-remetente-v1').val(),
             cliente_id: $('#select-cliente-v1').val(),
             peso_bruto: parseDecimal(document.getElementById('entrega-peso-bruto-v1').value),
             valor_frete: parseDecimal(document.getElementById('entrega-valor-frete-v1').value),
         };
-        if(!dados.cliente_id || dados.peso_bruto === null) { alert("Cliente e Peso Bruto são obrigatórios."); return; }
+		if(!dados.remetente_id || !dados.cliente_id || dados.peso_bruto === null) { alert("Remetente, Destinatário e Peso Bruto são obrigatórios."); return; }
         const response = await fetch(`/api/cargas/${cargaAtual.detalhes_carga.id}/entregas`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         });
         if (response.ok) {
-            await carregarDadosIniciais();
+            document.getElementById('entrega-peso-bruto-v1').value = '';
+			document.getElementById('entrega-valor-tonelada-v1').value = '';
+			document.getElementById('entrega-valor-frete-v1').value = '';
             await abrirModalDetalhes(cargaAtual.detalhes_carga.id, true);
         } else {
              const err = await response.json();
@@ -678,7 +719,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
     });
     // ***** FIM DA ALTERAÇÃO *****
 
-    async function handleFinalizarCarga() {
+	async function handleFinalizarCarga() {
         const senha = prompt("Para finalizar a carga, insira sua senha de usuário:");
         if (senha === null) return;
         const response = await fetch('/api/verify-password', {
@@ -687,10 +728,23 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             body: JSON.stringify({ password: senha })
         });
         if (response.ok) {
-            enviarAtualizacaoStatus({ status: 'Finalizada', data_finalizacao: getHojeFormatado() });
+            // --- INÍCIO DA CORREÇÃO ---
+            // Captura todos os dados da tela antes de finalizar
+            let dados = {
+                 observacoes: document.getElementById('obs-carga').value,
+                 frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+                 previsao_entrega: document.getElementById('detalhe-previsao')?.value || null // Adiciona o '?' para o caso de não existir
+            };
+            
+            // Adiciona os dados da finalização
+            dados.status = 'Finalizada';
+            dados.data_finalizacao = getHojeFormatado();
+            
+            enviarAtualizacaoStatus(dados);
+            // --- FIM DA CORREÇÃO ---
         } else { alert("Senha incorreta!"); }
     }
-
+	
     async function handleCancelarAgendamento() {
         if (!confirm('Tem certeza? A carga voltará para "Pendentes".')) return;
         enviarAtualizacaoStatus({ status: 'Pendente', data_agendamento: null });
@@ -705,10 +759,27 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         enviarAtualizacaoStatus({ status: 'Em Trânsito', data_finalizacao: null }); // Limpa a data de finalização
     }
 
-    function handleAgendar() {
+function handleAgendar() {
         const dataAgendamento = document.getElementById('detalhe-agendamento').value;
         if (!dataAgendamento) { alert('A data de agendamento é obrigatória.'); return; }
-        enviarAtualizacaoStatus({ status: 'Agendada', data_agendamento: dataAgendamento });
+        
+        // --- INÍCIO DA CORREÇÃO ---
+        // Captura todos os outros dados da tela (como em salvar)
+        let dados = {
+             observacoes: document.getElementById('obs-carga').value,
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+             origem: document.getElementById('detalhe-origem').value,
+             data_agendamento: dataAgendamento, // Adiciona a data específica
+             // Adiciona motorista/veiculo se já tiver sido preenchido
+             motorista_id: $('#select-motorista').val() || null,
+             veiculo_id: $('#select-veiculo').val() || null
+        };
+        
+        // Adiciona o status do agendamento
+        dados.status = 'Agendada';
+        
+        enviarAtualizacaoStatus(dados);
+        // --- FIM DA CORREÇÃO ---
     }
 
     function handleIniciarTransito() {
@@ -716,9 +787,30 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         const veiculoId = $('#select-veiculo').val();
         const dataCarregamento = document.getElementById('detalhe-carregamento').value;
         if (!motoristaId || !veiculoId || !dataCarregamento) { alert('Motorista, Veículo e Data de Carregamento são obrigatórios.'); return; }
-        enviarAtualizacaoStatus({ status: 'Em Trânsito', motorista_id: motoristaId, veiculo_id: veiculoId, data_carregamento: dataCarregamento });
-    }
 
+        // --- INÍCIO DA CORREÇÃO ---
+        // Captura todos os outros dados da tela (como em salvar)
+        let dados = {
+             observacoes: document.getElementById('obs-carga').value,
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+             previsao_entrega: document.getElementById('detalhe-previsao').value || null
+        };
+        // Adiciona dados de agendamento (caso o admin tenha editado)
+        const campoAgendamentoEdit = document.getElementById('detalhe-agendamento-edit');
+        if (campoAgendamentoEdit) {
+            dados.data_agendamento = campoAgendamentoEdit.value || null;
+        }
+        
+        // Adiciona os dados do trânsito
+        dados.status = 'Em Trânsito';
+        dados.motorista_id = motoristaId;
+        dados.veiculo_id = veiculoId;
+        dados.data_carregamento = dataCarregamento;
+        
+        enviarAtualizacaoStatus(dados);
+        // --- FIM DA CORREÇÃO ---
+    }
+	
     function handleSalvarAlteracoes() {
         const { detalhes_carga } = cargaAtual;
         let dados = {
@@ -727,9 +819,13 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         };
 
         if(detalhes_carga.status === 'Pendente') {
-            dados.origem = document.getElementById('detalhe-origem').value;
-            dados.data_agendamento = document.getElementById('detalhe-agendamento').value || null;
-        } else if (detalhes_carga.status === 'Agendada') {
+        dados.origem = document.getElementById('detalhe-origem').value;
+        dados.data_agendamento = document.getElementById('detalhe-agendamento').value || null;
+        // --- LINHAS NOVAS ABAIXO ---
+        dados.motorista_id = $('#select-motorista').val() || null;
+        dados.veiculo_id = $('#select-veiculo').val() || null;
+        // --- FIM DA ADIÇÃO ---
+		} else if (detalhes_carga.status === 'Agendada') {
             dados.motorista_id = $('#select-motorista').val() || null;
             dados.veiculo_id = $('#select-veiculo').val() || null;
             dados.data_carregamento = document.getElementById('detalhe-carregamento').value || null;
@@ -760,7 +856,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
     }
 
     function inicializarSelect2MotoristaVeiculo() {
-         if (cargaAtual?.detalhes_carga?.status === 'Agendada') {
+         if (['Pendente', 'Agendada'].includes(cargaAtual?.detalhes_carga?.status)) {
             $('#select-motorista').select2({
                 placeholder: 'Selecione um motorista',
                 allowClear: true,

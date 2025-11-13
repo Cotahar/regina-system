@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectDestinatario = $('#select-destinatario');
     const inputPesoBruto = document.getElementById('entrega-peso-bruto');
     const inputValorFrete = document.getElementById('entrega-valor-frete');
+	const inputValorTonelada = document.getElementById('entrega-valor-tonelada');
     const inputPesoCubado = document.getElementById('entrega-peso-cubado');
     const inputNotaFiscal = document.getElementById('entrega-nota-fiscal');
     const inputCidadeEntrega = document.getElementById('entrega-cidade');
@@ -95,39 +96,78 @@ document.addEventListener('DOMContentLoaded', () => {
             }).format(num);
         });
     };
+	const calcularFretePorTonelada = (pesoBrutoInput, pesoCubadoInput, tonInput, freteInput) => {
+    const pesoBruto = parseDecimal(pesoBrutoInput.value) || 0;
+    const pesoCubado = parseDecimal(pesoCubadoInput.value) || 0;
+    const valorTon = parseDecimal(tonInput.value) || 0;
+
+    // --- LÓGICA ATUALIZADA ---
+    // Usa Peso Cubado se for > 0, senão usa Peso Bruto
+    const pesoBase = (pesoCubado > 0) ? pesoCubado : pesoBruto;
+    // --- FIM DA ATUALIZAÇÃO ---
+
+    if (pesoBase > 0 && valorTon > 0) {
+        const freteCalculado = (pesoBase / 1000) * valorTon;
+        // Formata e insere no campo Frete
+        freteInput.value = new Intl.NumberFormat('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(freteCalculado);
+    }
+	};
     // --- FUNÇÕES DE CARREGAMENTO ---
     
     // ***** FUNÇÃO ALTERADA *****
     async function carregarClientes() { 
-        try {
-            const response = await fetch('/api/clientes');
-            if (!response.ok) throw new Error('Falha ao buscar clientes');
-            const clientesCompletos = await response.json();
-            listaClientesCompleta = clientesCompletos;
+    try {
+        const response = await fetch('/api/clientes');
+        if (!response.ok) throw new Error('Falha ao buscar clientes');
+        const clientesCompletos = await response.json();
+        listaClientesCompleta = clientesCompletos;
 
-            // Filtra e armazena globalmente a lista de remetentes
-            listaDeRemetentesSelect2 = clientesCompletos
-                .filter(c => c.is_remetente === true)
-                .map(c => ({ id: c.id, text: c.text }));
-            
-            const dadosSelect2Destinatarios = clientesCompletos
-                .filter(c => c.is_remetente === false)
-                .map(c => ({ id: c.id, text: c.text }));
+        // Filtra e armazena globalmente a lista de remetentes
+        listaDeRemetentesSelect2 = clientesCompletos
+            .filter(c => c.is_remetente === true)
+            .map(c => ({ id: c.id, text: c.text }));
 
-            selectRemetente.select2({ placeholder: 'Selecione o Remetente*', data: listaDeRemetentesSelect2, dropdownParent: $('#coluna-cadastro') });
-            selectDestinatario.select2({ placeholder: 'Selecione o Destinatário*', data: dadosSelect2Destinatarios, dropdownParent: $('#coluna-cadastro') });
-            
-            // Inicializa o dropdown do modal (agora que temos a lista)
-            selectEditRemetente.select2({ 
-                placeholder: 'Selecione um remetente', 
-                data: listaDeRemetentesSelect2, 
-                dropdownParent: $('#modal-editar-entrega-disponivel') 
-            });
+        const dadosSelect2Destinatarios = clientesCompletos
+            .filter(c => c.is_remetente === false)
+            .map(c => ({ id: c.id, text: c.text }));
 
-            selectDestinatario.on('select2:select', (e) => { const cId = e.params.data.id; const c = listaClientesCompleta.find(cli => cli.id == cId); if (c) { inputCidadeEntrega.value = c.cidade || ''; inputEstadoEntrega.value = c.estado || ''; } });
-            selectDestinatario.on('select2:unselect', () => { inputCidadeEntrega.value = ''; inputEstadoEntrega.value = ''; });
-        } catch (error) { console.error("Erro ao carregar clientes:", error); }
-    }
+        selectRemetente.select2({ placeholder: 'Selecione o Remetente*', data: listaDeRemetentesSelect2, dropdownParent: $('#coluna-cadastro') });
+        selectDestinatario.select2({ placeholder: 'Selecione o Destinatário*', data: dadosSelect2Destinatarios, dropdownParent: $('#coluna-cadastro') });
+
+        // Inicializa o dropdown do modal (agora que temos a lista)
+        selectEditRemetente.select2({ 
+            placeholder: 'Selecione um remetente', 
+            data: listaDeRemetentesSelect2, 
+            dropdownParent: $('#modal-editar-entrega-disponivel') 
+        });
+
+        selectDestinatario.on('select2:select', (e) => { const cId = e.params.data.id; const c = listaClientesCompleta.find(cli => cli.id == cId); if (c) { inputCidadeEntrega.value = c.cidade || ''; inputEstadoEntrega.value = c.estado || ''; } });
+        selectDestinatario.on('select2:unselect', () => { inputCidadeEntrega.value = ''; inputEstadoEntrega.value = ''; });
+
+        // --- INÍCIO DA NOVA CORREÇÃO (Item 4B - Foco Automático) ---
+
+        // 1. Para o Remetente
+        selectRemetente.on('select2:open', () => {
+            // Força o foco no campo de busca que o Select2 cria
+            // O 'setTimeout' é um truque para garantir que o elemento exista antes de focarmos
+            setTimeout(() => {
+                document.querySelector('.select2-search__field').focus();
+            }, 50); // 50ms de delay
+        });
+
+        // 2. Para o Destinatário
+        selectDestinatario.on('select2:open', () => {
+            setTimeout(() => {
+                document.querySelector('.select2-search__field').focus();
+            }, 50);
+        });
+        // --- FIM DA NOVA CORREÇÃO ---
+
+		} catch (error) { console.error("Erro ao carregar clientes:", error); }
+	}
     // ***** FIM DAS ALTERAÇÕES *****
     
 // --- FUNÇÃO DE RENDERIZAÇÃO (AGORA COM MULTI-FILTRO) ---
@@ -264,7 +304,19 @@ function renderizarTabelaDisponiveis() {
 
     // --- FUNÇÕES DE AÇÃO / MANIPULAÇÃO ---
     function exibirMensagem(el, msg, tipo='sucesso') { el.textContent=msg; el.style.color=tipo==='erro'?'#ef4444':(tipo==='aviso'?'#fde047':'#22c55e'); if(tipo!=='aviso'){setTimeout(()=>{if(el.textContent===msg){el.textContent='';}},5000);} }
-    async function handleAddEntrega(event) { event.preventDefault(); const d={remetente_id:selectRemetente.val(),cliente_id:selectDestinatario.val(),peso_bruto:parseDecimal(inputPesoBruto.value),valor_frete:parseDecimal(inputValorFrete.value),peso_cubado:parseDecimal(inputPesoCubado.value),nota_fiscal:inputNotaFiscal.value.toUpperCase()||null,cidade_entrega:inputCidadeEntrega.value.toUpperCase()||null,estado_entrega:inputEstadoEntrega.value.toUpperCase()||null}; if(!d.remetente_id||!d.cliente_id||d.peso_bruto===null){exibirMensagem(mensagemCadastro,'Remetente, Destinatário e Peso Bruto são obrigatórios.','erro'); return;} try {const r=await fetch('/api/entregas/disponiveis',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}); const res=await r.json(); if(!r.ok) throw new Error(res.error||'Falha ao adicionar entrega'); exibirMensagem(mensagemCadastro,res.message); formAddEntrega.reset(); selectRemetente.val(null).trigger('change'); selectDestinatario.val(null).trigger('change'); await carregarEntregasDisponiveis();} catch(e){exibirMensagem(mensagemCadastro,`Erro: ${e.message}`,'erro');} }
+    async function handleAddEntrega(event) { event.preventDefault(); 
+	const d={remetente_id:selectRemetente.val(),cliente_id:selectDestinatario.val(),peso_bruto:parseDecimal(inputPesoBruto.value),valor_frete:parseDecimal(inputValorFrete.value),peso_cubado:parseDecimal(inputPesoCubado.value),nota_fiscal:inputNotaFiscal.value.toUpperCase()||null,cidade_entrega:inputCidadeEntrega.value.toUpperCase()||null,estado_entrega:inputEstadoEntrega.value.toUpperCase()||null}; 
+	if(!d.remetente_id||!d.cliente_id||d.peso_bruto===null){exibirMensagem(mensagemCadastro,'Remetente, Destinatário e Peso Bruto são obrigatórios.','erro'); return;}
+	try {const r=await fetch('/api/entregas/disponiveis',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});
+	const res=await r.json(); if(!r.ok) throw new Error(res.error||'Falha ao adicionar entrega'); exibirMensagem(mensagemCadastro,res.message);
+    inputPesoBruto.value = '';
+    inputValorFrete.value = '';
+    inputValorTonelada.value = ''; // <-- Adicionado
+    inputPesoCubado.value = '';
+    inputNotaFiscal.value = '';
+	inputPesoBruto.focus();
+	await carregarEntregasDisponiveis();
+	} catch(e){exibirMensagem(mensagemCadastro,`Erro: ${e.message}`,'erro');} }
 function atualizarTotaisMontagem() { 
         const cS=document.querySelectorAll('.select-entrega:checked'); 
         let tE=0,tP=0,tC=0,tF=0; 
@@ -504,6 +556,10 @@ async function handleSalvarRascunho() {
 	if (inputFiltroDestinatario) inputFiltroDestinatario.addEventListener('input', renderizarTabelaDisponiveis);
 	if (inputFiltroCidade) inputFiltroCidade.addEventListener('input', renderizarTabelaDisponiveis);
 	if (inputFiltroEstado) inputFiltroEstado.addEventListener('input', renderizarTabelaDisponiveis);
+	const vTonListener = () => calcularFretePorTonelada(inputPesoBruto,inputPesoCubado, inputValorTonelada, inputValorFrete);
+	if (inputValorTonelada) inputValorTonelada.addEventListener('blur', vTonListener);
+	if (inputPesoBruto) inputPesoBruto.addEventListener('blur', vTonListener);
+	if (inputPesoCubado) inputPesoCubado.addEventListener('blur', vTonListener);
     if (selectAllCheckbox) selectAllCheckbox.addEventListener('change', (e) => { document.querySelectorAll('.select-entrega').forEach(cb => { cb.checked = e.target.checked; }); atualizarTotaisMontagem(); });
     if (inputOrigemPrincipal) inputOrigemPrincipal.addEventListener('input', atualizarTotaisMontagem);
     if (btnSalvarRascunho) btnSalvarRascunho.addEventListener('click', handleSalvarRascunho); else console.error("Elemento btn-salvar-rascunho não encontrado");
@@ -514,7 +570,8 @@ async function handleSalvarRascunho() {
     // --- INICIALIZAÇÃO ---
     try {
         mascaraDecimal(inputPesoBruto); mascaraDecimal(inputValorFrete); mascaraDecimal(inputPesoCubado);
-        carregarClientes(); // <-- Esta função agora também inicializa o select do modal
+        mascaraDecimal(inputValorTonelada);
+		carregarClientes(); // <-- Esta função agora também inicializa o select do modal
         carregarEntregasDisponiveis();
         carregarRascunhos();
 		inicializarSortersTabela();
