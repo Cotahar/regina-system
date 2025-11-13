@@ -577,12 +577,6 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
     display: block;
 }
 
-/* ***** CORREÇÃO BOTÃO EDITAR CARGA NA MONTAGEM (IMAGEM bc3c62) ***** */
-/*
-  O botão "Editar Carga na Montagem" estava usando a classe "btn-editar".
-  Agora, ele usará "btn-navegacao", mas precisamos de um ajuste
-  para que ele não fique desproporcional dentro do modal.
-*/
 .entregas-header .btn-navegacao {
     font-size: 14px; /* Tamanho da fonte padrão do botão */
     padding: 10px 15px; /* Padding padrão do botão */
@@ -592,3 +586,4 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
     box-shadow: 0 0 5px rgba(239, 68, 68, 0.5); /* Brilho vermelho */
 }
 .grid-col-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+

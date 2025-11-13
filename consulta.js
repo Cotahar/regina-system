@@ -306,10 +306,12 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
                 <div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div>
                 <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
-                <div class="campo-form"><label>Peso Cubado</label><p>${formatarPeso(cubadoTotalGeral)}</p></div> <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
+                <div class="campo-form"><label>Peso Cubado</label><p>${formatarPeso(cubadoTotalGeral)}</p></div>
+                <div class="campo-form"><label>Frete Total</label><p>${formatarMoeda(freteTotalGeral)}</p></div>
                  <div class="campo-form"><label>Frete Pago</label><input type="text" id="detalhe-frete-pago" value="${formatarMoeda(detalhes_carga.frete_pago).replace('R$ ','')}" inputmode="decimal"></div>
-                <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div> <div class="campo-form"><label>Motorista</label><p>${detalhes_carga.motorista_nome || 'N/A'}</p></div>
-                <div class="campo-form"><label>Placa</label><p>${detalhes_carga.veiculo_placa || 'N/A'}</p></div>
+                <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div>
+                <div class="campo-form"><label>Motorista</label><p>${detalhes_carga.motorista_nome || 'N/A'}</p></div>
+                <div class="campo-form"><label>Placa</label><p>${detalhes_carga.placa_veiculo || 'N/A'}</p></div>
                 <div class="campo-form"><label>Carregamento</label><p>${formatarData(detalhes_carga.data_carregamento)}</p></div>
                 <div class="campo-form"><label>Previsão Entrega</label><input type="date" id="detalhe-previsao" value="${formatarDataParaInput(detalhes_carga.previsao_entrega)}"></div>
             </div></div>`;
@@ -497,6 +499,8 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
 
         const container = document.getElementById('form-add-entrega-container');
         container.innerHTML = `<form id="form-nova-entrega" class="form-acao">
+        <select id="select-remetente-v1" style="width: 250px;"></select>
+
         <select id="select-cliente-v1" style="width: 250px;"></select>
         <input type="text" id="entrega-peso-bruto-v1" placeholder="Peso Bruto *" inputmode="decimal" required>
 
@@ -504,11 +508,18 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             <div><input type="text" id="entrega-valor-tonelada-v1" placeholder="Valor/Ton" inputmode="decimal" style="margin-bottom: 0; width: 100%;"></div>
             <div><input type="text" id="entrega-valor-frete-v1" placeholder="Valor Frete" inputmode="decimal" style="margin-bottom: 0; width: 100%;"></div>
         </div>
+
         <input type="text" id="entrega-peso-cobrado-v1" placeholder="Peso Cobrado" inputmode="decimal">
         <button type="submit">Salvar Entrega</button>
         <button type="button" class="btn-navegacao-secundario" id="cancelar-add-entrega-v1">Cancelar</button>
 		</form>`;
-        $('#select-cliente-v1').select2({ placeholder: 'Selecione um cliente', dropdownParent: $('#form-add-entrega-container'), data: listaDeClientes });
+		
+		$('#select-remetente-v1').select2({ 
+        placeholder: 'Selecione o Remetente *', 
+        dropdownParent: $('#form-add-entrega-container'), 
+        data: listaDeRemetentesSelect2 
+		});
+		$('#select-cliente-v1').select2({ placeholder: 'Selecione um cliente', dropdownParent: $('#form-add-entrega-container'), data: listaDeClientes });
 		const pesoV1 = document.getElementById('entrega-peso-bruto-v1');
 		const tonV1 = document.getElementById('entrega-valor-tonelada-v1');
 		const freteV1 = document.getElementById('entrega-valor-frete-v1');
@@ -613,24 +624,29 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
     async function salvarNovaEntregaV1(e) {
         e.preventDefault();
         const dados = {
+			remetente_id: $('#select-remetente-v1').val(),
             cliente_id: $('#select-cliente-v1').val(),
             peso_bruto: parseDecimal(document.getElementById('entrega-peso-bruto-v1').value),
             valor_frete: parseDecimal(document.getElementById('entrega-valor-frete-v1').value),
             peso_cobrado: parseDecimal(document.getElementById('entrega-peso-cobrado-v1').value)
         };
-        if(!dados.cliente_id || dados.peso_bruto === null) { alert("Cliente e Peso Bruto são obrigatórios."); return; }
+		if(!dados.remetente_id || !dados.cliente_id || dados.peso_bruto === null) { alert("Remetente, Destinatário e Peso Bruto são obrigatórios."); return; }
         const response = await fetch(`/api/cargas/${cargaAtual.detalhes_carga.id}/entregas`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dados)
         });
         if (response.ok) {
-            await abrirModalDetalhes(cargaAtual.detalhes_carga.id, true);
-             buscarCargas(document.querySelector('.btn-paginacao.active')?.dataset.page || 1);
-        } else {
-             const err = await response.json();
-             alert(`Erro ao salvar entrega: ${err.error || 'Erro desconhecido.'}`);
-        }
+            document.getElementById('entrega-peso-bruto-v1').value = '';
+			document.getElementById('entrega-valor-tonelada-v1').value = '';
+			document.getElementById('entrega-valor-frete-v1').value = '';
+				// Se o campo de peso cobrado existir (só em consulta.js)
+			const pesoCobradoV1 = document.getElementById('entrega-peso-cobrado-v1');
+				if (pesoCobradoV1) pesoCobradoV1.value = '';
+				} else {
+					const err = await response.json();
+					alert(`Erro ao salvar entrega: ${err.error || 'Erro desconhecido.'}`);
+				}
     }
 
 		document.getElementById('form-editar-entrega').addEventListener('submit', async (e) => {

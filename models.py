@@ -18,7 +18,7 @@ class Motorista(db.Model):
             'id': self.id,
             'codigo': self.codigo,
             'nome': self.nome,
-            'text': f"{(self.codigo or '')} - {(self.nome or '').upper()}"
+            'text': f"{(self.nome or '').upper()}"
         }
 
 # MÓDULO 1: Novo modelo de Veículo
