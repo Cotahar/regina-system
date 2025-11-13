@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectDestinatario = $('#select-destinatario');
     const inputPesoBruto = document.getElementById('entrega-peso-bruto');
     const inputValorFrete = document.getElementById('entrega-valor-frete');
+	const inputValorTonelada = document.getElementById('entrega-valor-tonelada');
     const inputPesoCubado = document.getElementById('entrega-peso-cubado');
     const inputNotaFiscal = document.getElementById('entrega-nota-fiscal');
     const inputCidadeEntrega = document.getElementById('entrega-cidade');
@@ -95,6 +96,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }).format(num);
         });
     };
+	const calcularFretePorTonelada = (pesoInput, tonInput, freteInput) => {
+    const pesoBruto = parseDecimal(pesoInput.value) || 0;
+    const valorTon = parseDecimal(tonInput.value) || 0;
+
+		if (pesoBruto > 0 && valorTon > 0) {
+			const freteCalculado = (pesoBruto / 1000) * valorTon;
+			// Formata e insere no campo Frete
+			freteInput.value = new Intl.NumberFormat('pt-BR', {
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2
+			}).format(freteCalculado);
+		}
+	};
     // --- FUNÇÕES DE CARREGAMENTO ---
     
     // ***** FUNÇÃO ALTERADA *****
@@ -504,6 +518,9 @@ async function handleSalvarRascunho() {
 	if (inputFiltroDestinatario) inputFiltroDestinatario.addEventListener('input', renderizarTabelaDisponiveis);
 	if (inputFiltroCidade) inputFiltroCidade.addEventListener('input', renderizarTabelaDisponiveis);
 	if (inputFiltroEstado) inputFiltroEstado.addEventListener('input', renderizarTabelaDisponiveis);
+	const vTonListener = () => calcularFretePorTonelada(inputPesoBruto, inputValorTonelada, inputValorFrete);
+	if (inputValorTonelada) inputValorTonelada.addEventListener('blur', vTonListener);
+	if (inputPesoBruto) inputPesoBruto.addEventListener('blur', vTonListener);
     if (selectAllCheckbox) selectAllCheckbox.addEventListener('change', (e) => { document.querySelectorAll('.select-entrega').forEach(cb => { cb.checked = e.target.checked; }); atualizarTotaisMontagem(); });
     if (inputOrigemPrincipal) inputOrigemPrincipal.addEventListener('input', atualizarTotaisMontagem);
     if (btnSalvarRascunho) btnSalvarRascunho.addEventListener('click', handleSalvarRascunho); else console.error("Elemento btn-salvar-rascunho não encontrado");
@@ -514,7 +531,8 @@ async function handleSalvarRascunho() {
     // --- INICIALIZAÇÃO ---
     try {
         mascaraDecimal(inputPesoBruto); mascaraDecimal(inputValorFrete); mascaraDecimal(inputPesoCubado);
-        carregarClientes(); // <-- Esta função agora também inicializa o select do modal
+        mascaraDecimal(inputValorTonelada);
+		carregarClientes(); // <-- Esta função agora também inicializa o select do modal
         carregarEntregasDisponiveis();
         carregarRascunhos();
 		inicializarSortersTabela();

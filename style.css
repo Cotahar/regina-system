@@ -590,3 +590,4 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
     border: 2px solid #ef4444 !important; /* Vermelho erro, !important para sobrepor */
     box-shadow: 0 0 5px rgba(239, 68, 68, 0.5); /* Brilho vermelho */
 }
+.grid-col-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
