@@ -346,20 +346,16 @@ def handle_cargas():
         try:
             status_filter = request.args.get('status')
             
-            # --- INÍCIO DA OTIMIZAÇÃO (LENTIDÃO) ---
             # Filtra para não mostrar Rascunhos nem Finalizadas no painel
             base_query = Carga.query.options(
                 joinedload(Carga.motorista_rel), 
                 joinedload(Carga.veiculo_rel), 
-                joinedload(Carga.entregas).joinedload(Entrega.cliente) # Carrega entregas E o cliente de cada entrega
+                joinedload(Carga.entregas).joinedload(Entrega.cliente)
             ).filter(Carga.status != 'Rascunho', Carga.status != 'Finalizada')
-            # --- FIM DA OTIMIZAÇÃO ---
 
             if status_filter:
                 base_query = base_query.filter(Carga.status == status_filter)
                 
-            # A ordenação das colunas do painel é feita no script.js, 
-            # então a ordem do backend não é crítica aqui.
             cargas = base_query.order_by(Carga.id.desc()).all()
             
             cargas_data = []
@@ -367,15 +363,12 @@ def handle_cargas():
             for carga in cargas:
                 carga_dict = carga.to_dict()
                 
-                # Dados das relações (agora vêm do joinedload, sem novas queries)
                 carga_dict['motorista_nome'] = carga.motorista_rel.nome if carga.motorista_rel else None
                 carga_dict['placa_veiculo'] = carga.veiculo_rel.placa if carga.veiculo_rel else None
-                
-                # Processamento de entregas (agora vêm do joinedload)
                 carga_dict['entregas'] = [e.to_dict() for e in carga.entregas]
                 
-                # --- (Lógica de contagem de entregas e peso - já corrigida) ---
                 peso_total_carga = 0.0
+                frete_total_acumulado = 0.0 # --- NOVO (ITEM 9) ---
                 destinos_set = set()
                 destino_principal_str = None 
                 destinos_unicos_count = set() 
@@ -383,6 +376,8 @@ def handle_cargas():
                 for e in carga.entregas:
                     if e.peso_bruto:
                         peso_total_carga += e.peso_bruto
+                    if e.valor_frete:
+                        frete_total_acumulado += e.valor_frete # --- SOMA FRETE ---
 
                     cidade_final = e.cidade_entrega or (e.cliente.cidade if e.cliente else None)
                     estado_final = e.estado_entrega or (e.cliente.estado if e.cliente else None)
@@ -405,6 +400,7 @@ def handle_cargas():
                 carga_dict['destinos'] = destinos_list
                 carga_dict['destino_principal'] = destino_principal_str or (destinos_list[0] if destinos_list else 'N/A')
                 carga_dict['peso_total'] = peso_total_carga 
+                carga_dict['valor_frete_total'] = frete_total_acumulado # --- ENVIA PARA O FRONT ---
                 carga_dict['num_entregas'] = len(destinos_unicos_count)
                 
                 cargas_data.append(carga_dict)
@@ -420,8 +416,11 @@ def handle_cargas():
 @login_required
 def get_cargas_consulta():
     try:
-        # >>>>> CORREÇÃO 5: Query simplificada para evitar crash inicial
-        query = Carga.query.filter(Carga.status != 'Rascunho')
+        query = Carga.query.options(
+            joinedload(Carga.motorista_rel),
+            joinedload(Carga.veiculo_rel),
+            joinedload(Carga.entregas).joinedload(Entrega.cliente)
+        ).filter(Carga.status != 'Rascunho')
 
         # Aplicar filtros
         if request.args.get('codigo_carga'):
@@ -886,7 +885,41 @@ def update_carga_status(carga_id):
         db.session.rollback()
         print(f"Erro ao atualizar status da carga {carga_id}: {e}")
         return jsonify(error=f"Erro interno: {str(e)}"), 500        
-        
+
+@app.route('/api/cargas/<int:carga_id>', methods=['DELETE'])
+@login_required
+def delete_carga_permanente(carga_id):
+    if session.get('user_permission') != 'admin':
+        return jsonify(error='Apenas administradores podem excluir cargas.'), 403
+
+    try:
+        carga = Carga.query.get(carga_id)
+        if not carga:
+            return jsonify(error='Carga não encontrada'), 404
+            
+        # Pega a ação desejada ('delete_entregas' ou 'return_to_pool')
+        action = request.args.get('action', 'return_to_pool')
+
+        if action == 'delete_entregas':
+            # Apaga as entregas do banco
+            for entrega in carga.entregas:
+                db.session.delete(entrega)
+        else:
+            # Devolve as entregas para o pool (remove o vínculo)
+            for entrega in carga.entregas:
+                entrega.carga_id = None
+                entrega.is_last_delivery = 0 # Reseta flag de destino
+
+        db.session.delete(carga)
+        db.session.commit()
+        return jsonify(message='Carga excluída com sucesso.')
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao excluir carga {carga_id}: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
+
+
 # --- API: Edição de Entregas (Dentro do Modal de Carga) ---
 @app.route('/api/cargas/<int:carga_id>/entregas', methods=['POST', 'DELETE'])
 @login_required
@@ -1043,10 +1076,8 @@ def update_entrega(entrega_id):
             entrega.peso_bruto = data['peso_bruto']
         if 'valor_frete' in data:
             entrega.valor_frete = data['valor_frete']
-        if 'peso_cubado' in data:
+        if 'peso_cubado' in data: # CORRIGIDO O NOME
             entrega.peso_cubado = data['peso_cubado']
-        if 'peso_cobrado' in data: # Campo que faltava no backend
-             entrega.peso_cobrado = data['peso_cobrado']
         if 'nota_fiscal' in data:
             entrega.nota_fiscal = data['nota_fiscal']
         if 'cidade_entrega' in data:

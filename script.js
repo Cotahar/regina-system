@@ -185,7 +185,10 @@ const mascaraDecimal = (input) => {
             emTransito.forEach(adicionarCartaoNaTela);
             
             // --- FIM DA LÓGICA DE ORDENAÇÃO ---
-            
+            $(document).on('select2:open', () => {
+				document.querySelector('.select2-search__field').focus();
+			});
+			
         } catch (error) { console.error("Erro ao carregar dados iniciais:", error); }
     }
     // ***** FIM DA ALTERAÇÃO *****
@@ -218,6 +221,11 @@ const mascaraDecimal = (input) => {
         }
         listaInfo += `<li><strong>Nº Entregas:</strong> ${carga.num_entregas || 0}</li>`;
         listaInfo += `<li><strong>Peso Total:</strong> ${formatarPeso(carga.peso_total)}</li>`;
+		
+		if (sessaoUsuario && sessaoUsuario.user_permission === 'admin') {
+            listaInfo += `<li><strong>Frete Total:</strong> ${formatarMoeda(carga.valor_frete_total)}</li>`;
+        }
+		
         listaInfo += '</ul>';
 
         cartao.innerHTML = cabecalhoCartao + listaInfo;
@@ -312,6 +320,8 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                 <button class="btn-acao" data-acao="agendar">Agendar Carga</button>
                 <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
             </div></div>`;
+			${(sessaoUsuario.user_permission === 'admin') ? 
+                    `<button class="btn-excluir-entrega" data-acao="excluir-carga" style="margin-left: auto;">Excluir Carga</button>` : ''}
         } else if (detalhes_carga.status === 'Agendada') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
                 <div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div>
@@ -335,6 +345,8 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                 <button class="btn-acao" data-acao="iniciar-transito">Iniciar Trânsito</button>
 				<button class="btn-acao-secundario" data-acao="cancelar-agendamento">Cancelar Agendamento</button>
                 <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
+				${(sessaoUsuario.user_permission === 'admin') ? 
+                    `<button class="btn-excluir-entrega" data-acao="excluir-carga" style="margin-left: auto;">Excluir Carga</button>` : ''}
             </div></div>`;
         } else if (detalhes_carga.status === 'Em Trânsito') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
@@ -520,6 +532,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         document.getElementById('btn-imprimir-espelho')?.addEventListener('click', handleImprimirEspelho);
         // ***** NOVO LISTENER (V2.1) *****
         document.getElementById('btn-devolver-rascunho')?.addEventListener('click', handleDevolverRascunho);
+		document.querySelector('[data-acao="excluir-carga"]')?.addEventListener('click', handleExcluirCarga);
     }
 
     function abrirFormAddEntregaV1(e){
@@ -580,6 +593,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         if (!entrega) { alert('Erro: Entrega não encontrada.'); return; }
 
         document.getElementById('edit-entrega-id').value = entrega.id;
+		document.getElementById('edit-nota-fiscal').value = entrega.nota_fiscal || '';
         
         // Popula o novo dropdown de remetente
         selectEditRemetente.val(entrega.remetente_id).trigger('change');
@@ -588,7 +602,17 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         document.getElementById('edit-valor-frete').value = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(entrega.valor_frete || 0);
         const pesoCobradoInput = document.getElementById('edit-peso-cobrado');
         if (pesoCobradoInput) pesoCobradoInput.value = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(entrega.peso_cubado || 0); // Corrigido para peso_cubado
+		const editPeso = document.getElementById('edit-peso-bruto');
+		const editTon = document.getElementById('edit-valor-tonelada');
+		const editFrete = document.getElementById('edit-valor-frete');
+		const editCubado = document.getElementById('edit-peso-cobrado'); // (Verifique o ID correto no seu HTML)
 
+		// Recalcula frete ao mudar ton ou peso
+		const calcListener = () => calcularFretePorTonelada(editPeso, editCubado, editTon, editFrete);
+		editTon.addEventListener('blur', calcListener);
+		editPeso.addEventListener('blur', calcListener);
+    
+    mascaraDecimal(editTon);
 
         document.getElementById('edit-cidade-entrega').value = entrega.cidade_entrega_override || '';
         document.getElementById('edit-estado-entrega').value = entrega.estado_entrega_override || '';
@@ -687,10 +711,11 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         const pesoCobradoInput = document.getElementById('edit-peso-cobrado');
         
         const dados = {
-            remetente_id: selectEditRemetente.val(), // Envia o novo remetente
+            remetente_id: selectEditRemetente.val(),
             peso_bruto: parseDecimal(document.getElementById('edit-peso-bruto').value),
             valor_frete: parseDecimal(document.getElementById('edit-valor-frete').value),
-            peso_cobrado: pesoCobradoInput ? parseDecimal(pesoCobradoInput.value) : undefined,
+            peso_cubado: pesoCobradoInput ? parseDecimal(pesoCobradoInput.value) : undefined, // Envia como peso_cubado (se o backend esperar isso, ou ajustamos o backend para ler peso_cobrado e gravar em cubado)
+            nota_fiscal: document.getElementById('edit-nota-fiscal').value, // NOVO
             cidade_entrega: document.getElementById('edit-cidade-entrega').value || null,
             estado_entrega: document.getElementById('edit-estado-entrega').value || null
         };
@@ -849,8 +874,9 @@ function handleAgendar() {
                 body: JSON.stringify(dados)
             });
             if (!response.ok) { const err = await response.json(); throw new Error(err.error || 'Falha ao atualizar'); }
-            fecharModais();
-            await carregarDadosIniciais();
+            alert('Alterações salvas com sucesso!'); // Confirmação
+            await carregarDadosIniciais(); // Atualiza o fundo
+            await abrirModalDetalhes(cargaAtual.detalhes_carga.id, false);
         } catch (error) {
             alert(`Não foi possível completar a ação: ${error.message}`);
         }
@@ -891,10 +917,10 @@ function handleAgendar() {
                 body: JSON.stringify(dados)
             });
             if (!response.ok) throw new Error('Falha ao criar carga');
-            const novaCarga = await response.json();
-            adicionarCartaoNaTela(novaCarga);
-            fecharModais();
-            document.getElementById('form-nova-carga').reset();
+			const novaCarga = await response.json();
+			adicionarCartaoNaTela(novaCarga); // Ou criarCartaoHTML se estiver usando a otimização
+			fecharModais();
+			document.getElementById('form-nova-carga').reset();
         } catch (error) { console.error("Erro ao criar carga:", error); }
     });
 	function handleImprimirEspelho() {
@@ -903,5 +929,31 @@ function handleAgendar() {
 		// Abre o PDF em uma nova aba (o navegador vai tratar o download)
 		window.open(`/cargas/${cargaId}/espelho_impressao`, '_blank'); // <-- CORRIGIDO
 	}
+	async function handleExcluirCarga() {
+        if (!confirm('ATENÇÃO ADMIN: Você está prestes a excluir esta carga PERMANENTEMENTE.\n\nClique OK para continuar.')) return;
+        
+        // Pergunta sobre as entregas
+        let acaoEntregas = prompt("O que deseja fazer com as entregas vinculadas?\n\nDigite 1 para DEVOLVER para a montagem (recomendado).\nDigite 2 para APAGAR permanentemente as entregas.\n\n(Qualquer outra tecla cancela)");
+        
+        let actionParam = '';
+        if (acaoEntregas === '1') actionParam = 'return_to_pool';
+        else if (acaoEntregas === '2') {
+            if(!confirm("Tem certeza absoluta? As entregas serão apagadas do banco de dados.")) return;
+            actionParam = 'delete_entregas';
+        } else {
+            return; // Cancela
+        }
+
+        try {
+            const response = await fetch(`/api/cargas/${cargaAtual.detalhes_carga.id}?action=${actionParam}`, { method: 'DELETE' });
+            if (response.ok) {
+                alert('Carga excluída com sucesso.');
+                fecharModais();
+                carregarDadosIniciais();
+            } else {
+                alert('Erro ao excluir carga.');
+            }
+        } catch (error) { console.error(error); }
+    }
     carregarDadosIniciais();
 });

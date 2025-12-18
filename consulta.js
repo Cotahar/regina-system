@@ -553,7 +553,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         document.getElementById('edit-peso-cobrado').value = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(entrega.peso_cubado || 0); // Corrigido para peso_cubado
         document.getElementById('edit-cidade-entrega').value = entrega.cidade_entrega_override || '';
         document.getElementById('edit-estado-entrega').value = entrega.estado_entrega_override || '';
-
+		document.getElementById('edit-nota-fiscal').value = entrega.nota_fiscal || '';
         const isAdmin = sessaoUsuario.user_permission === 'admin';
         document.getElementById('edit-cidade-entrega').disabled = !isAdmin;
         document.getElementById('edit-estado-entrega').disabled = !isAdmin;
@@ -653,10 +653,11 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         e.preventDefault();
         const entregaId = document.getElementById('edit-entrega-id').value;
         const dados = {
-            remetente_id: selectEditRemetente.val(), // <-- ADICIONE ESTA LINHA
+            remetente_id: selectEditRemetente.val(),
             peso_bruto: parseDecimal(document.getElementById('edit-peso-bruto').value),
             valor_frete: parseDecimal(document.getElementById('edit-valor-frete').value),
-            peso_cobrado: parseDecimal(document.getElementById('edit-peso-cobrado').value),
+            peso_cubado: pesoCobradoInput ? parseDecimal(pesoCobradoInput.value) : undefined, // Envia como peso_cubado (se o backend esperar isso, ou ajustamos o backend para ler peso_cobrado e gravar em cubado)
+            nota_fiscal: document.getElementById('edit-nota-fiscal').value, // NOVO
             cidade_entrega: document.getElementById('edit-cidade-entrega').value || null,
             estado_entrega: document.getElementById('edit-estado-entrega').value || null
         };
