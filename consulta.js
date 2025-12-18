@@ -160,8 +160,8 @@ const mascaraDecimal = (input) => {
                 tr.dataset.id = carga.id;
                 tr.style.cursor = 'pointer';
                 
-                // O backend já envia o destino pronto no campo 'destino'
-                const destinoExibir = carga.destino || 'N/A';
+                // O backend envia o destino principal neste campo
+                const destinoExibir = carga.destino_principal || 'N/A';
                 
                 tr.innerHTML = `
                     <td>${carga.codigo_carga}</td>
@@ -908,4 +908,7 @@ function handleAgendar() {
 		const cargaId = cargaAtual.detalhes_carga.id;
 		window.open(`/cargas/${cargaId}/espelho_impressao`, '_blank'); // <-- CORRIGIDO
 	}
-;
+carregarDadosIniciaisConsulta();
+    buscarCargas(1);
+
+}); // Fecha o document.addEventListener
