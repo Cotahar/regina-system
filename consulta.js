@@ -159,14 +159,18 @@ const mascaraDecimal = (input) => {
                 const tr = document.createElement('tr');
                 tr.dataset.id = carga.id;
                 tr.style.cursor = 'pointer';
-                const destinoCompleto = carga.destino_uf ? `${carga.destino}/${carga.destino_uf}` : (carga.destino || 'N/A');
+                
+                // O backend envia o destino principal neste campo
+                const destinoExibir = carga.destino_principal || 'N/A';
+                
                 tr.innerHTML = `
                     <td>${carga.codigo_carga}</td>
                     <td>${carga.status}</td>
                     <td>${carga.origem}</td>
-                    <td>${destinoCompleto}</td>
-                    <td>${carga.motorista || 'N/A'}</td> <td>${carga.num_entregas}</td>
-                    <td>${formatarPeso(carga.peso_total)}</td>
+                    <td>${destinoExibir}</td>
+                    <td>${carga.motorista_nome || 'N/A'}</td> 
+                    <td>${carga.num_entregas}</td>
+                    <td>${formatarPeso(carga.peso_total_bruto)}</td>
                     <td>${formatarData(carga.data_finalizacao)}</td>
                 `;
                 tabelaCorpo.appendChild(tr);
@@ -553,7 +557,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         document.getElementById('edit-peso-cobrado').value = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(entrega.peso_cubado || 0); // Corrigido para peso_cubado
         document.getElementById('edit-cidade-entrega').value = entrega.cidade_entrega_override || '';
         document.getElementById('edit-estado-entrega').value = entrega.estado_entrega_override || '';
-
+		document.getElementById('edit-nota-fiscal').value = entrega.nota_fiscal || '';
         const isAdmin = sessaoUsuario.user_permission === 'admin';
         document.getElementById('edit-cidade-entrega').disabled = !isAdmin;
         document.getElementById('edit-estado-entrega').disabled = !isAdmin;
@@ -653,10 +657,11 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         e.preventDefault();
         const entregaId = document.getElementById('edit-entrega-id').value;
         const dados = {
-            remetente_id: selectEditRemetente.val(), // <-- ADICIONE ESTA LINHA
+            remetente_id: selectEditRemetente.val(),
             peso_bruto: parseDecimal(document.getElementById('edit-peso-bruto').value),
             valor_frete: parseDecimal(document.getElementById('edit-valor-frete').value),
-            peso_cobrado: parseDecimal(document.getElementById('edit-peso-cobrado').value),
+            peso_cubado: pesoCobradoInput ? parseDecimal(pesoCobradoInput.value) : undefined, // Envia como peso_cubado (se o backend esperar isso, ou ajustamos o backend para ler peso_cobrado e gravar em cubado)
+            nota_fiscal: document.getElementById('edit-nota-fiscal').value, // NOVO
             cidade_entrega: document.getElementById('edit-cidade-entrega').value || null,
             estado_entrega: document.getElementById('edit-estado-entrega').value || null
         };
@@ -696,7 +701,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             // --- INÍCIO DA CORREÇÃO ---
             let dados = {
                  observacoes: document.getElementById('obs-carga').value,
-                 frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+                 frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
                  previsao_entrega: document.getElementById('detalhe-previsao')?.value || null
             };
             dados.status = 'Finalizada';
@@ -727,7 +732,7 @@ function handleAgendar() {
         // --- INÍCIO DA CORREÇÃO ---
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
-             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
              origem: document.getElementById('detalhe-origem').value,
              data_agendamento: dataAgendamento,
              motorista_id: $('#select-motorista').val() || null,
@@ -747,7 +752,7 @@ function handleAgendar() {
         // --- INÍCIO DA CORREÇÃO ---
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
-             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
              previsao_entrega: document.getElementById('detalhe-previsao').value || null
         };
         const campoAgendamentoEdit = document.getElementById('detalhe-agendamento-edit');
@@ -768,7 +773,7 @@ function handleAgendar() {
          const { detalhes_carga } = cargaAtual;
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
-             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value)
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
         };
 
         if(detalhes_carga.status === 'Pendente') {
@@ -903,8 +908,7 @@ function handleAgendar() {
 		const cargaId = cargaAtual.detalhes_carga.id;
 		window.open(`/cargas/${cargaId}/espelho_impressao`, '_blank'); // <-- CORRIGIDO
 	}
+carregarDadosIniciaisConsulta();
+    buscarCargas(1);
 
-form.addEventListener('submit', (event) => {
-
-    carregarDadosIniciaisConsulta();
-});
+}); // Fecha o document.addEventListener

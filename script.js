@@ -111,7 +111,7 @@ const mascaraDecimal = (input) => {
 
     // --- LÓGICA PRINCIPAL ---
     
-// ***** FUNÇÃO ALTERADA (PARA ORDENAÇÃO E PERFORMANCE DE RENDERIZAÇÃO) *****
+// ***** FUNÇÃO ALTERADA (PARA ORDENAÇÃO) *****
     async function carregarDadosIniciais() {
         try {
             const [sessionRes, clientesRes, motoristasRes, veiculosRes, cargasRes] = await Promise.all([
@@ -151,57 +151,53 @@ const mascaraDecimal = (input) => {
             const cargas = await cargasRes.json();
             document.querySelectorAll('.lista-cargas').forEach(lista => lista.innerHTML = '');
             
+            // --- INÍCIO DA LÓGICA DE ORDENAÇÃO ---
+            
             // 1. Separa as cargas por status
             const pendentes = cargas.filter(c => c.status === 'Pendente');
             const agendadas = cargas.filter(c => c.status === 'Agendada');
             const emTransito = cargas.filter(c => c.status === 'Em Trânsito');
 
-            // 2. Ordena as listas (já estava assim)
+            // 2. Ordena as listas
+            
+            // Pendentes: Pela ID (mais nova primeiro)
             pendentes.sort((a, b) => b.id - a.id);
+
+            // Agendadas: Pela data de agendamento (mais próxima primeiro)
             agendadas.sort((a, b) => {
+                // Joga datas nulas para o fim da lista
                 const dataA = a.data_agendamento ? new Date(a.data_agendamento) : new Date('9999-12-31');
                 const dataB = b.data_agendamento ? new Date(b.data_agendamento) : new Date('9999-12-31');
                 return dataA - dataB;
             });
+
+            // Em Trânsito: Pela previsão de entrega (mais próxima primeiro)
             emTransito.sort((a, b) => {
+                // Joga datas nulas para o fim da lista
                 const dataA = a.previsao_entrega ? new Date(a.previsao_entrega) : new Date('9999-12-31');
                 const dataB = b.previsao_entrega ? new Date(b.previsao_entrega) : new Date('9999-12-31');
                 return dataA - dataB;
             });
 
-            // --- INÍCIO DA OTIMIZAÇÃO DE RENDERIZAÇÃO ---
+            // 3. Renderiza as cargas já ordenadas
+            pendentes.forEach(adicionarCartaoNaTela);
+            agendadas.forEach(adicionarCartaoNaTela);
+            emTransito.forEach(adicionarCartaoNaTela);
             
-            // 3. Pega as colunas
-            const pendenteCol = document.getElementById('pendente');
-            const agendadaCol = document.getElementById('agendada');
-            const emTransitoCol = document.getElementById('em-transito');
-
-            // 4. Acumula o HTML em strings (em memória)
-            let pendenteHTML = '';
-            let agendadaHTML = '';
-            let emTransitoHTML = '';
-
-            pendentes.forEach(carga => {
-                pendenteHTML += criarCartaoHTML(carga);
-            });
-            agendadas.forEach(carga => {
-                agendadaHTML += criarCartaoHTML(carga);
-            });
-            emTransito.forEach(carga => {
-                emTransitoHTML += criarCartaoHTML(carga);
-            });
-
-            // 5. Adiciona ao DOM (apenas 3 operações de "pintura")
-            pendenteCol.innerHTML = pendenteHTML || '<p>Nenhum cartão pendente.</p>';
-            agendadaCol.innerHTML = agendadaHTML || '<p>Nenhum cartão agendado.</p>';
-            emTransitoCol.innerHTML = emTransitoHTML || '<p>Nenhum cartão em trânsito.</p>';
-            
-            // --- FIM DA OTIMIZAÇÃO ---
-            
+            // --- FIM DA LÓGICA DE ORDENAÇÃO ---
+            $(document).on('select2:open', () => {
+				document.querySelector('.select2-search__field').focus();
+			});
+			
         } catch (error) { console.error("Erro ao carregar dados iniciais:", error); }
     }
-		
-	function criarCartaoHTML(carga) {
+    // ***** FIM DA ALTERAÇÃO *****
+
+    function adicionarCartaoNaTela(carga) {
+        const cartao = document.createElement('div');
+        cartao.className = 'cartao-carga';
+        cartao.dataset.id = carga.id;
+
         let dataExtraHtml = '';
         if (carga.status === 'Agendada' && carga.data_agendamento) {
             dataExtraHtml = `<span class="cartao-data">Ag: ${formatarData(carga.data_agendamento)}</span>`;
@@ -215,19 +211,32 @@ const mascaraDecimal = (input) => {
         listaInfo += `<li><strong>Origem:</strong> ${carga.origem}</li>`;
 
 		if (carga.destino_principal) {
-            listaInfo += `<li><strong>Destino:</strong> ${carga.destino_principal}</li>`;
+        // A API já envia o destino formatado (ex: "CIDADE-UF")
+        listaInfo += `<li><strong>Destino:</strong> ${carga.destino_principal}</li>`;
 		}
 		if (carga.status === 'Agendada' || carga.status === 'Em Trânsito') {
             if (carga.motorista_nome) { 
-                listaInfo += `<li><strong>Motorista:</strong> ${carga.motorista_nome} (${carga.placa_veiculo || 'N/A'})</li>`;
+        listaInfo += `<li><strong>Motorista:</strong> ${carga.motorista_nome} (${carga.placa_veiculo || 'N/A'})</li>`;
 			}
         }
         listaInfo += `<li><strong>Nº Entregas:</strong> ${carga.num_entregas || 0}</li>`;
         listaInfo += `<li><strong>Peso Total:</strong> ${formatarPeso(carga.peso_total)}</li>`;
+		
+		if (sessaoUsuario && sessaoUsuario.user_permission === 'admin') {
+            listaInfo += `<li><strong>Frete Total:</strong> ${formatarMoeda(carga.valor_frete_total)}</li>`;
+        }
+		
         listaInfo += '</ul>';
 
-        // Retorna a string HTML completa do cartão
-        return `<div class="cartao-carga" data-id="${carga.id}">${cabecalhoCartao}${listaInfo}</div>`;
+        cartao.innerHTML = cabecalhoCartao + listaInfo;
+
+        const colunaId = carga.status.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '-');
+        const coluna = document.getElementById(colunaId);
+        if (coluna) {
+            coluna.appendChild(cartao);
+        } else {
+            console.error(`Coluna com ID '${colunaId}' não encontrada para o status '${carga.status}'`);
+        }
     }
 
     async function abrirModalDetalhes(id, reabrirFormularioEntrega = false) {
@@ -294,7 +303,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         const freteTotalGeral = entregas.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
         let secaoDados, secaoAcoes;
 
-        if (detalhes_carga.status === 'Pendente') {
+		if (detalhes_carga.status === 'Pendente') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
             <div class="campo-form"><label>Origem</label><input type="text" id="detalhe-origem" value="${detalhes_carga.origem || ''}"></div>
             <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
@@ -304,13 +313,16 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div>
             <div class="campo-form"><label for="select-motorista">Motorista</label><select id="select-motorista" style="width: 100%;"></select></div>
             <div class="campo-form"><label for="select-veiculo">Veículo</label><select id="select-veiculo" style="width: 100%;"></select></div>
-        </div></div>`;
+			</div></div>`;
+        
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao-agendar">
                 <label for="detalhe-agendamento">Data do Agendamento:</label>
                 <input type="date" id="detalhe-agendamento" value="${formatarDataParaInput(detalhes_carga.data_agendamento)}">
                 <button class="btn-acao" data-acao="agendar">Agendar Carga</button>
                 <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
-            </div></div>`;
+                ${(sessaoUsuario.user_permission === 'admin') ? 
+                    `<button class="btn-excluir-entrega" data-acao="excluir-carga" style="margin-left: auto;">Excluir Carga</button>` : ''}
+				</div></div>`;
         } else if (detalhes_carga.status === 'Agendada') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
                 <div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div>
@@ -334,6 +346,8 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                 <button class="btn-acao" data-acao="iniciar-transito">Iniciar Trânsito</button>
 				<button class="btn-acao-secundario" data-acao="cancelar-agendamento">Cancelar Agendamento</button>
                 <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
+				${(sessaoUsuario.user_permission === 'admin') ? 
+                    `<button class="btn-excluir-entrega" data-acao="excluir-carga" style="margin-left: auto;">Excluir Carga</button>` : ''}
             </div></div>`;
         } else if (detalhes_carga.status === 'Em Trânsito') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
@@ -519,6 +533,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         document.getElementById('btn-imprimir-espelho')?.addEventListener('click', handleImprimirEspelho);
         // ***** NOVO LISTENER (V2.1) *****
         document.getElementById('btn-devolver-rascunho')?.addEventListener('click', handleDevolverRascunho);
+		document.querySelector('[data-acao="excluir-carga"]')?.addEventListener('click', handleExcluirCarga);
     }
 
     function abrirFormAddEntregaV1(e){
@@ -579,6 +594,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         if (!entrega) { alert('Erro: Entrega não encontrada.'); return; }
 
         document.getElementById('edit-entrega-id').value = entrega.id;
+		document.getElementById('edit-nota-fiscal').value = entrega.nota_fiscal || '';
         
         // Popula o novo dropdown de remetente
         selectEditRemetente.val(entrega.remetente_id).trigger('change');
@@ -587,7 +603,17 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         document.getElementById('edit-valor-frete').value = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(entrega.valor_frete || 0);
         const pesoCobradoInput = document.getElementById('edit-peso-cobrado');
         if (pesoCobradoInput) pesoCobradoInput.value = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(entrega.peso_cubado || 0); // Corrigido para peso_cubado
+		const editPeso = document.getElementById('edit-peso-bruto');
+		const editTon = document.getElementById('edit-valor-tonelada');
+		const editFrete = document.getElementById('edit-valor-frete');
+		const editCubado = document.getElementById('edit-peso-cobrado'); // (Verifique o ID correto no seu HTML)
 
+		// Recalcula frete ao mudar ton ou peso
+		const calcListener = () => calcularFretePorTonelada(editPeso, editCubado, editTon, editFrete);
+		editTon.addEventListener('blur', calcListener);
+		editPeso.addEventListener('blur', calcListener);
+    
+    mascaraDecimal(editTon);
 
         document.getElementById('edit-cidade-entrega').value = entrega.cidade_entrega_override || '';
         document.getElementById('edit-estado-entrega').value = entrega.estado_entrega_override || '';
@@ -686,10 +712,11 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         const pesoCobradoInput = document.getElementById('edit-peso-cobrado');
         
         const dados = {
-            remetente_id: selectEditRemetente.val(), // Envia o novo remetente
+            remetente_id: selectEditRemetente.val(),
             peso_bruto: parseDecimal(document.getElementById('edit-peso-bruto').value),
             valor_frete: parseDecimal(document.getElementById('edit-valor-frete').value),
-            peso_cobrado: pesoCobradoInput ? parseDecimal(pesoCobradoInput.value) : undefined,
+            peso_cubado: pesoCobradoInput ? parseDecimal(pesoCobradoInput.value) : undefined, // Envia como peso_cubado (se o backend esperar isso, ou ajustamos o backend para ler peso_cobrado e gravar em cubado)
+            nota_fiscal: document.getElementById('edit-nota-fiscal').value, // NOVO
             cidade_entrega: document.getElementById('edit-cidade-entrega').value || null,
             estado_entrega: document.getElementById('edit-estado-entrega').value || null
         };
@@ -732,7 +759,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             // Captura todos os dados da tela antes de finalizar
             let dados = {
                  observacoes: document.getElementById('obs-carga').value,
-                 frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+                 frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
                  previsao_entrega: document.getElementById('detalhe-previsao')?.value || null // Adiciona o '?' para o caso de não existir
             };
             
@@ -767,7 +794,7 @@ function handleAgendar() {
         // Captura todos os outros dados da tela (como em salvar)
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
-             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
              origem: document.getElementById('detalhe-origem').value,
              data_agendamento: dataAgendamento, // Adiciona a data específica
              // Adiciona motorista/veiculo se já tiver sido preenchido
@@ -792,7 +819,7 @@ function handleAgendar() {
         // Captura todos os outros dados da tela (como em salvar)
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
-             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
              previsao_entrega: document.getElementById('detalhe-previsao').value || null
         };
         // Adiciona dados de agendamento (caso o admin tenha editado)
@@ -815,7 +842,7 @@ function handleAgendar() {
         const { detalhes_carga } = cargaAtual;
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
-             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value)
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
         };
 
         if(detalhes_carga.status === 'Pendente') {
@@ -848,8 +875,9 @@ function handleAgendar() {
                 body: JSON.stringify(dados)
             });
             if (!response.ok) { const err = await response.json(); throw new Error(err.error || 'Falha ao atualizar'); }
-            fecharModais();
-            await carregarDadosIniciais();
+            alert('Alterações salvas com sucesso!'); // Confirmação
+            await carregarDadosIniciais(); // Atualiza o fundo
+            await abrirModalDetalhes(cargaAtual.detalhes_carga.id, false);
         } catch (error) {
             alert(`Não foi possível completar a ação: ${error.message}`);
         }
@@ -890,10 +918,10 @@ function handleAgendar() {
                 body: JSON.stringify(dados)
             });
             if (!response.ok) throw new Error('Falha ao criar carga');
-            const novaCarga = await response.json();
-            adicionarCartaoNaTela(novaCarga);
-            fecharModais();
-            document.getElementById('form-nova-carga').reset();
+			const novaCarga = await response.json();
+			adicionarCartaoNaTela(novaCarga); // Ou criarCartaoHTML se estiver usando a otimização
+			fecharModais();
+			document.getElementById('form-nova-carga').reset();
         } catch (error) { console.error("Erro ao criar carga:", error); }
     });
 	function handleImprimirEspelho() {
@@ -902,5 +930,31 @@ function handleAgendar() {
 		// Abre o PDF em uma nova aba (o navegador vai tratar o download)
 		window.open(`/cargas/${cargaId}/espelho_impressao`, '_blank'); // <-- CORRIGIDO
 	}
+	async function handleExcluirCarga() {
+        if (!confirm('ATENÇÃO ADMIN: Você está prestes a excluir esta carga PERMANENTEMENTE.\n\nClique OK para continuar.')) return;
+        
+        // Pergunta sobre as entregas
+        let acaoEntregas = prompt("O que deseja fazer com as entregas vinculadas?\n\nDigite 1 para DEVOLVER para a montagem (recomendado).\nDigite 2 para APAGAR permanentemente as entregas.\n\n(Qualquer outra tecla cancela)");
+        
+        let actionParam = '';
+        if (acaoEntregas === '1') actionParam = 'return_to_pool';
+        else if (acaoEntregas === '2') {
+            if(!confirm("Tem certeza absoluta? As entregas serão apagadas do banco de dados.")) return;
+            actionParam = 'delete_entregas';
+        } else {
+            return; // Cancela
+        }
+
+        try {
+            const response = await fetch(`/api/cargas/${cargaAtual.detalhes_carga.id}?action=${actionParam}`, { method: 'DELETE' });
+            if (response.ok) {
+                alert('Carga excluída com sucesso.');
+                fecharModais();
+                carregarDadosIniciais();
+            } else {
+                alert('Erro ao excluir carga.');
+            }
+        } catch (error) { console.error(error); }
+    }
     carregarDadosIniciais();
 });

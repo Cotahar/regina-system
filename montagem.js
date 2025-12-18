@@ -165,7 +165,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 50);
         });
         // --- FIM DA NOVA CORREÇÃO ---
-
+			$(document).on('select2:open', () => {
+				document.querySelector('.select2-search__field').focus();
+			});
 		} catch (error) { console.error("Erro ao carregar clientes:", error); }
 	}
     // ***** FIM DAS ALTERAÇÕES *****
