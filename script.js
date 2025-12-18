@@ -303,7 +303,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         const freteTotalGeral = entregas.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
         let secaoDados, secaoAcoes;
 
-        if (detalhes_carga.status === 'Pendente') {
+		if (detalhes_carga.status === 'Pendente') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
             <div class="campo-form"><label>Origem</label><input type="text" id="detalhe-origem" value="${detalhes_carga.origem || ''}"></div>
             <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
@@ -313,15 +313,16 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             <div class="campo-form"><label>Qtd. Entregas</label><p>${Object.keys(entregasAgrupadas).length}</p></div>
             <div class="campo-form"><label for="select-motorista">Motorista</label><select id="select-motorista" style="width: 100%;"></select></div>
             <div class="campo-form"><label for="select-veiculo">Veículo</label><select id="select-veiculo" style="width: 100%;"></select></div>
-        </div></div>`;
+			</div></div>`;
+        
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao-agendar">
                 <label for="detalhe-agendamento">Data do Agendamento:</label>
                 <input type="date" id="detalhe-agendamento" value="${formatarDataParaInput(detalhes_carga.data_agendamento)}">
                 <button class="btn-acao" data-acao="agendar">Agendar Carga</button>
                 <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
-            </div></div>`;
-			${(sessaoUsuario.user_permission === 'admin') ? 
+                ${(sessaoUsuario.user_permission === 'admin') ? 
                     `<button class="btn-excluir-entrega" data-acao="excluir-carga" style="margin-left: auto;">Excluir Carga</button>` : ''}
+				</div></div>`;
         } else if (detalhes_carga.status === 'Agendada') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
                 <div class="campo-form"><label>Origem</label><p>${detalhes_carga.origem || ''}</p></div>
@@ -758,7 +759,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             // Captura todos os dados da tela antes de finalizar
             let dados = {
                  observacoes: document.getElementById('obs-carga').value,
-                 frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+                 frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
                  previsao_entrega: document.getElementById('detalhe-previsao')?.value || null // Adiciona o '?' para o caso de não existir
             };
             
@@ -793,7 +794,7 @@ function handleAgendar() {
         // Captura todos os outros dados da tela (como em salvar)
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
-             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
              origem: document.getElementById('detalhe-origem').value,
              data_agendamento: dataAgendamento, // Adiciona a data específica
              // Adiciona motorista/veiculo se já tiver sido preenchido
@@ -818,7 +819,7 @@ function handleAgendar() {
         // Captura todos os outros dados da tela (como em salvar)
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
-             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
              previsao_entrega: document.getElementById('detalhe-previsao').value || null
         };
         // Adiciona dados de agendamento (caso o admin tenha editado)
@@ -841,7 +842,7 @@ function handleAgendar() {
         const { detalhes_carga } = cargaAtual;
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
-             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value)
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
         };
 
         if(detalhes_carga.status === 'Pendente') {

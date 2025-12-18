@@ -159,14 +159,18 @@ const mascaraDecimal = (input) => {
                 const tr = document.createElement('tr');
                 tr.dataset.id = carga.id;
                 tr.style.cursor = 'pointer';
-                const destinoCompleto = carga.destino_uf ? `${carga.destino}/${carga.destino_uf}` : (carga.destino || 'N/A');
+                
+                // O backend já envia o destino pronto no campo 'destino'
+                const destinoExibir = carga.destino || 'N/A';
+                
                 tr.innerHTML = `
                     <td>${carga.codigo_carga}</td>
                     <td>${carga.status}</td>
                     <td>${carga.origem}</td>
-                    <td>${destinoCompleto}</td>
-                    <td>${carga.motorista || 'N/A'}</td> <td>${carga.num_entregas}</td>
-                    <td>${formatarPeso(carga.peso_total)}</td>
+                    <td>${destinoExibir}</td>
+                    <td>${carga.motorista_nome || 'N/A'}</td> 
+                    <td>${carga.num_entregas}</td>
+                    <td>${formatarPeso(carga.peso_total_bruto)}</td>
                     <td>${formatarData(carga.data_finalizacao)}</td>
                 `;
                 tabelaCorpo.appendChild(tr);
@@ -697,7 +701,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             // --- INÍCIO DA CORREÇÃO ---
             let dados = {
                  observacoes: document.getElementById('obs-carga').value,
-                 frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+                 frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
                  previsao_entrega: document.getElementById('detalhe-previsao')?.value || null
             };
             dados.status = 'Finalizada';
@@ -728,7 +732,7 @@ function handleAgendar() {
         // --- INÍCIO DA CORREÇÃO ---
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
-             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
              origem: document.getElementById('detalhe-origem').value,
              data_agendamento: dataAgendamento,
              motorista_id: $('#select-motorista').val() || null,
@@ -748,7 +752,7 @@ function handleAgendar() {
         // --- INÍCIO DA CORREÇÃO ---
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
-             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value),
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
              previsao_entrega: document.getElementById('detalhe-previsao').value || null
         };
         const campoAgendamentoEdit = document.getElementById('detalhe-agendamento-edit');
@@ -769,7 +773,7 @@ function handleAgendar() {
          const { detalhes_carga } = cargaAtual;
         let dados = {
              observacoes: document.getElementById('obs-carga').value,
-             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value)
+             frete_pago: parseDecimal(document.getElementById('detalhe-frete-pago')?.value) || 0,
         };
 
         if(detalhes_carga.status === 'Pendente') {
@@ -904,8 +908,4 @@ function handleAgendar() {
 		const cargaId = cargaAtual.detalhes_carga.id;
 		window.open(`/cargas/${cargaId}/espelho_impressao`, '_blank'); // <-- CORRIGIDO
 	}
-
-form.addEventListener('submit', (event) => {
-
-    carregarDadosIniciaisConsulta();
-});
+;

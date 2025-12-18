@@ -504,11 +504,11 @@ def get_cargas_consulta():
             
         return jsonify(
             cargas=cargas_data,
-            total=total,
-            page=page,
-            per_page=per_page,
-            total_pages=(total + per_page - 1) // per_page
+            total_resultados=total,       # Sincronizado com consulta.js
+            pagina_atual=page,            # Sincronizado com consulta.js
+            total_paginas=(total + per_page - 1) // per_page 
         )
+        
     except Exception as e:
         print(f"Erro em /api/cargas/consulta: {e}")
         traceback.print_exc()
