@@ -900,8 +900,31 @@ function handleAgendar() {
             }).val(cargaAtual.detalhes_carga.veiculo_id).trigger('change');
          }
     }
+// --- FILTROS ESPECÍFICOS POR COLUNA ---
+    const filtrosColuna = document.querySelectorAll('.filtro-coluna');
 
-    // --- Listener Principal ---
+    filtrosColuna.forEach(input => {
+        input.addEventListener('input', (e) => {
+            const termo = e.target.value.toLowerCase();
+            const targetId = e.target.dataset.target; // Pega o id ("pendente", "agendada", etc)
+            
+            // Busca o container correto baseado no input que foi digitado
+            const container = document.getElementById(targetId);
+            if (!container) return;
+
+            // Filtra APENAS os cards dentro desse container
+            const cards = container.querySelectorAll('.cartao-carga');
+
+            cards.forEach(card => {
+                const textoCard = card.innerText.toLowerCase();
+                if (textoCard.includes(termo)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });    // --- Listener Principal ---
     painelContainer.addEventListener('click', (e) => {
         const cartao = e.target.closest('.cartao-carga');
         if (cartao) abrirModalDetalhes(cartao.dataset.id, false);
