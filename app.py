@@ -518,7 +518,13 @@ def get_cargas_consulta():
 @login_required
 def get_carga_detalhes(carga_id):
     try:
-        carga = Carga.query.get(carga_id)
+        # CORREÇÃO: Usar joinedload para trazer tudo de uma vez e evitar erros de sessão
+        carga = Carga.query.options(
+            joinedload(Carga.motorista_rel),
+            joinedload(Carga.veiculo_rel),
+            joinedload(Carga.entregas).joinedload(Entrega.cliente),
+            joinedload(Carga.entregas).joinedload(Entrega.remetente)
+        ).get(carga_id)
         
         if not carga:
             return jsonify(error='Carga não encontrada'), 404
@@ -528,28 +534,28 @@ def get_carga_detalhes(carga_id):
         detalhes_carga['motorista_nome'] = carga.motorista_rel.nome if carga.motorista_rel else None
         detalhes_carga['placa_veiculo'] = carga.veiculo_rel.placa if carga.veiculo_rel else None
 
-        # 2. Prepara os detalhes das entregas (com TODOS os campos que o modal precisa)
+        # 2. Prepara os detalhes das entregas
         entregas_data = []
         for entrega in carga.entregas:
             entregas_data.append({
                 'id': entrega.id,
                 'remetente_id': entrega.remetente_id,
                 'cliente_id': entrega.cliente_id,
-                # Dados do Remetente
+                # Dados do Remetente (Protegido contra Nulos)
                 'remetente_nome': (entrega.remetente.razao_social or 'N/A') if entrega.remetente else 'N/A',
                 'remetente_cidade': (entrega.remetente.cidade or 'N/A') if entrega.remetente else 'N/A', 
-                # Dados do Destinatário (Cliente)
+                # Dados do Destinatário
                 'razao_social': (entrega.cliente.razao_social or 'N/A') if entrega.cliente else 'N/A',
-                # A cidade final é o override (se existir) OU a padrão do cliente
+                # Cidade/Estado (Com override)
                 'cidade': entrega.cidade_entrega or (entrega.cliente.cidade or '') if entrega.cliente else (entrega.cidade_entrega or ''),
                 'estado': entrega.estado_entrega or (entrega.cliente.estado or '') if entrega.cliente else (entrega.estado_entrega or ''),
                 'ddd': (entrega.cliente.ddd or '') if entrega.cliente else '',
                 'telefone': (entrega.cliente.telefone or '') if entrega.cliente else '',
                 'obs_cliente': (entrega.cliente.observacoes or '') if entrega.cliente else '',
-                # Campos de Override da Entrega
+                # Campos de Override
                 'cidade_entrega_override': entrega.cidade_entrega,
                 'estado_entrega_override': entrega.estado_entrega,
-                # Valores da Entrega
+                # Valores
                 'peso_bruto': entrega.peso_bruto,
                 'valor_frete': entrega.valor_frete,
                 'peso_cubado': entrega.peso_cubado,
@@ -557,7 +563,6 @@ def get_carga_detalhes(carga_id):
                 'is_last_delivery': entrega.is_last_delivery
             })
 
-        # 3. Retorna no formato que o JavaScript (script.js) espera
         return jsonify({
             'detalhes_carga': detalhes_carga,
             'entregas': entregas_data
@@ -565,8 +570,7 @@ def get_carga_detalhes(carga_id):
     except Exception as e:
         print(f"Erro em /api/cargas/<id>: {e}")
         traceback.print_exc()
-        return jsonify(error=f"Erro interno: {str(e)}"), 500
-        
+        return jsonify(error=f"Erro interno: {str(e)}"), 500        
 #
 # --- NOVA ROTA DO ESPELHO DE CARGA (VERSÃO HTML) ---
 #

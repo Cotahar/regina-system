@@ -32,18 +32,21 @@
         </div>
         <button id="nova-carga-btn">+ Nova Carga</button>
     </header>
-
+	
     <main class="container">
         <div class="coluna">
             <h2>Pendentes</h2>
+            <input type="text" class="filtro-coluna" data-target="pendente" placeholder="🔍 Filtrar...">
             <div id="pendente" class="lista-cargas"></div>
         </div>
         <div class="coluna">
             <h2>Agendadas</h2>
+            <input type="text" class="filtro-coluna" data-target="agendada" placeholder="🔍 Filtrar...">
             <div id="agendada" class="lista-cargas"></div>
         </div>
         <div class="coluna">
             <h2>Em Trânsito</h2>
+            <input type="text" class="filtro-coluna" data-target="em-transito" placeholder="🔍 Filtrar...">
             <div id="em-transito" class="lista-cargas"></div>
         </div>
     </main>

@@ -1,5 +1,5 @@
 /*
-* style.css (ATUALIZADO PARA V2 - MÓDULO 4 - CORREÇÃO DE ALINHAMENTO)
+* style.css (LIMPO E OTIMIZADO - V2)
 */
 
 body {
@@ -21,21 +21,21 @@ header {
 
 header h1 {
     color: #fde047; /* Amarelo */
-    margin: 0; /* Remove margem padrão */
+    margin: 0;
 }
 
 header div {
     display: flex;
     align-items: center;
-    flex-wrap: wrap; /* Permite que botões quebrem linha */
-    gap: 10px; /* Espaçamento entre botões */
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 /* ================================================= */
-/* --- SEÇÃO DE BOTÕES CORRIGIDA E UNIFICADA --- */
+/* --- SEÇÃO DE BOTÕES --- */
 /* ================================================= */
 
-/* --- Estilo Base para TODOS os botões e links de navegação --- */
+/* --- Estilo Base --- */
 button, .btn-navegacao, .btn-navegacao-secundario {
     padding: 10px 15px;
     border: none;
@@ -43,13 +43,13 @@ button, .btn-navegacao, .btn-navegacao-secundario {
     cursor: pointer;
     text-decoration: none;
     font-weight: 600;
-    font-family: 'Inter', sans-serif; /* Garante a mesma fonte */
-    font-size: 14px; /* Padroniza o tamanho da fonte */
-    display: inline-flex; /* Alinha o texto interno corretamente */
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease-in-out;
-    white-space: nowrap; /* Impede que o texto quebre linha */
+    white-space: nowrap;
 }
 
 button:hover, .btn-navegacao:hover, .btn-navegacao-secundario:hover {
@@ -57,19 +57,19 @@ button:hover, .btn-navegacao:hover, .btn-navegacao-secundario:hover {
     box-shadow: 0 4px 10px rgba(0,0,0,.3);
 }
 
-/* --- Botão Principal (Amarelo, ex: Nova Carga, Salvar, Importar) --- */
+/* --- Botão Principal (Amarelo) --- */
 #nova-carga-btn, form button[type="submit"], .btn-acao {
-    background-color: #fde047; /* Amarelo */
-    color: #1e293b; /* Azul escuro */
+    background-color: #fde047;
+    color: #1e293b;
     font-size: 16px;
 }
 #nova-carga-btn:hover, form button[type="submit"]:hover, .btn-acao:hover {
-    background-color: #facc15; /* Amarelo mais escuro */
+    background-color: #facc15;
 }
 
 /* --- Botão de Navegação (Contorno Amarelo) --- */
 .btn-navegacao {
-    color: #fde047; /* Amarelo */
+    color: #fde047;
     background-color: transparent;
     border: 1px solid #fde047;
 }
@@ -78,99 +78,76 @@ button:hover, .btn-navegacao:hover, .btn-navegacao-secundario:hover {
     color: #1e293b;
 }
 
-/* --- Botão Secundário / Sair / Limpar / Cancelar (Vermelho) --- */
+/* --- Botão Secundário (Vermelho) --- */
 .btn-navegacao-secundario {
     color: #fff;
-    background-color: #ef4444; /* Vermelho */
+    background-color: #ef4444;
 }
 .btn-navegacao-secundario:hover {
-    background-color: #dc2626; /* Vermelho mais escuro */
+    background-color: #dc2626;
 }
 
-
-/* --- Botões Pequenos de Ação (Tabelas e Modais) --- */
+/* --- Botões Pequenos (Tabelas e Modais) --- */
 .btn-editar, .btn-excluir-entrega, .btn-detalhes-entrega {
     font-size: 10px;
     padding: 4px 8px;
     margin-right: 5px;
-    margin-bottom: 3px; /* Espaço caso quebre linha */
+    margin-bottom: 3px;
 }
 
-/* Botão Editar (Cinza) */
-.btn-editar {
-    background-color: #64748b; /* Cinza */
-    color: #fff;
-}
-.btn-editar:hover {
-    background-color: #475569; /* Cinza escuro */
-}
+.btn-editar { background-color: #64748b; color: #fff; }
+.btn-editar:hover { background-color: #475569; }
 
-/* Botão Excluir (Vermelho) */
-.btn-excluir-entrega {
-    background-color: #ef4444; /* Vermelho */
-    color: #fff;
-}
-.btn-excluir-entrega:hover {
-    background-color: #dc2626; /* Vermelho escuro */
-}
+.btn-excluir-entrega { background-color: #ef4444; color: #fff; }
+.btn-excluir-entrega:hover { background-color: #dc2626; }
 
-/* Botão Detalhes (Azul) */
-.btn-detalhes-entrega {
-     background-color: #3b82f6; /* Azul */
-     color: #fff;
-}
-.btn-detalhes-entrega:hover {
-    background-color: #2563eb; /* Azul escuro */
-}
+.btn-detalhes-entrega { background-color: #3b82f6; color: #fff; }
+.btn-detalhes-entrega:hover { background-color: #2563eb; }
 
+/* --- Outros Botões --- */
+.btn-acao-verde, .btn-acao-finalizar { background-color: #22c55e; color: #fff; }
+.btn-acao-verde:hover, .btn-acao-finalizar:hover { background-color: #16a34a; }
 
-/* --- Outros Botões Específicos --- */
-.btn-acao-verde { background-color: #22c55e; color: #fff; } /* Verde */
-.btn-acao-verde:hover { background-color: #16a34a; } /* Verde escuro */
-.btn-acao-secundario { background-color: #ef4444; color: #fff; } /* Vermelho */
-.btn-acao-secundario:hover { background-color: #dc2626; } /* Vermelho escuro */
-.btn-acao-finalizar { background-color: #22c55e; color: #fff; } /* Verde */
-.btn-acao-finalizar:hover { background-color: #16a34a; } /* Verde escuro */
+.btn-acao-secundario { background-color: #ef4444; color: #fff; }
+.btn-acao-secundario:hover { background-color: #dc2626; }
+
 .btn-paginacao {
-    background-color: #475569; /* Cinza escuro */
-    color: #cbd5e1; /* Cinza claro */
+    background-color: #475569;
+    color: #cbd5e1;
     margin: 0 3px;
     padding: 5px 10px;
 }
 .btn-paginacao.active {
-    background-color: #fde047; /* Amarelo */
-    color: #1e293b; /* Azul escuro */
+    background-color: #fde047;
+    color: #1e293b;
     font-weight: bold;
 }
 .btn-paginacao:hover:not(.active) {
-    background-color: #64748b; /* Cinza */
+    background-color: #64748b;
 }
-
 
 /* ================================================= */
 /* --- LAYOUTS GERAIS E CARDS --- */
 /* ================================================= */
-.container{ display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; } /* Responsivo */
+.container{ display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
 .coluna{ background-color:#334155; border-radius:12px; padding:15px; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
 .coluna h2{ text-align:center; margin-top:0; border-bottom:2px solid #475569; padding-bottom:10px; color:#fff; }
 .lista-cargas{ min-height:400px; padding-top:10px; }
 
-.cartao-carga{ background-color:#475569; border-radius:8px; padding:15px; margin-bottom:15px; box-shadow:0 2px 4px rgba(0,0,0,.2); cursor:pointer; border-left:5px solid #94a3b8; /* Cinza default */ }
+.cartao-carga{ background-color:#475569; border-radius:8px; padding:15px; margin-bottom:15px; box-shadow:0 2px 4px rgba(0,0,0,.2); cursor:pointer; border-left:5px solid #94a3b8; }
 .cartao-carga:hover{ box-shadow:0 4px 8px rgba(0,0,0,.3); transform: translateY(-1px); }
 .cartao-carga h3{ margin:0; color:#fde047; font-size: 1.1em; }
 .cartao-carga ul{ list-style:none; padding:0; margin:10px 0 0 0; font-size:14px; color:#e2e8f0; }
 .cartao-carga li{ margin-bottom:7px; line-height: 1.4; }
-.cartao-carga li strong { color: #94a3b8; } /* Cinza mais claro para labels */
+.cartao-carga li strong { color: #94a3b8; }
 
-/* Bordas coloridas por status */
-#pendente .cartao-carga{ border-left-color:#94a3b8; } /* Cinza */
-#agendada .cartao-carga{ border-left-color:#60a5fa; } /* Azul */
-#em-transito .cartao-carga{ border-left-color:#fde047; } /* Amarelo */
+#pendente .cartao-carga{ border-left-color:#94a3b8; }
+#agendada .cartao-carga{ border-left-color:#60a5fa; }
+#em-transito .cartao-carga{ border-left-color:#fde047; }
 
 .cartao-header { display: flex; justify-content: space-between; align-items: flex-start; }
 .cartao-data { background-color: #334155; color: #e2e8f0; padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
 
-/* Layouts específicos de página */
 .container-clientes { display: flex; flex-direction: column; gap: 30px; }
 .card-importacao, .card-lista-clientes { background-color: #334155; border-radius: 12px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
 .card-importacao h2, .card-lista-clientes h2 { margin-top: 0; color: #fde047; }
@@ -186,14 +163,13 @@ button:hover, .btn-navegacao:hover, .btn-navegacao-secundario:hover {
 .fechar-modal{ color:#94a3b8; position:absolute; top:15px; right:25px; font-size:32px; font-weight:bold; cursor:pointer; line-height:1; }
 .fechar-modal:hover,.fechar-modal:focus{ color:#fde047; }
 
-/* Modal Detalhes - Layout interno */
 #detalhes-header{ padding-right:50px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #475569; padding-bottom:15px; margin-bottom:20px; }
 #detalhes-header h2{ color:#fde047; margin:0; }
 #detalhes-header span{ font-size:16px; padding:5px 10px; border-radius:8px; font-weight:bold; color:#1e293b; text-transform: capitalize; }
-.status-pendente{ background-color:#94a3b8; } /* Cinza */
-.status-agendada{ background-color:#60a5fa; } /* Azul */
-.status-em-transito{ background-color:#fde047; } /* Amarelo */
-.status-finalizada{ background-color:#4ade80; } /* Verde */
+.status-pendente{ background-color:#94a3b8; }
+.status-agendada{ background-color:#60a5fa; }
+.status-em-transito{ background-color:#fde047; }
+.status-finalizada{ background-color:#4ade80; }
 
 .modal-body-grid{ display:grid; grid-template-columns:1fr; gap:20px; }
 .detalhes-secao{ margin-top:25px; border-top:1px solid #475569; padding-top:20px; }
@@ -204,16 +180,16 @@ button:hover, .btn-navegacao:hover, .btn-navegacao-secundario:hover {
 .detalhes-form-grid-4{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:15px 20px; }
 .campo-form{ background-color:#475569; padding:12px; border-radius:8px; }
 .campo-form label{ display:block; font-size:12px; color:#cbd5e1; margin-bottom:5px; font-weight: normal; }
-.campo-form p{ margin:0; font-weight:bold; font-size:15px; padding:10px 0; color: #fff; } /* Padrão para valores exibidos */
-.campo-form input[type=text], .campo-form input[type=date], .campo-form textarea, .campo-form select { text-transform:uppercase; margin-top: 5px; } /* Inputs dentro do campo-form */
+.campo-form p{ margin:0; font-weight:bold; font-size:15px; padding:10px 0; color: #fff; }
+.campo-form input[type=text], .campo-form input[type=date], .campo-form textarea, .campo-form select { text-transform:uppercase; margin-top: 5px; }
 .campo-form input:disabled, .campo-form textarea:disabled { background-color:#475569; border-color:#475569; cursor:not-allowed; opacity:.7; }
 
-.acoes-container { margin-top: 20px; } /* Ajuste no container de botões de ação */
+.acoes-container { margin-top: 20px; }
 
-/* Estilo para <details> (Resumo de Coletas) */
-.secao-expansivel summary { cursor: pointer; display: list-item; list-style: disclosure-closed inside; /* Seta padrão */ }
+/* Detalhes Expansíveis */
+.secao-expansivel summary { cursor: pointer; display: list-item; list-style: disclosure-closed inside; }
 .secao-expansivel[open] summary { list-style-type: disclosure-open; }
-.secao-expansivel summary h4 { display: inline; /* Título ao lado da seta */ }
+.secao-expansivel summary h4 { display: inline; }
 .lista-resumo { list-style: none; padding-left: 20px; margin-top: 10px; }
 .lista-resumo li { padding: 5px 0; border-bottom: 1px dashed #475569; }
 .lista-resumo li:last-child { border-bottom: none; }
@@ -232,84 +208,41 @@ input[type=text], input[type=password], input[type=date], input[type=file], text
     color:#e2e8f0;
     font-size:14px;
     font-family:inherit;
-    margin-bottom: 10px; /* Espaço abaixo dos inputs */
+    margin-bottom: 10px;
 }
-input[type=file] { color:#e0e0e0; padding: 8px 10px; } /* Ajuste padding file input */
-input[type=date] { color-scheme: dark; height: 40px; } /* Ajuste altura date input */
+input[type=file] { color:#e0e0e0; padding: 8px 10px; }
+input[type=date] { color-scheme: dark; height: 40px; }
 
-form button[type="submit"] { margin-top:20px; width: auto; /* Botões de submit não precisam ser 100% */ }
+form button[type="submit"] { margin-top:20px; width: auto; }
 #form-nova-carga button{ width:100%; }
 
-/* Layouts específicos de formulário */
-/* ***** CORREÇÃO ALINHAMENTO IMPORTAR (IMAGEM 5da8b4) ***** */
-#form-importar{
-    display:flex;
-    gap:15px;
-    margin-top:15px;
-    align-items: center; /* Alinha verticalmente */
-}
-/* Faz o input de arquivo ocupar o espaço disponível, e o botão ter tamanho automático */
-#form-importar input[type="file"] {
-    width: auto;
-    flex-grow: 1; /* Ocupa o espaço restante */
-    margin-bottom: 0; /* Remove margem inferior padrão */
-}
-#form-importar button {
-    width: auto; /* Tamanho automático */
-    flex-shrink: 0; /* Impede que o botão encolha */
-    margin-top: 0; /* Remove margem superior padrão */
-}
+/* Formulários Específicos */
+#form-importar{ display:flex; gap:15px; margin-top:15px; align-items: center; }
+#form-importar input[type="file"] { width: auto; flex-grow: 1; margin-bottom: 0; }
+#form-importar button { width: auto; flex-shrink: 0; margin-top: 0; }
 
-/* ***** CORREÇÃO ALINHAMENTO AÇÕES (IMAGEM 5dacbc) ***** */
-.form-acao {
-    display:flex;
-    align-items:center;
-    gap:15px;
-    flex-wrap:wrap;
-    margin-top:10px;
-    justify-content: flex-start; /* Alinha itens à esquerda */
-}
-.form-acao-agendar {
-    display:flex;
-    align-items:center;
-    gap:10px;
-    background-color:#475569;
-    padding:15px;
-    border-radius:8px;
-    flex-wrap: wrap;
-    justify-content: flex-start; /* Alinha itens à esquerda */
-}
-.form-acao-agendar input[type="date"] {
-    width: auto; /* Data no agendamento */
-}
-.form-acao-agendar button {
-    margin-top: 0; /* Remove margem topo dos botões nesta linha */
-}
+.form-acao { display:flex; align-items:center; gap:15px; flex-wrap:wrap; margin-top:10px; justify-content: flex-start; }
+.form-acao-agendar { display:flex; align-items:center; gap:10px; background-color:#475569; padding:15px; border-radius:8px; flex-wrap: wrap; justify-content: flex-start; }
+.form-acao-agendar input[type="date"] { width: auto; }
+.form-acao-agendar button { margin-top: 0; }
 
 .filtro-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
 .filtro-linha { margin-top: 15px; }
 .filtro-linha-datas { display: flex; flex-wrap: wrap; gap: 30px; margin-top: 15px; align-items: center; }
 .campo-data { display: flex; align-items: center; gap: 10px; }
 .campo-data label, .campo-data span { white-space: nowrap; margin: 0; font-weight: normal; color: #cbd5e1; }
-.campo-data input[type="date"] { width: auto; flex-grow: 1; margin-bottom: 0; /* Remove margem de input padrão */ }
+.campo-data input[type="date"] { width: auto; flex-grow: 1; margin-bottom: 0; }
 
-/* ***** CORREÇÃO ALINHAMENTO CONSULTA (IMAGEM 5dabdb) ***** */
-#form-consulta .form-acao {
-    margin-top: 20px;
-    justify-content: flex-start; /* Garante alinhamento à esquerda */
-}
-#form-consulta button[type="reset"] {
-    margin-right: 0 !important;
-}
+#form-consulta .form-acao { margin-top: 20px; justify-content: flex-start; }
+#form-consulta button[type="reset"] { margin-right: 0 !important; }
 
-/* Mensagens */
-.mensagem{ margin-top:15px; font-weight:bold; min-height: 1em; /* Evita pulos de layout */ }
+.mensagem{ margin-top:15px; font-weight:bold; min-height: 1em; }
 .mensagem-erro{ color:#f87171; margin-top:15px; height:20px; }
 
 /* ================================================= */
 /* --- TABELAS --- */
 /* ================================================= */
-.tabela-wrapper{ max-height:500px; overflow-y:auto; border:1px solid #475569; border-radius:8px; margin-top: 15px; /* Espaço acima da tabela */ }
+.tabela-wrapper{ max-height:500px; overflow-y:auto; border:1px solid #475569; border-radius:8px; margin-top: 15px; }
 table{ width:100%; border-collapse:collapse; }
 th,td{ padding:12px 15px; text-align:left; border-bottom:1px solid #475569; }
 th{ background-color:#475569; color:#fde047; position:sticky; top:0; z-index: 10; }
@@ -318,16 +251,15 @@ tbody tr:hover{ background-color:#475569; }
 td.col-destino { text-align: center; }
 input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entrega-grupo { width: auto; cursor: pointer; }
 
-/* Módulo 4: Estilos para Agrupamento de Entregas */
+/* Estilos de Agrupamento */
 .linha-grupo-entrega td { font-weight: bold; }
-.linha-detalhes-entrega td { padding: 0 !important; border: 0; } /* Remove padding e borda da linha container */
-.detalhes-subtabela { background-color: #283549; /* Tom mais escuro */ padding: 15px; border-radius: 0 0 8px 8px; }
+.linha-detalhes-entrega td { padding: 0 !important; border: 0; }
+.detalhes-subtabela { background-color: #283549; padding: 15px; border-radius: 0 0 8px 8px; }
 .detalhes-subtabela h4 { margin: 0 0 10px 0; color: #94a3b8; font-size: 0.9em; }
 .detalhes-subtabela ul { list-style: none; padding: 0; margin: 0; }
 .detalhes-subtabela li { padding: 8px 5px; border-bottom: 1px dashed #475569; font-size: 0.85em; display: flex; flex-wrap: wrap; gap: 5px 15px; align-items: center;}
 .detalhes-subtabela li:last-child { border-bottom: none; }
 .detalhes-subtabela li span { color: #cbd5e1; }
-
 
 /* ================================================= */
 /* --- LOGIN --- */
@@ -336,7 +268,6 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
 .login-container{ background-color:#334155; padding:40px; border-radius:12px; box-shadow:0 5px 15px rgba(0,0,0,.5); width:100%; max-width:400px; text-align:center; }
 .login-container h2{ color:#fde047; margin-bottom: 25px; }
 
-
 /* ================================================= */
 /* --- SELECT2 CUSTOMIZAÇÃO --- */
 /* ================================================= */
@@ -344,7 +275,7 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
     background-color: #1e293b !important;
     border: 1px solid #475569 !important;
     border-radius: 8px !important;
-    height: 40px !important; /* Mesma altura dos inputs */
+    height: 40px !important;
     padding: 5px 0px 5px 5px !important;
 }
 .select2-container--default .select2-selection--single .select2-selection__rendered {
@@ -361,7 +292,6 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
      border-color: transparent transparent #94a3b8 transparent !important;
      border-width: 0 4px 5px 4px !important;
 }
-/* Dropdown */
 .select2-dropdown {
     background-color: #1e293b !important;
     border: 1px solid #475569 !important;
@@ -379,16 +309,21 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
     color: #1e293b !important;
 }
 .select2-results__option[aria-selected=true] {
-     background-color: #475569 !important; /* Cor para item selecionado no dropdown */
+     background-color: #475569 !important;
 }
+.select2-container--open { z-index: 1051 !important; }
+
+/* Montagem e Grid */
 .container-montagem { display: grid; grid-template-columns: 400px 1fr; gap: 20px; align-items: flex-start; }
 #coluna-cadastro, #coluna-disponiveis { display: flex; flex-direction: column; gap: 20px; }
-#coluna-cadastro .card-lista-clientes, #coluna-disponiveis .card-lista-clientes { flex-grow: 1; } /* Faz os cards ocuparem altura disponível */
+#coluna-cadastro .card-lista-clientes, #coluna-disponiveis .card-lista-clientes { flex-grow: 1; }
 .grid-col-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+.grid-col-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
 .grid-col-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; }
 .divisor-form { border: none; border-top: 1px solid #475569; margin: 20px 0; }
-#tabela-disponiveis th:first-child, #tabela-disponiveis td:first-child { width: 40px; text-align: center; } /* Checkbox */
+#tabela-disponiveis th:first-child, #tabela-disponiveis td:first-child { width: 40px; text-align: center; }
 #tabela-disponiveis td { font-size: 0.9em; }
+
 .painel-montagem {
     background-color: #475569; padding: 15px 20px; border-radius: 8px; margin-top: 15px;
     display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 20px; align-items: center;
@@ -396,194 +331,117 @@ input[type="radio"].radio-ultima-entrega, input[type="radio"].radio-ultima-entre
 .painel-montagem span { font-weight: bold; color: #e2e8f0; }
 .painel-montagem input[type=text] { margin-bottom: 0; }
 .painel-montagem button { margin-top: 0; white-space: nowrap; }
+
 #lista-rascunhos-corpo ul { list-style: none; padding: 0; margin: 0; }
 #lista-rascunhos-corpo li { padding: 10px 5px; border-bottom: 1px dashed #475569; display: flex; justify-content: space-between; align-items: center; font-size: 0.9em;}
 #lista-rascunhos-corpo li:last-child { border-bottom: none; }
 #lista-rascunhos-corpo button { font-size: 10px; padding: 3px 6px; margin-left: 5px; }
 .highlight-row { background-color: #52637a !important; }
 
-/* Ajustes Responsivos */
-@media (max-width: 900px) {
-    .container-montagem { grid-template-columns: 1fr; }
-}
-
-/* Garante que dropdowns do Select2 apareçam sobre modais */
-.select2-container--open { z-index: 1051 !important; /* Maior que o z-index do modal */ }
-/* Adicione no final do style.css */
 .campo-checkbox {
     display: flex;
     align-items: center;
     gap: 10px;
     margin-top: 15px;
     padding: 10px;
-    background-color: #475569; /* Fundo cinza */
+    background-color: #475569;
     border-radius: 8px;
 }
-.campo-checkbox input[type="checkbox"] {
-    width: auto; /* Tamanho automático */
-    margin: 0;
+.campo-checkbox input[type="checkbox"] { width: auto; margin: 0; }
+.campo-checkbox label { margin: 0; font-weight: normal; color: #cbd5e1; }
+
+.entregas-header .btn-navegacao { font-size: 14px; padding: 10px 15px; }
+.input-error { border: 2px solid #ef4444 !important; box-shadow: 0 0 5px rgba(239, 68, 68, 0.5); }
+
+/* Ajustes Responsivos */
+@media (max-width: 900px) {
+    .container-montagem { grid-template-columns: 1fr; }
 }
-.campo-checkbox label {
-    margin: 0; /* Remove margens do label padrão */
-    font-weight: normal;
+
+/* ================================================= */
+/* --- MENU DROPDOWN (HEADER LIMPO) --- */
+/* ================================================= */
+
+.dropdown { position: relative; display: inline-block; }
+
+.dropdown-btn {
+    color: #fde047;
+    background-color: transparent;
+    border: 1px solid #fde047;
+    padding: 10px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease-in-out;
+    white-space: nowrap;
+}
+
+.dropdown-btn:hover {
+    background-color: #fde047;
+    color: #1e293b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,.3);
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #334155;
+    min-width: 200px;
+    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.4);
+    z-index: 100;
+    border-radius: 8px;
+    margin-top: 0px;
+    right: 0;
+}
+
+.dropdown-content a {
     color: #cbd5e1;
-}
-/* ================================================= */
-/* --- MENU DROPDOWN (HEADER LIMPO) --- */
-/* ================================================= */
-
-/* O container do botão do dropdown */
-.dropdown {
-    position: relative;
-    display: inline-block;
-}
-
-/* O botão que aciona o dropdown (estilizado como btn-navegacao) */
-.dropdown-btn {
-    color: #fde047;
-    background-color: transparent;
-    border: 1px solid #fde047;
-    padding: 10px 15px;
-    border-radius: 8px;
-    cursor: pointer;
-    text-decoration: none;
-    font-weight: 600;
-    font-family: 'Inter', sans-serif;
-    font-size: 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease-in-out;
-    white-space: nowrap;
-}
-
-.dropdown-btn:hover {
-    background-color: #fde047;
-    color: #1e293b;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,.3);
-}
-
-/* O conteúdo que aparece (a caixa do dropdown) */
-.dropdown-content {
-    display: none; /* Escondido por padrão */
-    position: absolute;
-    background-color: #334155; /* Cor da coluna */
-    min-width: 200px; /* Largura mínima */
-    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.4);
-    z-index: 100; /* Sobrepor outros itens */
-    border-radius: 8px;
-    margin-top: 0px; /* Espaço do botão */
-    right: 0; /* Alinha à direita do container */
-}
-
-/* Links dentro do dropdown */
-.dropdown-content a {
-    color: #cbd5e1; /* Cinza claro */
     padding: 12px 16px;
     text-decoration: none;
     display: block;
     font-size: 14px;
-    font-weight: normal; /* Fonte normal, não bold */
-    border-bottom: 1px solid #475569; /* Separador */
+    font-weight: normal;
+    border-bottom: 1px solid #475569;
 }
+.dropdown-content a:last-child { border-bottom: none; }
+.dropdown-content a:hover { background-color: #475569; color: #fde047; }
+.dropdown:hover .dropdown-content { display: block; }
 
-.dropdown-content a:last-child {
-    border-bottom: none; /* Remove borda do último item */
-}
 
-/* Efeito hover nos links */
-.dropdown-content a:hover {
-    background-color: #475569; /* Cinza hover */
-    color: #fde047; /* Amarelo hover */
-}
-
-/* Mostrar o dropdown ao passar o mouse */
-.dropdown:hover .dropdown-content {
-    display: block;
-}
 /* ================================================= */
-/* --- MENU DROPDOWN (HEADER LIMPO) --- */
+/* --- FILTROS POR COLUNA --- */
 /* ================================================= */
-
-/* O container do botão do dropdown */
-.dropdown {
-    position: relative;
-    display: inline-block;
-}
-
-/* O botão que aciona o dropdown (estilizado como btn-navegacao) */
-.dropdown-btn {
+.filtro-coluna {
+    width: 100%;
+    margin-bottom: 15px; /* Espaço até o primeiro card */
+    padding: 8px 12px;
+    font-size: 13px;
+    background-color: #1e293b; /* Mais escuro que a coluna para contraste */
+    border: 1px solid #475569;
     color: #fde047;
-    background-color: transparent;
-    border: 1px solid #fde047;
-    padding: 10px 15px;
-    border-radius: 8px;
-    cursor: pointer;
-    text-decoration: none;
-    font-weight: 600;
-    font-family: 'Inter', sans-serif;
-    font-size: 14px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease-in-out;
-    white-space: nowrap;
+    border-radius: 6px;
+    
+    /* Ícone de Lupa pequeno na direita */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' /%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
 }
 
-.dropdown-btn:hover {
-    background-color: #fde047;
-    color: #1e293b;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,.3);
+.filtro-coluna:focus {
+    border-color: #fde047;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(253, 224, 71, 0.1);
 }
 
-/* O conteúdo que aparece (a caixa do dropdown) */
-.dropdown-content {
-    display: none; /* Escondido por padrão */
-    position: absolute;
-    background-color: #334155; /* Cor da coluna */
-    min-width: 200px; /* Largura mínima */
-    box-shadow: 0 8px 16px 0 rgba(0,0,0,0.4);
-    z-index: 100; /* Sobrepor outros itens */
-    border-radius: 8px;
-    margin-top: 5px; /* Espaço do botão */
-    right: 0; /* Alinha à direita do container */
+.filtro-coluna::placeholder {
+    color: #64748b;
+    font-style: italic;
 }
-
-/* Links dentro do dropdown */
-.dropdown-content a {
-    color: #cbd5e1; /* Cinza claro */
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
-    font-size: 14px;
-    font-weight: normal; /* Fonte normal, não bold */
-    border-bottom: 1px solid #475569; /* Separador */
-}
-
-.dropdown-content a:last-child {
-    border-bottom: none; /* Remove borda do último item */
-}
-
-/* Efeito hover nos links */
-.dropdown-content a:hover {
-    background-color: #475569; /* Cinza hover */
-    color: #fde047; /* Amarelo hover */
-}
-
-/* Mostrar o dropdown ao passar o mouse */
-.dropdown:hover .dropdown-content {
-    display: block;
-}
-
-.entregas-header .btn-navegacao {
-    font-size: 14px; /* Tamanho da fonte padrão do botão */
-    padding: 10px 15px; /* Padding padrão do botão */
-}
-.input-error {
-    border: 2px solid #ef4444 !important; /* Vermelho erro, !important para sobrepor */
-    box-shadow: 0 0 5px rgba(239, 68, 68, 0.5); /* Brilho vermelho */
-}
-.grid-col-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
-
