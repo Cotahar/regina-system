@@ -242,14 +242,18 @@ const mascaraDecimal = (input) => {
     async function abrirModalDetalhes(id, reabrirFormularioEntrega = false) {
         try {
             const response = await fetch(`/api/cargas/${id}`);
-            if (!response.ok) throw new Error('Carga não encontrada');
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Carga não encontrada');
+            }
             cargaAtual = await response.json();
             renderizarModalDetalhes(reabrirFormularioEntrega);
             modalDetalhes.style.display = 'block';
             inicializarSelect2MotoristaVeiculo();
         } catch (error) {
             console.error("Erro ao buscar detalhes:", error);
-            alert("Não foi possível carregar os detalhes.");
+            // Agora o alerta vai te dizer QUAL é o erro (ex: Erro 500, JSON inválido, etc)
+            alert(`Não foi possível carregar os detalhes: ${error.message}`);
         }
     }
 
@@ -953,10 +957,9 @@ function handleAgendar() {
 		// Abre o PDF em uma nova aba (o navegador vai tratar o download)
 		window.open(`/cargas/${cargaId}/espelho_impressao`, '_blank'); // <-- CORRIGIDO
 	}
-	async function handleExcluirCarga() {
+async function handleExcluirCarga() {
         if (!confirm('ATENÇÃO ADMIN: Você está prestes a excluir esta carga PERMANENTEMENTE.\n\nClique OK para continuar.')) return;
         
-        // Pergunta sobre as entregas
         let acaoEntregas = prompt("O que deseja fazer com as entregas vinculadas?\n\nDigite 1 para DEVOLVER para a montagem (recomendado).\nDigite 2 para APAGAR permanentemente as entregas.\n\n(Qualquer outra tecla cancela)");
         
         let actionParam = '';
@@ -965,7 +968,7 @@ function handleAgendar() {
             if(!confirm("Tem certeza absoluta? As entregas serão apagadas do banco de dados.")) return;
             actionParam = 'delete_entregas';
         } else {
-            return; // Cancela
+            return; 
         }
 
         try {
@@ -979,5 +982,8 @@ function handleAgendar() {
             }
         } catch (error) { console.error(error); }
     }
+
+    // Inicialização correta (dentro do Listener)
     carregarDadosIniciais();
-});
+
+}); // Fim do document.addEventListener
