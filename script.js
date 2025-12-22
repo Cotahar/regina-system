@@ -10,7 +10,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ***** INÍCIO DAS ALTERAÇÕES *****
     const selectEditRemetente = $('#edit-remetente-carga'); // Novo seletor
-
+	
+	// --- SELETORES DO MÓDULO 6 (LOTE DETALHES) ---
+    const modalLoteDet = document.getElementById('modal-lote-detalhes');
+    const formLoteDet = document.getElementById('form-lote-detalhes');
+    const selectRemetenteLoteDet = $('#select-remetente-lote-detalhes');
+    const spanQtdLoteDet = document.getElementById('qtd-lote-detalhes');
+    const msgLoteDet = document.getElementById('msg-lote-detalhes');
+    const btnFecharLoteDet = document.getElementById('fechar-modal-lote-detalhes');
+	let selecaoDetalhesAtiva = false;
+	
     let listaDeClientes = []; // Todos os clientes
     let listaDeMotoristas = [];
     let listaDeVeiculos = [];
@@ -147,7 +156,11 @@ const mascaraDecimal = (input) => {
                 data: listaDeRemetentesSelect2,
                 dropdownParent: $('#modal-editar-entrega') // Anexa ao modal correto
             });
-            
+            selectRemetenteLoteDet.select2({
+                placeholder: 'Selecione o Novo Remetente',
+                data: listaDeRemetentesSelect2,
+                dropdownParent: $('#modal-lote-detalhes')
+            });
             const cargas = await cargasRes.json();
             document.querySelectorAll('.lista-cargas').forEach(lista => lista.innerHTML = '');
             
@@ -240,6 +253,7 @@ const mascaraDecimal = (input) => {
     }
 
     async function abrirModalDetalhes(id, reabrirFormularioEntrega = false) {
+		selecaoDetalhesAtiva = false;
         try {
             const response = await fetch(`/api/cargas/${id}`);
             if (!response.ok) {
@@ -263,7 +277,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         const podeEditarGeral = ['admin', 'operador'].includes(sessaoUsuario.user_permission);
         const podeEditarEntregas = podeEditarGeral && ['Pendente', 'Agendada'].includes(detalhes_carga.status);
 
-        // Agrupa coletas
+        // Agrupa coletas para resumo
         const coletasPorRemetente = entregas.reduce((acc, e) => {
             const remetenteKey = e.remetente_nome || 'Desconhecido';
             if (!acc[remetenteKey]) {
@@ -276,7 +290,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             `<li>${coleta.nome} (${coleta.cidade}): ${formatarPeso(coleta.peso)}</li>`
         ).join('');
 
-        // Agrupa entregas
+        // Agrupa entregas por Cliente/Destino
         const entregasAgrupadas = entregas.reduce((acc, e) => {
              const clienteKey = `${e.cliente_id}_${(e.cidade || 'N/A').toUpperCase()}_${(e.estado || 'N/A').toUpperCase()}`;
              if (!acc[clienteKey]) {
@@ -299,14 +313,12 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
              return acc;
          }, {});
 
-
         const pesoTotalGeral = entregas.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
-        // --- CÁLCULO (JÁ CORRIGIDO) ---
         const cubadoTotalGeral = entregas.reduce((acc, e) => acc + (e.peso_cubado || e.peso_bruto || 0), 0);
-        // --- FIM DO CÁLCULO ---
         const freteTotalGeral = entregas.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
         let secaoDados, secaoAcoes;
 
+        // --- GERAÇÃO DOS DADOS DA VIAGEM ---
 		if (detalhes_carga.status === 'Pendente') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
             <div class="campo-form"><label>Origem</label><input type="text" id="detalhe-origem" value="${detalhes_carga.origem || ''}"></div>
@@ -318,14 +330,12 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             <div class="campo-form"><label for="select-motorista">Motorista</label><select id="select-motorista" style="width: 100%;"></select></div>
             <div class="campo-form"><label for="select-veiculo">Veículo</label><select id="select-veiculo" style="width: 100%;"></select></div>
 			</div></div>`;
-        
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="form-acao-agendar">
                 <label for="detalhe-agendamento">Data do Agendamento:</label>
                 <input type="date" id="detalhe-agendamento" value="${formatarDataParaInput(detalhes_carga.data_agendamento)}">
                 <button class="btn-acao" data-acao="agendar">Agendar Carga</button>
                 <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
-                ${(sessaoUsuario.user_permission === 'admin') ? 
-                    `<button class="btn-excluir-entrega" data-acao="excluir-carga" style="margin-left: auto;">Excluir Carga</button>` : ''}
+                ${(sessaoUsuario.user_permission === 'admin') ? `<button class="btn-excluir-entrega" data-acao="excluir-carga" style="margin-left: auto;">Excluir Carga</button>` : ''}
 				</div></div>`;
         } else if (detalhes_carga.status === 'Agendada') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
@@ -350,8 +360,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                 <button class="btn-acao" data-acao="iniciar-transito">Iniciar Trânsito</button>
 				<button class="btn-acao-secundario" data-acao="cancelar-agendamento">Cancelar Agendamento</button>
                 <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
-				${(sessaoUsuario.user_permission === 'admin') ? 
-                    `<button class="btn-excluir-entrega" data-acao="excluir-carga" style="margin-left: auto;">Excluir Carga</button>` : ''}
+				${(sessaoUsuario.user_permission === 'admin') ? `<button class="btn-excluir-entrega" data-acao="excluir-carga" style="margin-left: auto;">Excluir Carga</button>` : ''}
             </div></div>`;
         } else if (detalhes_carga.status === 'Em Trânsito') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
@@ -368,8 +377,7 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             </div></div>`;
             secaoAcoes = `<div class="detalhes-secao"><h4>Ações de Status</h4><div class="acoes-container">
             <button class="btn-acao-finalizar" data-acao="finalizar">Finalizar Carga</button>
-            ${(sessaoUsuario.user_permission === 'admin') ? 
-                `<button class="btn-acao-secundario" data-acao="regredir-para-agendada">Devolver para Agendada</button>` : ''}
+            ${(sessaoUsuario.user_permission === 'admin') ? `<button class="btn-acao-secundario" data-acao="regredir-para-agendada">Devolver para Agendada</button>` : ''}
             <button class="btn-acao-verde" data-acao="salvar">Salvar Alterações</button>
         </div></div>`;
         } else { // Finalizada
@@ -390,15 +398,25 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
 				}
         }
 
-        // ***** INÍCIO DA ALTERAÇÃO (Estilo e Botão) *****
         let botoesEntregaHtml = '';
         if (podeEditarEntregas) {
-            // Botão V2.1 (Devolver para Montagem) - CLASSE CORRIGIDA
             botoesEntregaHtml += `<button id="btn-devolver-rascunho" class="btn-navegacao">Editar Carga na Montagem</button>`;
-            // Botão V1 (Coleta Rápida) - NOME ATUALIZADO
             botoesEntregaHtml += `<button id="btn-add-entrega" class="btn-acao">+ Coleta Rápida (V1)</button>`;
+            // --- NOVO BOTÃO: Toggle Seleção ---
+			botoesEntregaHtml += `<button id="btn-toggle-selecao-detalhes" class="btn-navegacao" style="background-color: #64748b; color: white; margin-left: 25px; border-left: 1px solid #94a3b8; padding-left: 15px;">✅ Seleção / Lote</button>`;
         }
-        // ***** FIM DA ALTERAÇÃO *****
+        
+        // HTML da barra de ação em lote
+        const acoesLoteHtml = podeEditarEntregas ? `
+        <div id="acoes-lote-wrapper-detalhes" style="display: none; background-color: #fff7ed; padding: 10px; margin-bottom: 10px; border: 1px solid #fdba74; border-radius: 6px; align-items: center; gap: 10px;">
+            <span style="color: #c2410c; font-weight: bold; font-size: 0.9em;">Ações em Lote:</span>
+            <button id="btn-alterar-remetente-lote-detalhes" type="button" style="background-color: #f97316; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                ✏️ Alterar Remetente (<span id="contador-lote-detalhes">0</span>)
+            </button>
+        </div>` : '';
+
+        // Estilo das colunas (Esconde ou mostra baseado na variável)
+        const displaySel = selecaoDetalhesAtiva ? 'table-cell' : 'none';
 
         detalhesConteudo.innerHTML = `
 			<div id="detalhes-header">
@@ -424,8 +442,10 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                     </div>
                 </div>
                 <div id="form-add-entrega-container"></div>
+                ${acoesLoteHtml}
                 <div class="tabela-wrapper"><table id="tabela-entregas">
                     <thead><tr>
+                        ${podeEditarEntregas ? `<th class="col-selecao-detalhes" style="display: ${displaySel}; width: 30px; text-align: center;"><input type="checkbox" id="cb-all-detalhes" title="Selecionar Todos"></th>` : ''}
                         ${podeEditarEntregas ? '<th>Destino</th>': ''}
                         <th>Cliente</th><th>Cidade/UF</th><th>Peso Total</th><th>Frete Total</th><th>Telefone</th><th>Observações</th>
                         ${podeEditarGeral ? '<th>Ações</th>': ''}
@@ -437,25 +457,19 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         const tabelaCorpoEntregas = document.getElementById('tabela-entregas-corpo');
         tabelaCorpoEntregas.innerHTML = '';
         
-        // --- INÍCIO DA CORREÇÃO DE ORDENAÇÃO (BUG 5) ---
-        // 1. Converte o objeto de grupos em um array
         const gruposOrdenados = Object.values(entregasAgrupadas);
+        gruposOrdenados.sort((a, b) => (a.razao_social || '').localeCompare(b.razao_social || ''));
         
-        // 2. Ordena o array pela razao_social
-        gruposOrdenados.sort((a, b) => {
-            return (a.razao_social || '').localeCompare(b.razao_social || '');
-        });
-        
-        // 3. Itera sobre o array JÁ ORDENADO
         if (gruposOrdenados.length > 0) {
-             gruposOrdenados.forEach((grupo, index) => {
-        // --- FIM DA CORREÇÃO DE ORDENAÇÃO (BUG 5) ---
+             gruposOrdenados.forEach((grupo) => {
                 const isChecked = grupo.sub_entregas.some(se => se.is_last_delivery);
                 const radioId = `ultima-entrega-grupo-${grupo.id}`; 
+                const idsDoGrupo = grupo.sub_entregas.map(e => e.id).join(',');
 
                 const trGrupo = document.createElement('tr');
                 trGrupo.classList.add('linha-grupo-entrega');
                 trGrupo.innerHTML = `
+                    ${podeEditarEntregas ? `<td class="col-selecao-detalhes" style="display: ${displaySel}; text-align: center;"><input type="checkbox" class="cb-lote-detalhes" data-ids="${idsDoGrupo}"></td>` : ''}
                     ${podeEditarEntregas ? `<td class="col-destino"><input type="radio" name="ultima-entrega-grupo" id="${radioId}" class="radio-ultima-entrega-grupo" data-grupo-id="${grupo.id}" ${isChecked ? 'checked' : ''}></td>` : ''}
                     <td>${grupo.razao_social}</td>
                     <td>${grupo.cidade}-${grupo.estado}</td>
@@ -471,7 +485,10 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                 trDetalhes.classList.add('linha-detalhes-entrega');
                 trDetalhes.id = `detalhes-${grupo.id}`;
                 trDetalhes.style.display = 'none';
-                const colspanCount = podeEditarGeral ? (podeEditarEntregas ? 8 : 7) : 6;
+                
+                let colspanCount = podeEditarGeral ? 7 : 6;
+                if (podeEditarEntregas) colspanCount += 2; // +1 Checkbox, +1 Radio
+
                 let detalhesHtml = `<td colspan="${colspanCount}"><div class="detalhes-subtabela"><h4>Coletas para ${grupo.razao_social} (${grupo.cidade}/${grupo.estado}):</h4><ul>`;
                 grupo.sub_entregas.forEach(sub => {
                     detalhesHtml += `<li>
@@ -487,8 +504,28 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                 tabelaCorpoEntregas.appendChild(trDetalhes);
             });
         } else {
-            const colspanCount = podeEditarGeral ? (podeEditarEntregas ? 8 : 7) : 6;
+            let colspanCount = podeEditarGeral ? 7 : 6;
+            if (podeEditarEntregas) colspanCount += 2;
             tabelaCorpoEntregas.innerHTML = `<tr><td colspan="${colspanCount}">Nenhuma entrega adicionada.</td></tr>`;
+        }
+
+        // --- LISTENERS ---
+        // Novo Listener para o botão de toggle
+        const btnToggle = document.getElementById('btn-toggle-selecao-detalhes');
+        if (btnToggle) {
+            btnToggle.addEventListener('click', () => {
+                selecaoDetalhesAtiva = !selecaoDetalhesAtiva;
+                const display = selecaoDetalhesAtiva ? 'table-cell' : 'none';
+                document.querySelectorAll('.col-selecao-detalhes').forEach(el => el.style.display = display);
+                
+                // Limpa seleções se esconder
+                if (!selecaoDetalhesAtiva) {
+                    document.querySelectorAll('.cb-lote-detalhes').forEach(cb => cb.checked = false);
+                    if(document.getElementById('cb-all-detalhes')) document.getElementById('cb-all-detalhes').checked = false;
+                    const wrapper = document.getElementById('acoes-lote-wrapper-detalhes');
+                    if(wrapper) wrapper.style.display = 'none';
+                }
+            });
         }
 
         document.querySelectorAll('.btn-detalhes-entrega').forEach(btn => {
@@ -508,23 +545,21 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         document.querySelectorAll('.radio-ultima-entrega-grupo').forEach(radio => {
              radio.addEventListener('change', async (event) => {
                 const idEntregaDoGrupo = event.target.dataset.grupoId; 
-                if (idEntregaDoGrupo) {
-                    await handleMarcarUltimaEntrega(idEntregaDoGrupo);
-                } else {
-                     alert('Erro: Não foi possível identificar a entrega para este grupo.');
-                     event.target.checked = false;
-                }
+                if (idEntregaDoGrupo) await handleMarcarUltimaEntrega(idEntregaDoGrupo);
              });
         });
 
         configurarEventListenersDeAcoesGerais();
         mascaraDecimal(document.getElementById('detalhe-frete-pago'));
+        
+        if (podeEditarEntregas) configurarLoteDetalhes();
+
         if (reabrirFormularioEntrega) {
             const btnAddEntrega = document.getElementById('btn-add-entrega');
             if (btnAddEntrega) btnAddEntrega.click();
         }
     }
-
+	
     function configurarEventListenersDeAcoesGerais() {
         document.querySelector('[data-acao="salvar"]')?.addEventListener('click', handleSalvarAlteracoes);
         document.querySelector('[data-acao="agendar"]')?.addEventListener('click', handleAgendar);
@@ -982,6 +1017,122 @@ async function handleExcluirCarga() {
             }
         } catch (error) { console.error(error); }
     }
+	
+	// --- FUNÇÕES DE LOTE (DETALHES) ---
+    function configurarLoteDetalhes() {
+        const cbAll = document.getElementById('cb-all-detalhes');
+        const checkboxes = document.querySelectorAll('.cb-lote-detalhes');
+        const btnLote = document.getElementById('btn-alterar-remetente-lote-detalhes');
+
+        function atualizarUI() {
+            // Conta quantas ENTREGAS (não grupos) estão selecionadas
+            let totalEntregas = 0;
+            document.querySelectorAll('.cb-lote-detalhes:checked').forEach(cb => {
+                const ids = cb.dataset.ids.split(',');
+                totalEntregas += ids.length;
+            });
+
+            const wrapper = document.getElementById('acoes-lote-wrapper-detalhes');
+            const contador = document.getElementById('contador-lote-detalhes');
+            
+            if (wrapper && contador) {
+                if (totalEntregas > 0) {
+                    wrapper.style.display = 'flex';
+                    contador.textContent = totalEntregas;
+                } else {
+                    wrapper.style.display = 'none';
+                }
+            }
+        }
+
+        if (cbAll) {
+            cbAll.addEventListener('change', (e) => {
+                checkboxes.forEach(cb => cb.checked = e.target.checked);
+                atualizarUI();
+            });
+        }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', atualizarUI);
+        });
+
+        if (btnLote) {
+            btnLote.addEventListener('click', handleAbrirModalLoteDetalhes);
+        }
+    }
+
+    function handleAbrirModalLoteDetalhes() {
+        let totalEntregas = 0;
+        document.querySelectorAll('.cb-lote-detalhes:checked').forEach(cb => {
+            totalEntregas += cb.dataset.ids.split(',').length;
+        });
+
+        if (totalEntregas === 0) return;
+
+        spanQtdLoteDet.textContent = totalEntregas;
+        selectRemetenteLoteDet.val(null).trigger('change');
+        msgLoteDet.textContent = '';
+        modalLoteDet.style.display = 'block';
+    }
+
+    // Listener do Formulário de Lote
+    if (formLoteDet) {
+        formLoteDet.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const novoRemetente = selectRemetenteLoteDet.val();
+            if (!novoRemetente) return;
+
+            // Coleta todos os IDs selecionados
+            let todosIds = [];
+            document.querySelectorAll('.cb-lote-detalhes:checked').forEach(cb => {
+                if (cb.dataset.ids) {
+                    const ids = cb.dataset.ids.split(',').map(Number);
+                    todosIds = todosIds.concat(ids);
+                }
+            });
+
+            if (todosIds.length === 0) return;
+
+            const btn = formLoteDet.querySelector('button');
+            const txtOriginal = btn.textContent;
+            btn.textContent = 'Salvando...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/entregas/bulk-update-remetente', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ entrega_ids: todosIds, novo_remetente_id: novoRemetente })
+                });
+                
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error);
+
+                msgLoteDet.textContent = 'Sucesso! Atualizando...';
+                msgLoteDet.style.color = 'green';
+                
+                setTimeout(async () => {
+                    modalLoteDet.style.display = 'none';
+                    btn.textContent = txtOriginal;
+                    btn.disabled = false;
+                    
+                    // Recarrega os detalhes da carga atual
+                    if (cargaAtual && cargaAtual.detalhes_carga) {
+                        await abrirModalDetalhes(cargaAtual.detalhes_carga.id, false);
+                    }
+                }, 1000);
+
+            } catch (err) {
+                msgLoteDet.textContent = 'Erro: ' + err.message;
+                msgLoteDet.style.color = 'red';
+                btn.textContent = txtOriginal;
+                btn.disabled = false;
+            }
+        });
+    }
+
+    if (btnFecharLoteDet) btnFecharLoteDet.addEventListener('click', () => modalLoteDet.style.display = 'none');
 
     // Inicialização correta (dentro do Listener)
     carregarDadosIniciais();

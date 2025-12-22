@@ -104,6 +104,24 @@
             </form>
         </div>
     </div>
+	<div id="modal-lote-detalhes" class="modal">
+        <div class="modal-conteudo" style="max-width: 500px;">
+            <span class="fechar-modal" id="fechar-modal-lote-detalhes">&times;</span>
+            <h2>Alterar Remetente (Lote)</h2>
+            <p style="margin-bottom: 15px; color: #64748b;">Você está alterando o remetente de <b><span id="qtd-lote-detalhes">0</span></b> entregas selecionadas.</p>
+            
+            <form id="form-lote-detalhes">
+                <label>Selecione o Novo Remetente:*</label>
+                <select id="select-remetente-lote-detalhes" style="width: 100%;" required></select>
+                
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="submit" class="btn-acao-verde">Confirmar Alteração</button>
+                </div>
+            </form>
+            <div id="msg-lote-detalhes" class="mensagem"></div>
+        </div>
+    </div>
+	
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="script.js"></script>
