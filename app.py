@@ -1332,7 +1332,7 @@ def handle_usuario(user_id):
             db.session.rollback()
             return jsonify(error=f"Erro interno: {str(e)}"), 500
 
-# --- NOVA ROTA: AGRUPAR ENTREGAS (MÓDULO DE MESCLAGEM) ---
+# --- NOVA ROTA: AGRUPAR ENTREGAS (MÓDULO 7) ---
 @app.route('/api/entregas/agrupar', methods=['POST'])
 @login_required
 def agrupar_entregas():
@@ -1354,12 +1354,7 @@ def agrupar_entregas():
         if any(e.cliente_id != primeiro_cliente_id for e in entregas):
             return jsonify(error='Todas as entregas devem pertencer ao mesmo Cliente (Destinatário).'), 400
 
-        # Validação 2: Verificar se todas têm o mesmo Remetente (Opcional, mas recomendado)
-        primeiro_remetente_id = entregas[0].remetente_id
-        if any(e.remetente_id != primeiro_remetente_id for e in entregas):
-             return jsonify(error='Atenção: As entregas possuem remetentes diferentes. Não é possível agrupar.'), 400
-
-        # A "sobrevivente" será a primeira da lista (geralmente a mais antiga ou a primeira selecionada)
+        # A "sobrevivente" será a primeira da lista
         entrega_principal = entregas[0]
         
         # Variáveis para somar/concatenar
@@ -1383,7 +1378,7 @@ def agrupar_entregas():
         entrega_principal.peso_bruto = total_peso
         entrega_principal.valor_frete = total_frete
         entrega_principal.peso_cubado = total_cubado
-        # Concatena as NFs separadas por barra (ex: "123 / 456")
+        # Concatena as NFs
         entrega_principal.nota_fiscal = " / ".join(filter(None, notas_fiscais))
 
         db.session.commit()
@@ -1392,9 +1387,9 @@ def agrupar_entregas():
 
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao agrupar entregas: {e}")
+        print(f"Erro em agrupar_entregas: {e}")
         return jsonify(error=f"Erro interno: {str(e)}"), 500
-
+        
 # --- Servir arquivos estáticos (CSS, JS) ---
 @app.route('/<path:filename>')
 def serve_static(filename):
