@@ -109,6 +109,12 @@
                     <input type="text" id="filtro-cidade" placeholder="Filtrar Cidade...">
                     <input type="text" id="filtro-estado" placeholder="Filtrar UF...">
                 </div>
+				<div id="acoes-lote-wrapper" style="margin-bottom: 10px; display: none; background-color: #fff7ed; padding: 10px; border: 1px solid #fdba74; border-radius: 6px; align-items: center; gap: 10px;">
+                    <span style="color: #c2410c; font-weight: bold; font-size: 0.9em;">Ações em Lote:</span>
+                    <button id="btn-alterar-remetente-lote" style="background-color: #f97316; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 600;">
+                        ✏️ Alterar Remetente (<span id="contador-lote">0</span>)
+                    </button>
+                </div>
                 <div class="tabela-wrapper" style="max-height: 60vh;">
                     <table id="tabela-disponiveis">
                         <table id="tabela-disponiveis">
@@ -174,7 +180,24 @@
             </form>
         </div>
     </div>
-
+	<div id="modal-editar-lote-remetente" class="modal">
+        <div class="modal-conteudo" style="max-width: 500px;">
+            <span class="fechar-modal" id="fechar-modal-lote-remetente">&times;</span>
+            <h2>Alterar Remetente em Massa</h2>
+            <p style="margin-bottom: 15px; color: #64748b;">Você está alterando o remetente de <b><span id="lote-qtd-msg">0</span></b> entrega(s).</p>
+            
+            <form id="form-lote-remetente">
+                <label for="select-lote-remetente">Selecione o Novo Remetente:*</label>
+                <select id="select-lote-remetente" style="width: 100%;" required></select>
+                
+                <div style="margin-top: 25px; text-align: right;">
+                    <button type="submit" style="background-color: #22c55e; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Confirmar Alteração</button>
+                </div>
+            </form>
+            <div id="mensagem-lote" class="mensagem"></div>
+        </div>
+    </div>
+	
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="montagem.js"></script>

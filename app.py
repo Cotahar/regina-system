@@ -1103,7 +1103,43 @@ def update_entrega(entrega_id):
         db.session.rollback()
         print(f"Erro ao atualizar entrega {entrega_id}: {e}")
         return jsonify(error=f"Erro interno: {str(e)}"), 500
+ 
+# --- NOVA ROTA: EDIÇÃO EM LOTE DE REMETENTE (MÓDULO 6) ---
+@app.route('/api/entregas/bulk-update-remetente', methods=['PUT'])
+@login_required
+def bulk_update_remetente():
+    try:
+        data = request.json
+        entrega_ids = data.get('entrega_ids')
+        novo_remetente_id = data.get('novo_remetente_id')
+
+        if not entrega_ids or not isinstance(entrega_ids, list) or not entrega_ids:
+            return jsonify(error='Nenhuma entrega selecionada.'), 400
+            
+        if not novo_remetente_id:
+            return jsonify(error='Novo remetente não informado.'), 400
+
+        # Verifica se o novo remetente existe
+        novo_remetente = Cliente.query.get(novo_remetente_id)
+        if not novo_remetente:
+            return jsonify(error='Remetente não encontrado.'), 404
+
+        # Executa a atualização em lote (UPDATE WHERE id IN (...))
+        # Isso é muito mais eficiente do que atualizar um por um
+        count = Entrega.query.filter(Entrega.id.in_(entrega_ids)).update(
+            {'remetente_id': novo_remetente.id}, 
+            synchronize_session=False
+        )
         
+        db.session.commit()
+        
+        return jsonify(message=f'{count} entrega(s) atualizada(s) para o remetente {novo_remetente.razao_social}!')
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro em bulk-update-remetente: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
+ 
 # --- API: MOTORISTAS ---
 @app.route('/api/motoristas', methods=['GET'])
 @login_required

@@ -38,7 +38,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const formEditarDisp = document.getElementById('form-editar-entrega-disponivel');
     const btnFecharModalEditarDisp = document.getElementById('fechar-modal-editar-disponivel');
     const mensagemEdicaoDisp = document.getElementById('mensagem-edicao-disp');
-    
+	
+    const acoesLoteWrapper = document.getElementById('acoes-lote-wrapper');
+    const btnAlterarRemetenteLote = document.getElementById('btn-alterar-remetente-lote');
+    const contadorLote = document.getElementById('contador-lote');
+
+    const modalLoteRemetente = document.getElementById('modal-editar-lote-remetente');
+    const formLoteRemetente = document.getElementById('form-lote-remetente');
+    const btnFecharModalLote = document.getElementById('fechar-modal-lote-remetente');
+    const selectLoteRemetente = $('#select-lote-remetente');
+    const loteQtdMsg = document.getElementById('lote-qtd-msg');
+    const mensagemLote = document.getElementById('mensagem-lote');
     // ***** INÍCIO DAS ALTERAÇÕES *****
     const selectEditRemetente = $('#edit-disp-remetente'); // Novo seletor
 
@@ -142,6 +152,20 @@ document.addEventListener('DOMContentLoaded', () => {
             placeholder: 'Selecione um remetente', 
             data: listaDeRemetentesSelect2, 
             dropdownParent: $('#modal-editar-entrega-disponivel') 
+        });
+		
+		// Inicializa o Select2 do Modal de Lote (Módulo 6)
+        selectLoteRemetente.select2({ 
+            placeholder: 'Selecione o Novo Remetente', 
+            data: listaDeRemetentesSelect2, // Reusa a lista carregada
+            dropdownParent: $('#modal-editar-lote-remetente') 
+        });
+
+        // Correção de foco para o Select de Lote
+        selectLoteRemetente.on('select2:open', () => {
+            setTimeout(() => {
+                document.querySelector('.select2-search__field').focus();
+            }, 50);
         });
 
         selectDestinatario.on('select2:select', (e) => { const cId = e.params.data.id; const c = listaClientesCompleta.find(cli => cli.id == cId); if (c) { inputCidadeEntrega.value = c.cidade || ''; inputEstadoEntrega.value = c.estado || ''; } });
@@ -319,6 +343,7 @@ function renderizarTabelaDisponiveis() {
 	inputPesoBruto.focus();
 	await carregarEntregasDisponiveis();
 	} catch(e){exibirMensagem(mensagemCadastro,`Erro: ${e.message}`,'erro');} }
+	
 function atualizarTotaisMontagem() { 
         const cS=document.querySelectorAll('.select-entrega:checked'); 
         let tE=0,tP=0,tC=0,tF=0; 
@@ -354,6 +379,16 @@ function atualizarTotaisMontagem() {
         // 2. O botão agora só depende de ter entregas selecionadas
         btnSalvarRascunho.disabled = !(tE > 0); 
         // --- FIM DA CORREÇÃO DE FOCO ---
+		
+		// --- LÓGICA DO MÓDULO 6 (BOTÃO DE AÇÃO EM LOTE) ---
+        if (acoesLoteWrapper) {
+            if (tE > 0) {
+                acoesLoteWrapper.style.display = 'flex';
+                contadorLote.textContent = tE;
+            } else {
+                acoesLoteWrapper.style.display = 'none';
+            }
+        }
     }
 async function handleSalvarRascunho() {
         const oP = inputOrigemPrincipal.value.toUpperCase();
@@ -590,4 +625,79 @@ async function handleSalvarRascunho() {
     } catch (initError) {
         console.error("Erro durante a inicialização:", initError);
     }
+	// --- FUNÇÕES DO MÓDULO 6 (EDIÇÃO EM LOTE) ---
+    
+    function handleAbrirModalLote() {
+        const checkboxesSelecionados = document.querySelectorAll('.select-entrega:checked');
+        if (checkboxesSelecionados.length === 0) return;
+        
+        // Prepara o modal
+        loteQtdMsg.textContent = checkboxesSelecionados.length;
+        selectLoteRemetente.val(null).trigger('change'); // Limpa seleção anterior
+        mensagemLote.textContent = '';
+        
+        modalLoteRemetente.style.display = 'block';
+    }
+
+    async function handleSalvarLoteRemetente(event) {
+        event.preventDefault();
+        
+        const novoRemetenteId = selectLoteRemetente.val();
+        if (!novoRemetenteId) {
+            exibirMensagem(mensagemLote, 'Por favor, selecione um remetente.', 'erro');
+            return;
+        }
+
+        // Pega todos os IDs marcados
+        const idsParaEditar = Array.from(document.querySelectorAll('.select-entrega:checked'))
+                                   .map(cb => parseInt(cb.dataset.id));
+
+        const btnSubmit = formLoteRemetente.querySelector('button[type="submit"]');
+        const textoOriginal = btnSubmit.textContent;
+        btnSubmit.textContent = 'Salvando...';
+        btnSubmit.disabled = true;
+
+        try {
+            const response = await fetch('/api/entregas/bulk-update-remetente', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    entrega_ids: idsParaEditar,
+                    novo_remetente_id: novoRemetenteId
+                })
+            });
+
+            const resultado = await response.json();
+            if (!response.ok) throw new Error(resultado.error || 'Falha ao atualizar');
+
+            exibirMensagem(mensagemLote, resultado.message);
+
+            // Sucesso: Fecha modal e recarrega após 1.5s
+            setTimeout(async () => {
+                modalLoteRemetente.style.display = 'none';
+                
+                // Se estivermos editando um rascunho, recarrega ele. Se não, recarrega a lista geral.
+                if (rascunhoCarregadoId) {
+                     const btnCarregar = document.querySelector(`.btn-carregar-rascunho[data-id="${rascunhoCarregadoId}"]`);
+                     if (btnCarregar) btnCarregar.click();
+                } else {
+                     await carregarEntregasDisponiveis();
+                }
+                
+                btnSubmit.textContent = textoOriginal;
+                btnSubmit.disabled = false;
+            }, 1500);
+
+        } catch (error) {
+            exibirMensagem(mensagemLote, `Erro: ${error.message}`, 'erro');
+            btnSubmit.textContent = textoOriginal;
+            btnSubmit.disabled = false;
+        }
+    }
+
+    // --- LISTENERS DO MÓDULO 6 ---
+    if (btnAlterarRemetenteLote) btnAlterarRemetenteLote.addEventListener('click', handleAbrirModalLote);
+    if (formLoteRemetente) formLoteRemetente.addEventListener('submit', handleSalvarLoteRemetente);
+    if (btnFecharModalLote) btnFecharModalLote.addEventListener('click', () => modalLoteRemetente.style.display = 'none');
+	
 });
