@@ -51,6 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const mensagemLote = document.getElementById('mensagem-lote');
     // ***** INÍCIO DAS ALTERAÇÕES *****
     const selectEditRemetente = $('#edit-disp-remetente'); // Novo seletor
+	const btnAgruparEntregas = document.getElementById('btn-agrupar-entregas');
+	const btnToggleSelecao = document.getElementById('btn-toggle-selecao');
+    let selecaoAtiva = false;
 
     let listaClientesCompleta = [];
     let listaDeRemetentesSelect2 = []; // Lista global para os remetentes
@@ -259,7 +262,9 @@ function renderizarTabelaDisponiveis() {
         tr.dataset.id = e.id;
         if (e.selecionada) { tr.classList.add('highlight-row'); }
         tr.innerHTML = `
-            <td><input type="checkbox" class="select-entrega" data-id="${e.id}" ${e.selecionada ? 'checked' : ''}></td>
+                <td class="col-selecao" style="display: ${displayStyle}; text-align: center;">
+                    <input type="checkbox" class="select-entrega" data-id="${entrega.id}" data-cliente-id="${entrega.cliente_id}" data-remetente-id="${entrega.remetente_id}">
+                </td>
             <td>${e.remetente_nome || 'N/A'}</td>
             <td>${e.destinatario_nome || 'N/A'}</td>
             <td>${e.cidade_entrega || 'N/A'}-${e.estado_entrega || 'N/A'}</td>
@@ -695,6 +700,65 @@ async function handleSalvarRascunho() {
         }
     }
 
+	// --- LÓGICA DE AGRUPAMENTO (MÓDULO NOVO) ---
+    async function handleAgruparEntregas() {
+        const checkboxes = document.querySelectorAll('.select-entrega:checked');
+        if (checkboxes.length < 2) {
+            alert('Selecione pelo menos 2 entregas para agrupar.');
+            return;
+        }
+
+        // Validação Visual (Frontend)
+        let primeiroCliente = checkboxes[0].dataset.clienteId;
+        let clientesDiferentes = false;
+        
+        checkboxes.forEach(cb => {
+            if (cb.dataset.clienteId !== primeiroCliente) clientesDiferentes = true;
+        });
+
+        if (clientesDiferentes) {
+            alert('Erro: Você selecionou entregas de Clientes diferentes.\nSó é possível agrupar entregas para o mesmo destinatário.');
+            return;
+        }
+
+        if(!confirm(`Deseja fundir essas ${checkboxes.length} entregas em uma única linha?\n\nOs valores serão somados e as entregas individuais apagadas.`)) return;
+
+        // Prepara envio
+        const ids = Array.from(checkboxes).map(cb => parseInt(cb.dataset.id));
+        const btnOriginal = btnAgruparEntregas.innerHTML;
+        btnAgruparEntregas.innerHTML = 'Processando...';
+        btnAgruparEntregas.disabled = true;
+
+        try {
+            const response = await fetch('/api/entregas/agrupar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ entrega_ids: ids })
+            });
+            const result = await response.json();
+
+            if (!response.ok) throw new Error(result.error || 'Erro ao agrupar');
+
+            alert(result.message);
+            
+            // Recarrega a tabela
+            if (rascunhoCarregadoId) {
+                 const btnCarregar = document.querySelector(`.btn-carregar-rascunho[data-id="${rascunhoCarregadoId}"]`);
+                 if (btnCarregar) btnCarregar.click();
+            } else {
+                 await carregarEntregasDisponiveis();
+            }
+
+        } catch (error) {
+            alert(error.message);
+        } finally {
+            btnAgruparEntregas.innerHTML = btnOriginal;
+            btnAgruparEntregas.disabled = false;
+        }
+    }
+
+    if (btnAgruparEntregas) btnAgruparEntregas.addEventListener('click', handleAgruparEntregas);
+	
     // --- LISTENERS DO MÓDULO 6 ---
     if (btnAlterarRemetenteLote) btnAlterarRemetenteLote.addEventListener('click', handleAbrirModalLote);
     if (formLoteRemetente) formLoteRemetente.addEventListener('submit', handleSalvarLoteRemetente);

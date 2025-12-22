@@ -1332,6 +1332,69 @@ def handle_usuario(user_id):
             db.session.rollback()
             return jsonify(error=f"Erro interno: {str(e)}"), 500
 
+# --- NOVA ROTA: AGRUPAR ENTREGAS (MÓDULO DE MESCLAGEM) ---
+@app.route('/api/entregas/agrupar', methods=['POST'])
+@login_required
+def agrupar_entregas():
+    try:
+        data = request.json
+        entrega_ids = data.get('entrega_ids')
+
+        if not entrega_ids or len(entrega_ids) < 2:
+            return jsonify(error='Selecione pelo menos 2 entregas para agrupar.'), 400
+
+        # Busca as entregas no banco
+        entregas = Entrega.query.filter(Entrega.id.in_(entrega_ids)).all()
+        
+        if not entregas:
+            return jsonify(error='Entregas não encontradas.'), 404
+
+        # Validação 1: Verificar se todas são do mesmo cliente (Destinatário)
+        primeiro_cliente_id = entregas[0].cliente_id
+        if any(e.cliente_id != primeiro_cliente_id for e in entregas):
+            return jsonify(error='Todas as entregas devem pertencer ao mesmo Cliente (Destinatário).'), 400
+
+        # Validação 2: Verificar se todas têm o mesmo Remetente (Opcional, mas recomendado)
+        primeiro_remetente_id = entregas[0].remetente_id
+        if any(e.remetente_id != primeiro_remetente_id for e in entregas):
+             return jsonify(error='Atenção: As entregas possuem remetentes diferentes. Não é possível agrupar.'), 400
+
+        # A "sobrevivente" será a primeira da lista (geralmente a mais antiga ou a primeira selecionada)
+        entrega_principal = entregas[0]
+        
+        # Variáveis para somar/concatenar
+        total_peso = entrega_principal.peso_bruto or 0.0
+        total_frete = entrega_principal.valor_frete or 0.0
+        total_cubado = entrega_principal.peso_cubado or 0.0
+        notas_fiscais = [str(entrega_principal.nota_fiscal)] if entrega_principal.nota_fiscal else []
+
+        # Itera sobre as outras para somar e depois excluir
+        for e in entregas[1:]:
+            total_peso += (e.peso_bruto or 0.0)
+            total_frete += (e.valor_frete or 0.0)
+            total_cubado += (e.peso_cubado or 0.0)
+            if e.nota_fiscal:
+                notas_fiscais.append(str(e.nota_fiscal))
+            
+            # Marca para deletar do banco
+            db.session.delete(e)
+
+        # Atualiza a entrega principal
+        entrega_principal.peso_bruto = total_peso
+        entrega_principal.valor_frete = total_frete
+        entrega_principal.peso_cubado = total_cubado
+        # Concatena as NFs separadas por barra (ex: "123 / 456")
+        entrega_principal.nota_fiscal = " / ".join(filter(None, notas_fiscais))
+
+        db.session.commit()
+        
+        return jsonify(message=f'Sucesso! {len(entregas)} entregas foram agrupadas em uma única linha.')
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao agrupar entregas: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
+
 # --- Servir arquivos estáticos (CSS, JS) ---
 @app.route('/<path:filename>')
 def serve_static(filename):
