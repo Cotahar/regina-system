@@ -206,6 +206,10 @@ def usuarios_page():
         return redirect(url_for('index'))
     return send_from_directory('.', 'usuarios.html')
 
+@app.route('/avarias.html')
+@login_required
+def avarias_page():
+    return send_from_directory('.', 'avarias.html')
 # --- ROTAS DA API (DADOS) ---
 
 # --- API: CLIENTES ---
@@ -1625,5 +1629,15 @@ def upload_fotos_avaria(avaria_id):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        
+        # --- AUTO-SEED: Cria as marcas se não existirem ---
+        if not Marca.query.first():
+            print("Criando marcas padrão...")
+            marcas_padrao = ["ELIANE", "PORTINARI", "PORTOBELLO", "INCEPA", "CEUSA", "ELIZABETH", "BIANCHOGRES", "DELTA"]
+            for m in marcas_padrao:
+                db.session.add(Marca(nome=m))
+            db.session.commit()
+            print("Marcas cadastradas com sucesso!")
+            
     app.run(debug=True, host='0.0.0.0', port=5000)
     

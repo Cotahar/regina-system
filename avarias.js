@@ -11,7 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const inputFotos = document.getElementById('input-fotos');
     const previewContainer = document.getElementById('preview-container');
     
-    // URL Params (Para saber se é cadastro de carga)
+    // Elementos de Progresso
+    const progressContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+    
     const urlParams = new URLSearchParams(window.location.search);
     const cargaId = urlParams.get('carga_id');
 
@@ -19,21 +22,17 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarMarcas();
     
     if (cargaId) {
-        // MODO REGISTRO
         viewLista.style.display = 'none';
         viewRegistro.style.display = 'block';
-        document.getElementById('lbl-codigo-carga').textContent = cargaId; // Apenas visual
+        document.getElementById('lbl-codigo-carga').textContent = cargaId;
         carregarEntregasDaCarga(cargaId);
-        adicionarLinhaItem(); // Começa com 1 item
+        adicionarLinhaItem(); 
     } else {
-        // MODO LISTA
         viewLista.style.display = 'block';
         viewRegistro.style.display = 'none';
         carregarListaAvarias();
     }
 
-    // --- FUNÇÕES MODO REGISTRO ---
-    
     async function carregarMarcas() {
         try {
             const res = await fetch('/api/marcas');
@@ -63,20 +62,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 tbody.appendChild(tr);
             });
 
-            // Listener seleção
             document.querySelectorAll('.btn-selecionar-entrega').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    // Libera o formulário
                     const wrapper = document.getElementById('form-cadastro-wrapper');
                     wrapper.style.opacity = '1';
                     wrapper.style.pointerEvents = 'auto';
                     wrapper.style.display = 'block';
-                    
                     document.getElementById('input-entrega-id').value = e.target.dataset.id;
-                    // Foca no campo de NF Manual para obrigar preenchimento
                     document.getElementById('input-nf-manual').focus();
                     
-                    // Destaque visual na linha
                     document.querySelectorAll('tr').forEach(tr => tr.style.background = 'transparent');
                     e.target.closest('tr').style.background = '#dcfce7';
                 });
@@ -85,7 +79,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { alert('Erro ao carregar entregas: ' + e.message); }
     }
 
-    // Gerenciador de Itens Dinâmicos
+    // --- GERENCIADOR DE ITENS (ATUALIZADO) ---
+    function atualizarBotoesRemover() {
+        const botoes = document.querySelectorAll('.btn-remove-item');
+        const qtd = botoes.length;
+        botoes.forEach(btn => {
+            // Desabilita se for o único item
+            btn.disabled = (qtd === 1);
+            btn.title = (qtd === 1) ? "É obrigatório ter ao menos um item" : "Remover item";
+        });
+    }
+
     function adicionarLinhaItem() {
         const div = document.createElement('div');
         div.classList.add('item-row');
@@ -97,13 +101,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 <option value="m²">m²</option>
                 <option value="pç">Peças</option>
             </select>
-            <button type="button" class="btn-remove-item" onclick="this.parentElement.remove()">X</button>
+            <button type="button" class="btn-remove-item">X</button>
         `;
+        
+        // Listener para remover com verificação
+        div.querySelector('.btn-remove-item').addEventListener('click', function() {
+            if (document.querySelectorAll('.item-row').length > 1) {
+                div.remove();
+                atualizarBotoesRemover();
+            }
+        });
+
         containerItens.appendChild(div);
+        atualizarBotoesRemover();
     }
     btnAddItem.addEventListener('click', adicionarLinhaItem);
 
-    // Preview de Fotos
+    // Preview
     inputFotos.addEventListener('change', () => {
         previewContainer.innerHTML = '';
         Array.from(inputFotos.files).forEach(file => {
@@ -114,15 +128,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // --- SALVAR AVARIA ---
+    // --- SALVAR (COM BARRA DE PROGRESSO) ---
     formAvaria.addEventListener('submit', async (e) => {
         e.preventDefault();
         const btn = formAvaria.querySelector('button[type="submit"]');
         const txtOriginal = btn.textContent;
         btn.textContent = 'Salvando dados...'; btn.disabled = true;
+        msgCadastro.textContent = '';
 
         try {
-            // 1. Coleta Dados
+            // 1. Coleta Dados e Salva Texto
             const itens = [];
             document.querySelectorAll('.item-row').forEach(row => {
                 itens.push({
@@ -134,13 +149,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const payload = {
                 entrega_id: document.getElementById('input-entrega-id').value,
-                nota_fiscal: document.getElementById('input-nf-manual').value, // NF Manual
+                nota_fiscal: document.getElementById('input-nf-manual').value,
                 marca_id: selectMarca.val(),
                 tipo_descarga: document.getElementById('select-descarga').value,
                 itens: itens
             };
 
-            // 2. Envia Dados Texto
             const resDados = await fetch('/api/avarias', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -149,115 +163,103 @@ document.addEventListener('DOMContentLoaded', () => {
             const jsonDados = await resDados.json();
             if(!resDados.ok) throw new Error(jsonDados.error);
 
-            // 3. Envia Fotos (se houver)
+            // 2. Upload de Fotos com Progresso (XHR)
             if (inputFotos.files.length > 0) {
-                btn.textContent = 'Enviando fotos para o Drive... (Isso pode demorar)';
-                const formData = new FormData();
-                Array.from(inputFotos.files).forEach(f => formData.append('fotos', f));
+                btn.textContent = 'Enviando Fotos...';
+                progressContainer.style.display = 'block';
                 
-                const resFotos = await fetch(`/api/avarias/${jsonDados.avaria_id}/upload`, {
-                    method: 'POST',
-                    body: formData
-                });
-                if(!resFotos.ok) throw new Error('Erro ao enviar fotos');
+                await uploadComProgresso(jsonDados.avaria_id, inputFotos.files);
             }
 
             msgCadastro.textContent = 'Sucesso! Avaria registrada.';
             msgCadastro.style.color = 'green';
-            setTimeout(() => { window.location.href = '/avarias.html'; }, 2000); // Vai para lista
+            setTimeout(() => { window.location.href = '/avarias.html'; }, 1500);
 
         } catch (erro) {
             msgCadastro.textContent = 'Erro: ' + erro.message;
             msgCadastro.style.color = 'red';
             btn.textContent = txtOriginal; btn.disabled = false;
+            progressContainer.style.display = 'none';
         }
     });
 
-    // --- MODO LISTA ---
+    // Função de Upload Manual (XHR)
+    function uploadComProgresso(avariaId, fileList) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            Array.from(fileList).forEach(f => formData.append('fotos', f));
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `/api/avarias/${avariaId}/upload`, true);
+
+            // Evento de Progresso
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = (e.loaded / e.total) * 100;
+                    progressBar.style.width = percentComplete + '%';
+                    progressBar.textContent = Math.round(percentComplete) + '%';
+                }
+            };
+
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    progressBar.style.backgroundColor = '#22c55e'; // Verde sucesso
+                    resolve(xhr.response);
+                } else {
+                    reject(new Error('Falha no upload das imagens'));
+                }
+            };
+
+            xhr.onerror = function() {
+                reject(new Error('Erro de rede no upload'));
+            };
+
+            xhr.send(formData);
+        });
+    }
+
     async function carregarListaAvarias() {
         const tbody = tabelaAvarias;
         tbody.innerHTML = '<tr><td colspan="7">Carregando...</td></tr>';
-        
         try {
             const res = await fetch('/api/avarias');
             const lista = await res.json();
             tbody.innerHTML = '';
-            
-            if(lista.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7">Nenhuma avaria registrada.</td></tr>';
-                return;
-            }
-
+            if(lista.length === 0) { tbody.innerHTML = '<tr><td colspan="7">Nenhuma avaria registrada.</td></tr>'; return; }
             lista.forEach(a => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${a.data}</td>
-                    <td><b>${a.nota_fiscal}</b></td>
-                    <td>${a.cliente}</td>
-                    <td>${a.marca}</td>
-                    <td>${a.resumo_produto}</td>
-                    <td><span class="status-pendente">${a.status}</span></td>
-                    <td>
-                        <button class="btn-acao" onclick="abrirRelatorio(${a.id})">🖨️ Relatório</button>
-                    </td>
-                `;
+                tr.innerHTML = `<td>${a.data}</td><td><b>${a.nota_fiscal}</b></td><td>${a.cliente}</td><td>${a.marca}</td><td>${a.resumo_produto}</td><td><span class="status-pendente">${a.status}</span></td><td><button class="btn-acao" onclick="abrirRelatorio(${a.id})">🖨️ Relatório</button></td>`;
                 tbody.appendChild(tr);
             });
         } catch(e) { console.error(e); }
     }
 
-    // --- RELATÓRIO E IMPRESSÃO (O Pulo do Gato) ---
     window.abrirRelatorio = async (id) => {
-        // Busca os dados completos da avaria para preencher o modal
-        // Por simplicidade, vamos buscar a lista de novo filtrada ou criar endpoint GET /avarias/id
-        // Vamos usar o endpoint de lista e filtrar no JS por enquanto (rápido)
-        const res = await fetch('/api/avarias'); // Ideal seria /api/avarias/id
+        const res = await fetch('/api/avarias'); 
         const lista = await res.json();
         const avaria = lista.find(a => a.id == id);
         
-        // Texto Padrão (recriado aqui ou vindo do backend se salvarmos em 'observacoes')
-        // Vamos supor que queremos editar o texto que foi salvo
-        // Precisaríamos buscar o campo 'observacoes' que salvamos no backend.
-        // O endpoint de lista atual retorna resumo. Vamos melhorar o endpoint no futuro.
-        // Para agora, vou recriar o texto padrão aqui para demo:
-        
+        // Aqui você pode montar o texto como quiser
         const texto = `Foram encontradas avarias no produto ${avaria.resumo_produto}, referente a NF ${avaria.nota_fiscal}, durante descarga no cliente ${avaria.cliente}.`;
-        
         document.getElementById('texto-relatorio').value = texto;
         
-        // Configura o botão de imprimir para abrir a janela final
         document.getElementById('btn-imprimir-final').onclick = () => {
             const textoFinal = document.getElementById('texto-relatorio').value;
-            imprimirPagina(textoFinal, avaria); // Passar fotos aqui se tivermos link
+            imprimirPagina(textoFinal, avaria);
         };
-        
         document.getElementById('modal-relatorio').style.display = 'block';
     };
 
     function imprimirPagina(texto, dados) {
         const janela = window.open('', '', 'width=900,height=700');
         janela.document.write(`
-            <html>
-            <head><title>Relatório de Avaria - ${dados.nota_fiscal}</title>
-            <style>body { font-family: Arial; padding: 40px; } img { max-width: 300px; margin: 10px; }</style>
-            </head>
-            <body>
-                <h1>Relatório de Avaria</h1>
-                <p><strong>Data:</strong> ${dados.data}</p>
-                <hr>
-                <h3>Descrição da Ocorrência</h3>
-                <p style="font-size: 1.2em; padding: 20px; background: #eee;">${texto}</p>
-                <hr>
-                <h3>Registros Fotográficos</h3>
-                <p><i>(Fotos do Google Drive aparecerão aqui se o link for público)</i></p>
-                </body>
-            </html>
+            <html><head><title>Relatório - ${dados.nota_fiscal}</title><style>body { font-family: Arial; padding: 40px; } img { max-width: 300px; margin: 10px; border:1px solid #ccc; }</style></head>
+            <body><h1>Relatório de Avaria</h1><p><strong>Data:</strong> ${dados.data}</p><hr><h3>Descrição</h3><p style="font-size: 1.2em; padding: 20px; background: #eee;">${texto}</p><hr><h3>Registros Fotográficos</h3><p><i>As fotos devem ser acessadas via link do Drive ou incluídas manualmente se o link for público.</i></p></body></html>
         `);
         janela.document.close();
         janela.print();
     }
 
-    // Modal listeners
     document.getElementById('fechar-relatorio').onclick = () => document.getElementById('modal-relatorio').style.display = 'none';
     document.getElementById('btn-voltar-lista').onclick = () => window.location.href = '/avarias.html';
 });

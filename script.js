@@ -399,31 +399,30 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         }
 
         let botoesEntregaHtml = '';
+        
+        // Bloco para status Pendente/Agendada (Edição)
         if (podeEditarEntregas) {
             botoesEntregaHtml += `<button id="btn-devolver-rascunho" class="btn-navegacao">Editar Carga na Montagem</button>`;
             botoesEntregaHtml += `<button id="btn-add-entrega" class="btn-acao">+ Coleta Rápida (V1)</button>`;
-			const statusAtual = (detalhes_carga.status || '').trim(); // Remove espaços extras
-            console.log("Status da Carga para Avaria:", statusAtual); // Para debug no F12
+            botoesEntregaHtml += `<button id="btn-toggle-selecao-detalhes" class="btn-navegacao" style="background-color: #64748b; color: white; margin-left: 25px; border-left: 1px solid #94a3b8; padding-left: 15px;">✅ Seleção / Lote</button>`;
+        }
 
-            // Verifica se contém 'Trânsito' (com ou sem acento) ou 'Finalizada'
-            // Usamos includes para pegar variações como "Em Trânsito" ou "Em Transito"
-            if (
-                statusAtual.includes('Trânsito') || 
-                statusAtual.includes('Transito') || 
-                statusAtual === 'Finalizada'
-            ) {
-                // Ajuste do ID: Garantindo que usamos o ID correto da carga
-                const idCargaParaAvaria = detalhes_carga.id; 
-                
-                botoesEntregaHtml += `
-                    <button class="btn-navegacao" 
-                        style="background-color: #ef4444; color: white; margin-left: 15px;" 
-                        onclick="window.location.href='/avarias.html?carga_id=${idCargaParaAvaria}'">
-                        ⚠️ Registrar Avaria
-                    </button>`;
-            } 
-			// --- NOVO BOTÃO: Toggle Seleção ---
-			botoesEntregaHtml += `<button id="btn-toggle-selecao-detalhes" class="btn-navegacao" style="background-color: #64748b; color: white; margin-left: 25px; border-left: 1px solid #94a3b8; padding-left: 15px;">✅ Seleção / Lote</button>`;
+        // --- CORREÇÃO: BOTÃO DE AVARIA (AGORA FORA DO BLOCO ACIMA) ---
+        // Este bloco deve ficar SOLTO aqui embaixo para funcionar em qualquer status
+        const statusAtual = (detalhes_carga.status || '').trim();
+        
+        // Verifica se é "Em Trânsito" ou "Finalizada"
+        if (
+            statusAtual.includes('Trânsito') || 
+            statusAtual.includes('Transito') || 
+            statusAtual === 'Finalizada'
+        ) {
+            botoesEntregaHtml += `
+                <button class="btn-navegacao" 
+                    style="background-color: #ef4444; color: white; margin-left: 15px;" 
+                    onclick="window.location.href='/avarias.html?carga_id=${detalhes_carga.id}'">
+                    ⚠️ Registrar Avaria
+                </button>`;
         }
         
         // HTML da barra de ação em lote
