@@ -10,6 +10,9 @@ from functools import wraps
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func, or_
 import traceback
+if os.environ.get('GOOGLE_CREDENTIALS_CONTENT'):
+    with open('credentials.json', 'w') as f:
+        f.write(os.environ.get('GOOGLE_CREDENTIALS_CONTENT'))
 from dotenv import load_dotenv
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
