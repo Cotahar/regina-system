@@ -11,14 +11,71 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy import func, or_
 import traceback
 from dotenv import load_dotenv
-
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
+import io
 from database import db
-from models import Carga, Cliente, Entrega, Usuario, Motorista, Veiculo
+from models import Carga, Cliente, Entrega, Usuario, Motorista, Veiculo, Avaria, AvariaItem, AvariaFoto, Marca
 
 # --- INICIALIZAÇÃO E CONFIGURAÇÃO ---
 load_dotenv('.env.railway') # Garante que as variáveis de ambiente sejam lidas
 app = Flask(__name__)
 app.secret_key = 'sua-chave-secreta-muito-segura-aqui-12345'
+
+# --- CONFIGURAÇÃO GOOGLE DRIVE (MÓDULO 8) ---
+SCOPES = ['https://www.googleapis.com/auth/drive.file']
+SERVICE_ACCOUNT_FILE = 'credentials.json' # Certifique-se que o arquivo tem este nome
+PARENT_FOLDER_ID = '1AhCs57ZYuVjJrEPBycaBtuElc-exkZEF' # <--- COLOQUE O ID DA PASTA AQUI
+
+def get_drive_service():
+    if not os.path.exists(SERVICE_ACCOUNT_FILE):
+        print("Erro: Arquivo credentials.json não encontrado.")
+        return None
+    creds = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    return build('drive', 'v3', credentials=creds)
+
+def upload_to_drive(file_storage, filename):
+    """Envia um arquivo para o Google Drive e retorna o ID e Link."""
+    service = get_drive_service()
+    if not service:
+        return None, None
+
+    file_metadata = {
+        'name': filename,
+        'parents': [PARENT_FOLDER_ID]
+    }
+    
+    # Prepara o arquivo para envio
+    media = MediaIoBaseUpload(
+        io.BytesIO(file_storage.read()), 
+        mimetype=file_storage.content_type,
+        resumable=True
+    )
+    
+    try:
+        file = service.files().create(
+            body=file_metadata, 
+            media_body=media, 
+            fields='id, webViewLink'
+        ).execute()
+        
+        # Torna o arquivo visível para quem tiver o link (Opcional, mas bom para evitar erros de acesso)
+        # Se preferir restrito, remova este bloco permission
+        try:
+            service.permissions().create(
+                fileId=file.get('id'),
+                body={'role': 'reader', 'type': 'anyone'},
+                fields='id',
+            ).execute()
+        except:
+            pass # Se der erro na permissão, segue o jogo
+
+        return file.get('id'), file.get('webViewLink')
+    except Exception as e:
+        print(f"Erro no upload para o Drive: {e}")
+        return None, None
 
 # Configuração do Banco de Dados (Lê do .env.railway ou usa sqlite local)
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -1332,7 +1389,7 @@ def handle_usuario(user_id):
             db.session.rollback()
             return jsonify(error=f"Erro interno: {str(e)}"), 500
 
-# --- NOVA ROTA: AGRUPAR ENTREGAS (MÓDULO DE MESCLAGEM) ---
+# --- NOVA ROTA: AGRUPAR ENTREGAS (MÓDULO 7) ---
 @app.route('/api/entregas/agrupar', methods=['POST'])
 @login_required
 def agrupar_entregas():
@@ -1354,12 +1411,7 @@ def agrupar_entregas():
         if any(e.cliente_id != primeiro_cliente_id for e in entregas):
             return jsonify(error='Todas as entregas devem pertencer ao mesmo Cliente (Destinatário).'), 400
 
-        # Validação 2: Verificar se todas têm o mesmo Remetente (Opcional, mas recomendado)
-        primeiro_remetente_id = entregas[0].remetente_id
-        if any(e.remetente_id != primeiro_remetente_id for e in entregas):
-             return jsonify(error='Atenção: As entregas possuem remetentes diferentes. Não é possível agrupar.'), 400
-
-        # A "sobrevivente" será a primeira da lista (geralmente a mais antiga ou a primeira selecionada)
+        # A "sobrevivente" será a primeira da lista
         entrega_principal = entregas[0]
         
         # Variáveis para somar/concatenar
@@ -1383,7 +1435,7 @@ def agrupar_entregas():
         entrega_principal.peso_bruto = total_peso
         entrega_principal.valor_frete = total_frete
         entrega_principal.peso_cubado = total_cubado
-        # Concatena as NFs separadas por barra (ex: "123 / 456")
+        # Concatena as NFs
         entrega_principal.nota_fiscal = " / ".join(filter(None, notas_fiscais))
 
         db.session.commit()
@@ -1392,18 +1444,183 @@ def agrupar_entregas():
 
     except Exception as e:
         db.session.rollback()
-        print(f"Erro ao agrupar entregas: {e}")
+        print(f"Erro em agrupar_entregas: {e}")
         return jsonify(error=f"Erro interno: {str(e)}"), 500
-
+        
 # --- Servir arquivos estáticos (CSS, JS) ---
 @app.route('/<path:filename>')
 def serve_static(filename):
-    if filename in ['style.css', 'script.js', 'clientes.js', 'montagem.js', 'consulta.js', 'motoristas.js', 'veiculos.js', 'usuarios.js']:
+    if filename in ['style.css', 'script.js', 'clientes.js', 'montagem.js', 'consulta.js', 'motoristas.js', 'veiculos.js', 'usuarios.js', 'avarias.js']:
         return send_from_directory('.', filename)
     # Correção do bug do favicon.ico
     return "Arquivo não encontrado", 404
+    
+# --- ROTAS DO MÓDULO 8: AVARIAS ---
 
+@app.route('/api/marcas', methods=['GET', 'POST'])
+@login_required
+def handle_marcas():
+    # Rota para listar ou criar marcas (Ex: Portinari, Eliane)
+    if request.method == 'GET':
+        marcas = Marca.query.order_by(Marca.nome).all()
+        return jsonify([m.to_dict() for m in marcas])
+        
+    if request.method == 'POST':
+        # Apenas admin pode criar marcas novas via API (segurança básica)
+        if session.get('user_permission') != 'admin':
+            return jsonify(error='Apenas administradores podem cadastrar marcas.'), 403
+            
+        data = request.json
+        nome = (data.get('nome') or '').strip().upper()
+        if not nome:
+            return jsonify(error='Nome da marca é obrigatório.'), 400
+            
+        if Marca.query.filter_by(nome=nome).first():
+            return jsonify(error='Marca já cadastrada.'), 400
+            
+        nova_marca = Marca(nome=nome)
+        db.session.add(nova_marca)
+        db.session.commit()
+        return jsonify(message='Marca cadastrada com sucesso!', marca=nova_marca.to_dict())
+
+@app.route('/api/avarias', methods=['GET', 'POST'])
+@login_required
+def handle_avarias():
+    # LISTAR AVARIAS
+    if request.method == 'GET':
+        status = request.args.get('status') # Ex: ?status=Pendente
+        query = Avaria.query.options(
+            joinedload(Avaria.entrega).joinedload(Entrega.cliente),
+            joinedload(Avaria.marca_rel),
+            joinedload(Avaria.itens)
+        )
+        
+        if status:
+            query = query.filter(Avaria.status == status)
+            
+        avarias = query.order_by(Avaria.data_criacao.desc()).all()
+        
+        # Monta o JSON de resposta simplificado para a lista
+        lista = []
+        for a in avarias:
+            # Pega o primeiro item para resumo
+            resumo_produto = f"{len(a.itens)} item(s)"
+            if a.itens:
+                resumo_produto = f"{a.itens[0].produto_nome}..." if len(a.itens) > 1 else a.itens[0].produto_nome
+
+            lista.append({
+                'id': a.id,
+                'data': a.data_criacao.strftime('%d/%m/%Y'),
+                'nota_fiscal': a.entrega.nota_fiscal if a.entrega else 'N/A',
+                'cliente': a.entrega.cliente.razao_social if (a.entrega and a.entrega.cliente) else 'N/A',
+                'marca': a.marca_rel.nome if a.marca_rel else 'N/A',
+                'resumo_produto': resumo_produto,
+                'status': a.status
+            })
+        return jsonify(lista)
+
+    # CRIAR NOVA AVARIA
+    if request.method == 'POST':
+        try:
+            data = request.json
+            nota_fiscal_manual = data.get('nota_fiscal')
+            entrega_id = data.get('entrega_id')
+            marca_id = data.get('marca_id')
+            itens = data.get('itens') # Lista de objetos {produto, qtd, unidade}
+            tipo_descarga = data.get('tipo_descarga')
+            
+            if not entrega_id or not marca_id or not itens:
+                return jsonify(error='Dados incompletos. Selecione entrega, marca e pelo menos um item.'), 400
+
+            # 1. Cria a Avaria Principal
+            nova_avaria = Avaria(
+                entrega_id=entrega_id,
+                marca_id=marca_id,
+                tipo_descarga=tipo_descarga,
+                nota_fiscal=nota_fiscal_manual,
+                status='Pendente'
+            )
+            db.session.add(nova_avaria)
+            db.session.flush() # Garante que nova_avaria.id seja gerado
+
+            # 2. Cria os Itens
+            for item in itens:
+                novo_item = AvariaItem(
+                    avaria_id=nova_avaria.id,
+                    produto_nome=item['produto'],
+                    quantidade=item['quantidade'],
+                    unidade_medida=item['unidade']
+                )
+                db.session.add(novo_item)
+            
+            # 3. Gera o texto padrão para o relatório (O Pulo do Gato)
+            # Vamos montar aquele texto bonito automaticamente
+            entrega = Entrega.query.get(entrega_id)
+            cliente_nome = entrega.cliente.razao_social if entrega.cliente else "CLIENTE DESCONHECIDO"
+            nf_num = entrega.nota_fiscal or "S/N"
+            
+            # Monta lista de produtos para o texto (ex: "10cx Piso A, 5m2 Piso B")
+            lista_txt = [f"{i['quantidade']}{i['unidade']} de {i['produto']}" for i in itens]
+            produtos_txt = ", ".join(lista_txt)
+            
+            texto_padrao = (
+                f"Foram encontradas {produtos_txt}, referente a NF {nf_num}, "
+                f"avariadas durante descarga {tipo_descarga or 'Manual'} no cliente {cliente_nome}."
+            )
+            nova_avaria.observacoes = texto_padrao
+
+            db.session.commit()
+            return jsonify(message='Avaria registrada com sucesso!', avaria_id=nova_avaria.id)
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Erro ao criar avaria: {e}")
+            return jsonify(error=f"Erro interno: {str(e)}"), 500
+
+@app.route('/api/avarias/<int:avaria_id>/upload', methods=['POST'])
+@login_required
+def upload_fotos_avaria(avaria_id):
+    # Rota específica para receber as imagens
+    if 'fotos' not in request.files:
+        return jsonify(error='Nenhuma imagem enviada.'), 400
+    
+    files = request.files.getlist('fotos')
+    sucesso = 0
+    
+    try:
+        avaria = Avaria.query.get(avaria_id)
+        if not avaria:
+            return jsonify(error='Avaria não encontrada.'), 404
+
+        for file in files:
+            if file.filename == '':
+                continue
+                
+            # Gera um nome único para o Drive: AVARIA_{ID}_{Original}
+            nome_arquivo = f"AVARIA_{avaria_id}_{file.filename}"
+            
+            # Chama nossa função de upload
+            drive_id, drive_link = upload_to_drive(file, nome_arquivo)
+            
+            if drive_id:
+                nova_foto = AvariaFoto(
+                    avaria_id=avaria_id,
+                    google_drive_id=drive_id,
+                    drive_link=drive_link
+                )
+                db.session.add(nova_foto)
+                sucesso += 1
+        
+        db.session.commit()
+        return jsonify(message=f'{sucesso} foto(s) enviada(s) com sucesso!')
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro no upload de fotos: {e}")
+        return jsonify(error=f"Erro interno ao salvar fotos: {str(e)}"), 500
+        
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     app.run(debug=True, host='0.0.0.0', port=5000)
+    

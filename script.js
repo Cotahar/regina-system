@@ -402,7 +402,9 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         if (podeEditarEntregas) {
             botoesEntregaHtml += `<button id="btn-devolver-rascunho" class="btn-navegacao">Editar Carga na Montagem</button>`;
             botoesEntregaHtml += `<button id="btn-add-entrega" class="btn-acao">+ Coleta Rápida (V1)</button>`;
-            // --- NOVO BOTÃO: Toggle Seleção ---
+			if (['Em Trânsito', 'Finalizada'].includes(detalhes_carga.status)) {
+                botoesEntregaHtml += `<button class="btn-navegacao" style="background-color: #ef4444; color: white; margin-left: 5px;" onclick="window.location.href='/avarias.html?carga_id=${detalhes_carga.id}'">⚠️ Registrar Avaria</button>`;
+            }            // --- NOVO BOTÃO: Toggle Seleção ---
 			botoesEntregaHtml += `<button id="btn-toggle-selecao-detalhes" class="btn-navegacao" style="background-color: #64748b; color: white; margin-left: 25px; border-left: 1px solid #94a3b8; padding-left: 15px;">✅ Seleção / Lote</button>`;
         }
         

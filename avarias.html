@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Avarias - Regina System</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+        /* Estilos Específicos para Avarias */
+        .painel-avaria { display: grid; grid-template-columns: 1fr; gap: 20px; }
+        .form-avaria { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .grid-avaria-header { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        .lista-itens-avaria { margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 6px; border: 1px dashed #cbd5e1; }
+        .item-row { display: grid; grid-template-columns: 2fr 1fr 1fr 40px; gap: 10px; margin-bottom: 10px; align-items: end; }
+        .btn-remove-item { background: #ef4444; color: white; border: none; border-radius: 4px; height: 38px; cursor: pointer; }
+        .area-upload { border: 2px dashed #94a3b8; padding: 20px; text-align: center; border-radius: 6px; cursor: pointer; background: #f1f5f9; margin-top: 15px; }
+        .area-upload:hover { background: #e2e8f0; border-color: #64748b; }
+        .preview-fotos { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+        .thumb-foto { width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd; }
+        
+        /* Modal de Impressão */
+        #modal-relatorio textarea { width: 100%; height: 150px; padding: 10px; margin: 10px 0; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Gestão de Avarias</h1>
+        <div>
+            <a href="/" class="btn-navegacao">Painel Principal</a>
+            <a href="/montagem.html" class="btn-navegacao">Montagem</a>
+            <a href="/avarias.html" class="btn-navegacao" style="background-color: #ef4444;">Avarias</a>
+            <a href="/logout" class="btn-navegacao-secundario">Sair</a>
+        </div>
+    </header>
+
+    <main style="padding: 20px;">
+        
+        <div id="view-lista-avarias">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>⚠️ Painel de Ocorrências</h2>
+                <div class="filtro-grid">
+                    <select id="filtro-status-avaria" style="padding: 8px;">
+                        <option value="">Todos os Status</option>
+                        <option value="Pendente" selected>Pendentes</option>
+                        <option value="Enviado">Enviados para Fábrica</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="tabela-wrapper">
+                <table id="tabela-avarias">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>NF (Manual)</th>
+                            <th>Cliente</th>
+                            <th>Marca</th>
+                            <th>Produtos</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpo-tabela-avarias"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="view-registro-avaria" style="display: none;">
+            <div style="margin-bottom: 15px;">
+                <button id="btn-voltar-lista" class="btn-navegacao">← Voltar para Lista</button>
+            </div>
+            
+            <div class="painel-avaria">
+                <div class="card-lista-clientes" id="card-selecao-entrega">
+                    <h3>1. Selecione a Entrega Avariada (Carga <span id="lbl-codigo-carga">...</span>)</h3>
+                    <div class="tabela-wrapper" style="max-height: 200px;">
+                        <table>
+                            <thead><tr><th>Selecionar</th><th>NF Sistema</th><th>Cliente</th><th>Cidade</th></tr></thead>
+                            <tbody id="lista-entregas-carga"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="form-cadastro-wrapper" class="form-avaria" style="display: none; opacity: 0.5; pointer-events: none;">
+                    <h3>2. Detalhes da Ocorrência</h3>
+                    <form id="form-nova-avaria">
+                        <input type="hidden" id="input-entrega-id">
+                        
+                        <div class="grid-avaria-header">
+                            <div>
+                                <label>Nota Fiscal (Obrigatório)*</label>
+                                <input type="text" id="input-nf-manual" placeholder="Digite a NF..." required style="background-color: #fffbeb; border: 1px solid #f59e0b;">
+                                <small style="color: #64748b; font-size: 0.8em;">Nunca importar auto.</small>
+                            </div>
+                            <div>
+                                <label>Marca*</label>
+                                <select id="select-marca" style="width: 100%;" required></select>
+                            </div>
+                            <div>
+                                <label>Tipo Descarga*</label>
+                                <select id="select-descarga" required style="width: 100%; padding: 10px;">
+                                    <option value="Manual">Manual</option>
+                                    <option value="Empilhadeira">Empilhadeira</option>
+                                    <option value="Munck">Munck</option>
+                                    <option value="Grua">Grua</option>
+                                    <option value="Outros">Outros</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="lista-itens-avaria">
+                            <label style="font-weight: bold; color: #334155;">Produtos Avariados:</label>
+                            <div id="container-itens">
+                                </div>
+                            <button type="button" id="btn-add-item" style="margin-top: 10px; background: #3b82f6; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">+ Adicionar Item</button>
+                        </div>
+
+                        <div class="area-upload">
+                            <label for="input-fotos" style="cursor: pointer;">
+                                📷 <b>Clique para selecionar fotos</b> (Pode selecionar várias)<br>
+                                <span style="font-size: 0.8em; color: #64748b;">Serão enviadas para o Google Drive</span>
+                            </label>
+                            <input type="file" id="input-fotos" multiple accept="image/*" style="display: none;">
+                            <div id="preview-container" class="preview-fotos"></div>
+                        </div>
+
+                        <div style="margin-top: 25px; text-align: right;">
+                            <button type="submit" class="btn-acao-verde" style="font-size: 1.1em; padding: 10px 30px;">Salvar e Enviar Fotos</button>
+                        </div>
+                        <div id="msg-cadastro" class="mensagem"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <div id="modal-relatorio" class="modal">
+        <div class="modal-conteudo" style="max-width: 700px;">
+            <span class="fechar-modal" id="fechar-relatorio">&times;</span>
+            <h2>Gerar Relatório de Avaria</h2>
+            <p>Revise o texto abaixo antes de imprimir:</p>
+            <textarea id="texto-relatorio"></textarea>
+            <div id="preview-fotos-relatorio" style="display:none;"></div> <div style="text-align: right;">
+                <button id="btn-imprimir-final" class="btn-acao">🖨️ Gerar PDF / Imprimir</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="avarias.js"></script>
+</body>
+</html>
