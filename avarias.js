@@ -250,16 +250,74 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('modal-relatorio').style.display = 'block';
     };
 
-    function imprimirPagina(texto, dados) {
+function imprimirPagina(texto, dados) {
+        // Monta o HTML das fotos
+        let htmlFotos = '';
+        
+        if (dados.fotos && dados.fotos.length > 0) {
+            htmlFotos += '<div style="display: flex; flex-wrap: wrap; gap: 10px;">';
+            dados.fotos.forEach(foto => {
+                // Usa o link de exportação do Google para exibir a imagem direta
+                htmlFotos += `
+                    <div style="text-align: center; margin-bottom: 10px;">
+                        <img src="https://lh3.googleusercontent.com/d/${foto.id}" 
+							style="max-width: 800px; max-height: 1128px; border: 1px solid #ccc; border-radius: 4px;"
+							alt="Foto Avaria"
+							referrerpolicy="no-referrer"
+							crossorigin="anonymous">
+                    </div>`;
+            });
+            htmlFotos += '</div>';
+        } else {
+            htmlFotos = '<p style="color: #666; font-style: italic;">Nenhuma foto registrada para esta ocorrência.</p>';
+        }
+
         const janela = window.open('', '', 'width=900,height=700');
         janela.document.write(`
-            <html><head><title>Relatório - ${dados.nota_fiscal}</title><style>body { font-family: Arial; padding: 40px; } img { max-width: 300px; margin: 10px; border:1px solid #ccc; }</style></head>
-            <body><h1>Relatório de Avaria</h1><p><strong>Data:</strong> ${dados.data}</p><hr><h3>Descrição</h3><p style="font-size: 1.2em; padding: 20px; background: #eee;">${texto}</p><hr><h3>Registros Fotográficos</h3><p><i>As fotos devem ser acessadas via link do Drive ou incluídas manualmente se o link for público.</i></p></body></html>
+            <html>
+            <head>
+                <title>Relatório de Avaria - NF ${dados.nota_fiscal}</title>
+                <style>
+                    body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #333; }
+                    h1 { color: #b91c1c; border-bottom: 2px solid #b91c1c; padding-bottom: 10px; }
+                    .info-box { background: #f3f4f6; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+                    .texto-desc { font-size: 1.1em; line-height: 1.6; padding: 20px; border: 1px dashed #ccc; background: #fff; }
+                </style>
+            </head>
+            <body>
+                <h1>Relatório de Avaria de Carga</h1>
+                
+                <div class="info-box">
+                    <p><strong>Data da Ocorrência:</strong> ${dados.data}</p>
+                    <p><strong>Nota Fiscal:</strong> ${dados.nota_fiscal}</p>
+                    <p><strong>Cliente:</strong> ${dados.cliente}</p>
+                    <p><strong>Marca:</strong> ${dados.marca}</p>
+                </div>
+
+                <h3>Descrição da Ocorrência</h3>
+                <div class="texto-desc">
+                    ${texto.replace(/\n/g, '<br>')}
+                </div>
+                
+                <hr style="margin: 30px 0; border: 0; border-top: 1px solid #ddd;">
+                
+                <h3>Registros Fotográficos</h3>
+                ${htmlFotos}
+                
+                <div style="margin-top: 50px; text-align: center; font-size: 0.8em; color: #999;">
+                    <p>Relatório gerado automaticamente pelo Regina System.</p>
+                </div>
+            </body>
+            </html>
         `);
         janela.document.close();
-        janela.print();
+        
+        // Aguarda as imagens carregarem um pouco antes de abrir a janela de impressão
+        setTimeout(() => {
+            janela.print();
+        }, 1000);
     }
-
+	
     document.getElementById('fechar-relatorio').onclick = () => document.getElementById('modal-relatorio').style.display = 'none';
     document.getElementById('btn-voltar-lista').onclick = () => window.location.href = '/avarias.html';
 });

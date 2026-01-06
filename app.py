@@ -1,46 +1,57 @@
-# app.py CORRIGIDO (V7.2 - CORREÇÃO DE INDENTAÇÃO)
-
 import time
 import pandas as pd
 import os
-from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for, render_template
+import json # <--- IMPORTANTE: Faltava este import
+from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for, render_template, send_file
 from flask_migrate import Migrate
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from sqlalchemy.orm import joinedload
 from sqlalchemy import func, or_
 import traceback
-if os.environ.get('GOOGLE_CREDENTIALS_CONTENT'):
-    with open('credentials.json', 'w') as f:
-        f.write(os.environ.get('GOOGLE_CREDENTIALS_CONTENT'))
 from dotenv import load_dotenv
-from google.oauth2 import service_account
+
+# Imports do Google (ATUALIZADO PARA OAUTH PESSOAL)
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
+from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 import io
+
 from database import db
 from models import Carga, Cliente, Entrega, Usuario, Motorista, Veiculo, Avaria, AvariaItem, AvariaFoto, Marca
 
-# --- INICIALIZAÇÃO E CONFIGURAÇÃO ---
-load_dotenv('.env.railway') # Garante que as variáveis de ambiente sejam lidas
+# --- INICIALIZAÇÃO ---
+load_dotenv('.env.railway') 
 app = Flask(__name__)
 app.secret_key = 'sua-chave-secreta-muito-segura-aqui-12345'
 
-# --- CONFIGURAÇÃO GOOGLE DRIVE (MÓDULO 8) ---
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
-SERVICE_ACCOUNT_FILE = 'credentials.json' # Certifique-se que o arquivo tem este nome
-PARENT_FOLDER_ID = '1AhCs57ZYuVjJrEPBycaBtuElc-exkZEF' # <--- COLOQUE O ID DA PASTA AQUI
+# --- CONFIGURAÇÃO GOOGLE DRIVE (MÓDULO 8 - OAUTH PESSOAL) ---
+# ID da pasta onde as fotos serão salvas
+PARENT_FOLDER_ID = '1AhCs57ZYuVjJrEPBycaBtuElc-exkZEF' 
 
 def get_drive_service():
-    if not os.path.exists(SERVICE_ACCOUNT_FILE):
-        print("Erro: Arquivo credentials.json não encontrado.")
+    creds = None
+    
+    # 1. Tenta carregar do arquivo local (Para quando você roda no seu PC)
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', ['https://www.googleapis.com/auth/drive.file'])
+    
+    # 2. Se não tiver arquivo, tenta carregar da Variável de Ambiente (Para o Railway)
+    elif os.environ.get('GOOGLE_TOKEN_CONTENT'):
+        try:
+            token_info = json.loads(os.environ.get('GOOGLE_TOKEN_CONTENT'))
+            creds = Credentials.from_authorized_user_info(token_info, ['https://www.googleapis.com/auth/drive.file'])
+        except Exception as e:
+            print(f"Erro ao ler token do Railway: {e}")
+
+    if not creds:
+        print("Erro: Nenhuma credencial de token encontrada (token.json ou ENV).")
         return None
-    creds = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+
     return build('drive', 'v3', credentials=creds)
 
 def upload_to_drive(file_storage, filename):
-    """Envia um arquivo para o Google Drive e retorna o ID e Link."""
+    """Envia um arquivo para o Google Drive Pessoal (OAuth)."""
     service = get_drive_service()
     if not service:
         return None, None
@@ -50,7 +61,6 @@ def upload_to_drive(file_storage, filename):
         'parents': [PARENT_FOLDER_ID]
     }
     
-    # Prepara o arquivo para envio
     media = MediaIoBaseUpload(
         io.BytesIO(file_storage.read()), 
         mimetype=file_storage.content_type,
@@ -58,28 +68,27 @@ def upload_to_drive(file_storage, filename):
     )
     
     try:
+        # Upload padrão (sem supportsAllDrives pois é conta pessoal)
         file = service.files().create(
             body=file_metadata, 
             media_body=media, 
             fields='id, webViewLink'
         ).execute()
         
-        # Torna o arquivo visível para quem tiver o link (Opcional, mas bom para evitar erros de acesso)
-        # Se preferir restrito, remova este bloco permission
+        # Tenta dar permissão pública para leitura (Opcional - para ver no relatório)
         try:
             service.permissions().create(
                 fileId=file.get('id'),
-                body={'role': 'reader', 'type': 'anyone'},
-                fields='id',
+                body={'role': 'reader', 'type': 'anyone'}
             ).execute()
         except:
-            pass # Se der erro na permissão, segue o jogo
+            pass
 
         return file.get('id'), file.get('webViewLink')
     except Exception as e:
         print(f"Erro no upload para o Drive: {e}")
         return None, None
-
+        
 # Configuração do Banco de Dados (Lê do .env.railway ou usa sqlite local)
 basedir = os.path.abspath(os.path.dirname(__file__))
 database_url = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'cargas.db')
@@ -1516,14 +1525,14 @@ def handle_avarias():
                 resumo_produto = f"{a.itens[0].produto_nome}..." if len(a.itens) > 1 else a.itens[0].produto_nome
 
             lista.append({
-                'id': a.id,
-                'data': a.data_criacao.strftime('%d/%m/%Y'),
-                'nota_fiscal': a.entrega.nota_fiscal if a.entrega else 'N/A',
+                'id': a.id, 'data': a.data_criacao.strftime('%d/%m/%Y'),
+                'nota_fiscal': a.nota_fiscal or 'N/A',
                 'cliente': a.entrega.cliente.razao_social if (a.entrega and a.entrega.cliente) else 'N/A',
                 'marca': a.marca_rel.nome if a.marca_rel else 'N/A',
-                'resumo_produto': resumo_produto,
-                'status': a.status
+                'resumo_produto': resumo_produto, 'status': a.status,
+                'fotos': [{'id': f.google_drive_id} for f in a.fotos] # <--- NOVO: Lista de IDs das fotos
             })
+            
         return jsonify(lista)
 
     # CRIAR NOVA AVARIA

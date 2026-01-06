@@ -3,3 +3,4 @@ cargas.db
 __pycache__/
 .env.railwaycredentials.json 
 credentials.json
+token.json
