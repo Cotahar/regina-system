@@ -162,3 +162,92 @@ class Usuario(db.Model):
     nome_usuario = db.Column(db.String, unique=True, nullable=False)
     senha_hash = db.Column(db.String, nullable=False)
     permissao = db.Column(db.String, nullable=False)
+    
+class Marca(db.Model):
+    __tablename__ = 'marcas'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String, unique=True, nullable=False)
+    
+    # Relacionamento
+    avarias = db.relationship('Avaria', back_populates='marca_rel', lazy=True)
+
+    def to_dict(self):
+        return {'id': self.id, 'nome': self.nome}
+
+class Avaria(db.Model):
+    __tablename__ = 'avarias'
+    id = db.Column(db.Integer, primary_key=True)
+    nota_fiscal = db.Column(db.String)
+    # Vínculos
+    entrega_id = db.Column(db.Integer, db.ForeignKey('entregas.id'), nullable=False)
+    marca_id = db.Column(db.Integer, db.ForeignKey('marcas.id'), nullable=False)
+    
+    # Dados da Ocorrência
+    tipo_descarga = db.Column(db.String) # Manual, Empilhadeira, Munck
+    observacoes = db.Column(db.Text) # Texto do relatório (editável)
+    status = db.Column(db.String, default='Pendente') # Pendente, Enviado
+    data_criacao = db.Column(db.DateTime, default=db.func.current_timestamp())
+    
+    # Dados Envio/Retorno Fábrica
+    registro_envio = db.Column(db.Text)      # Protocolo/Email enviado para fábrica
+    retorno_fabrica = db.Column(db.Text)     # Resposta da fábrica (Cobrança/Reposição)
+    valor_cobranca = db.Column(db.Float)     # Valor se houver cobrança
+    
+    # Relacionamentos
+    entrega = db.relationship('Entrega', backref='avarias') 
+    marca_rel = db.relationship('Marca', back_populates='avarias')
+    itens = db.relationship('AvariaItem', back_populates='avaria', cascade='all, delete-orphan')
+    fotos = db.relationship('AvariaFoto', back_populates='avaria', cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'entrega_id': self.entrega_id,
+            'nota_fiscal': self.nota_fiscal,
+            'marca_nome': self.marca_rel.nome if self.marca_rel else 'N/A',
+            'tipo_descarga': self.tipo_descarga,
+            'observacoes': self.observacoes,
+            'status': self.status,
+            'registro_envio': self.registro_envio,
+            'retorno_fabrica': self.retorno_fabrica,
+            'valor_cobranca': self.valor_cobranca,
+            'data_criacao': self.data_criacao.strftime('%d/%m/%Y %H:%M') if self.data_criacao else None,
+            'itens': [i.to_dict() for i in self.itens],
+            'fotos': [f.to_dict() for f in self.fotos]
+        }
+
+class AvariaItem(db.Model):
+    __tablename__ = 'avaria_itens'
+    id = db.Column(db.Integer, primary_key=True)
+    avaria_id = db.Column(db.Integer, db.ForeignKey('avarias.id'), nullable=False)
+    
+    produto_nome = db.Column(db.String, nullable=False)
+    quantidade = db.Column(db.Float, nullable=False)
+    unidade_medida = db.Column(db.String) # cx, m2, pç
+    
+    avaria = db.relationship('Avaria', back_populates='itens')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'produto': self.produto_nome,
+            'quantidade': self.quantidade,
+            'unidade': self.unidade_medida
+        }
+
+class AvariaFoto(db.Model):
+    __tablename__ = 'avaria_fotos'
+    id = db.Column(db.Integer, primary_key=True)
+    avaria_id = db.Column(db.Integer, db.ForeignKey('avarias.id'), nullable=False)
+    
+    google_drive_id = db.Column(db.String, nullable=False) # ID do arquivo no Google
+    drive_link = db.Column(db.String) # Link para visualizar
+    
+    avaria = db.relationship('Avaria', back_populates='fotos')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'drive_id': self.google_drive_id,
+            'link': self.drive_link
+        }

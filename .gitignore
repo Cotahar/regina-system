@@ -1,4 +1,6 @@
 cargas.db
 *.pyc
 __pycache__/
-.env.railway
+.env.railwaycredentials.json 
+credentials.json
+token.json
