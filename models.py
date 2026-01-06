@@ -188,6 +188,11 @@ class Avaria(db.Model):
     status = db.Column(db.String, default='Pendente') # Pendente, Enviado
     data_criacao = db.Column(db.DateTime, default=db.func.current_timestamp())
     
+    # Dados Envio/Retorno Fábrica
+    registro_envio = db.Column(db.Text)      # Protocolo/Email enviado para fábrica
+    retorno_fabrica = db.Column(db.Text)     # Resposta da fábrica (Cobrança/Reposição)
+    valor_cobranca = db.Column(db.Float)     # Valor se houver cobrança
+    
     # Relacionamentos
     entrega = db.relationship('Entrega', backref='avarias') 
     marca_rel = db.relationship('Marca', back_populates='avarias')
@@ -197,12 +202,15 @@ class Avaria(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
-            'nota_fiscal': self.nota_fiscal,
             'entrega_id': self.entrega_id,
+            'nota_fiscal': self.nota_fiscal,
             'marca_nome': self.marca_rel.nome if self.marca_rel else 'N/A',
             'tipo_descarga': self.tipo_descarga,
             'observacoes': self.observacoes,
             'status': self.status,
+            'registro_envio': self.registro_envio,
+            'retorno_fabrica': self.retorno_fabrica,
+            'valor_cobranca': self.valor_cobranca,
             'data_criacao': self.data_criacao.strftime('%d/%m/%Y %H:%M') if self.data_criacao else None,
             'itens': [i.to_dict() for i in self.itens],
             'fotos': [f.to_dict() for f in self.fotos]

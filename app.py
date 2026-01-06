@@ -89,6 +89,17 @@ def upload_to_drive(file_storage, filename):
         print(f"Erro no upload para o Drive: {e}")
         return None, None
         
+def delete_from_drive(file_id):
+    """Remove um arquivo do Google Drive."""
+    service = get_drive_service()
+    if not service: return False
+    try:
+        service.files().delete(fileId=file_id).execute()
+        return True
+    except Exception as e:
+        print(f"Erro ao excluir do Drive {file_id}: {e}")
+        return False
+        
 # Configuração do Banco de Dados (Lê do .env.railway ou usa sqlite local)
 basedir = os.path.abspath(os.path.dirname(__file__))
 database_url = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'cargas.db')
@@ -1466,7 +1477,7 @@ def agrupar_entregas():
 # --- Servir arquivos estáticos (CSS, JS) ---
 @app.route('/<path:filename>')
 def serve_static(filename):
-    if filename in ['style.css', 'script.js', 'clientes.js', 'montagem.js', 'consulta.js', 'motoristas.js', 'veiculos.js', 'usuarios.js', 'avarias.js']:
+    if filename in ['style.css', 'script.js', 'clientes.js', 'montagem.js', 'consulta.js', 'motoristas.js', 'veiculos.js', 'usuarios.js', 'avarias.js', 'marcas.js', 'marcas.html']:
         return send_from_directory('.', filename)
     # Correção do bug do favicon.ico
     return "Arquivo não encontrado", 404
@@ -1498,101 +1509,180 @@ def handle_marcas():
         db.session.add(nova_marca)
         db.session.commit()
         return jsonify(message='Marca cadastrada com sucesso!', marca=nova_marca.to_dict())
+        
+@app.route('/api/marcas/<int:marca_id>', methods=['PUT', 'DELETE'])
+@login_required
+def handle_marca_item(marca_id):
+    if session.get('user_permission') != 'admin':
+        return jsonify(error='Apenas admin'), 403
+        
+    marca = Marca.query.get(marca_id)
+    if not marca: return jsonify(error='Marca não encontrada'), 404
+    
+    if request.method == 'DELETE':
+        try:
+            db.session.delete(marca)
+            db.session.commit()
+            return jsonify(message='Marca excluída!')
+        except Exception as e:
+            db.session.rollback()
+            return jsonify(error='Erro ao excluir (Pode estar em uso)'), 500
 
+    if request.method == 'PUT':
+        data = request.json
+        novo_nome = (data.get('nome') or '').strip().upper()
+        if not novo_nome: return jsonify(error='Nome obrigatório'), 400
+        
+        marca.nome = novo_nome
+        db.session.commit()
+        return jsonify(message='Marca atualizada!')
+        
+# --- ROTAS DE AVARIAS (CORRIGIDAS) ---
+
+# --- SUBSTIRUIR APENAS A FUNÇÃO handle_avarias INTEIRA ---
 @app.route('/api/avarias', methods=['GET', 'POST'])
 @login_required
 def handle_avarias():
-    # LISTAR AVARIAS
+    # 1. LISTAR (GET)
     if request.method == 'GET':
-        status = request.args.get('status') # Ex: ?status=Pendente
         query = Avaria.query.options(
             joinedload(Avaria.entrega).joinedload(Entrega.cliente),
+            joinedload(Avaria.entrega).joinedload(Entrega.carga).joinedload(Carga.motorista_rel),
             joinedload(Avaria.marca_rel),
-            joinedload(Avaria.itens)
+            joinedload(Avaria.itens),
+            joinedload(Avaria.fotos)
         )
         
-        if status:
-            query = query.filter(Avaria.status == status)
-            
+        # Filtros
+        if request.args.get('status'): query = query.filter(Avaria.status == request.args.get('status'))
+        if request.args.get('nf'): query = query.filter(Avaria.nota_fiscal.ilike(f"%{request.args.get('nf')}%"))
+        if request.args.get('marca_id'): query = query.filter(Avaria.marca_id == request.args.get('marca_id'))
+        if request.args.get('data_inicio'): query = query.filter(func.date(Avaria.data_criacao) >= request.args.get('data_inicio'))
+        if request.args.get('data_fim'): query = query.filter(func.date(Avaria.data_criacao) <= request.args.get('data_fim'))
+        if request.args.get('cliente_id'): query = query.join(Avaria.entrega).filter(Entrega.cliente_id == request.args.get('cliente_id'))
+        if request.args.get('motorista_id'): query = query.join(Avaria.entrega).join(Entrega.carga).filter(Carga.motorista_id == request.args.get('motorista_id'))
+
         avarias = query.order_by(Avaria.data_criacao.desc()).all()
-        
-        # Monta o JSON de resposta simplificado para a lista
         lista = []
         for a in avarias:
-            # Pega o primeiro item para resumo
-            resumo_produto = f"{len(a.itens)} item(s)"
-            if a.itens:
-                resumo_produto = f"{a.itens[0].produto_nome}..." if len(a.itens) > 1 else a.itens[0].produto_nome
-
-            lista.append({
-                'id': a.id, 'data': a.data_criacao.strftime('%d/%m/%Y'),
-                'nota_fiscal': a.nota_fiscal or 'N/A',
-                'cliente': a.entrega.cliente.razao_social if (a.entrega and a.entrega.cliente) else 'N/A',
-                'marca': a.marca_rel.nome if a.marca_rel else 'N/A',
-                'resumo_produto': resumo_produto, 'status': a.status,
-                'fotos': [{'id': f.google_drive_id} for f in a.fotos] # <--- NOVO: Lista de IDs das fotos
-            })
+            mot = 'N/A'
+            if a.entrega and a.entrega.carga and a.entrega.carga.motorista_rel: mot = a.entrega.carga.motorista_rel.nome
             
+            # Limpeza do Nome do Cliente na Lista
+            cli = 'N/A'
+            if a.entrega and a.entrega.cliente:
+                raw_nome = a.entrega.cliente.razao_social
+                cli = raw_nome.split('-', 1)[1].strip() if '-' in raw_nome else raw_nome
+            
+            lista.append({
+                'id': a.id, 
+                'data': a.data_criacao.strftime('%d/%m/%Y'),
+                'nota_fiscal': a.nota_fiscal or 'N/A',
+                'cliente': cli,
+                # --- NOVOS CAMPOS PARA AGRUPAMENTO ---
+                'cliente_id': a.entrega.cliente_id if a.entrega else None,
+                'carga_id': a.entrega.carga_id if a.entrega else None,
+                # -------------------------------------
+                'motorista': mot,
+                'marca': a.marca_rel.nome if a.marca_rel else 'N/A',
+                'status': a.status,
+                'observacoes': a.observacoes or '',
+                'registro_envio': a.registro_envio or '',
+                'retorno_fabrica': a.retorno_fabrica or '',
+                'valor_cobranca': a.valor_cobranca or 0.0,
+                'itens': [i.to_dict() for i in a.itens],
+                'fotos': [{'id': f.google_drive_id} for f in a.fotos]
+            })
         return jsonify(lista)
 
-    # CRIAR NOVA AVARIA
+    # 2. CRIAR (POST)
     if request.method == 'POST':
         try:
             data = request.json
             nota_fiscal_manual = data.get('nota_fiscal')
             entrega_id = data.get('entrega_id')
             marca_id = data.get('marca_id')
-            itens = data.get('itens') # Lista de objetos {produto, qtd, unidade}
+            itens = data.get('itens')
             tipo_descarga = data.get('tipo_descarga')
             
             if not entrega_id or not marca_id or not itens:
-                return jsonify(error='Dados incompletos. Selecione entrega, marca e pelo menos um item.'), 400
+                return jsonify(error='Dados incompletos.'), 400
 
-            # 1. Cria a Avaria Principal
             nova_avaria = Avaria(
-                entrega_id=entrega_id,
-                marca_id=marca_id,
-                tipo_descarga=tipo_descarga,
-                nota_fiscal=nota_fiscal_manual,
-                status='Pendente'
+                entrega_id=entrega_id, marca_id=marca_id, tipo_descarga=tipo_descarga,
+                nota_fiscal=nota_fiscal_manual, status='Pendente'
             )
             db.session.add(nova_avaria)
-            db.session.flush() # Garante que nova_avaria.id seja gerado
+            db.session.flush()
 
-            # 2. Cria os Itens
             for item in itens:
-                novo_item = AvariaItem(
-                    avaria_id=nova_avaria.id,
-                    produto_nome=item['produto'],
-                    quantidade=item['quantidade'],
-                    unidade_medida=item['unidade']
-                )
-                db.session.add(novo_item)
+                db.session.add(AvariaItem(
+                    avaria_id=nova_avaria.id, produto_nome=item['produto'],
+                    quantidade=item['quantidade'], unidade_medida=item['unidade']
+                ))
             
-            # 3. Gera o texto padrão para o relatório (O Pulo do Gato)
-            # Vamos montar aquele texto bonito automaticamente
-            entrega = Entrega.query.get(entrega_id)
-            cliente_nome = entrega.cliente.razao_social if entrega.cliente else "CLIENTE DESCONHECIDO"
-            nf_num = entrega.nota_fiscal or "S/N"
+            # Geração Texto Inteligente (Com limpeza de nome)
+            entrega = db.session.get(Entrega, entrega_id)
             
-            # Monta lista de produtos para o texto (ex: "10cx Piso A, 5m2 Piso B")
-            lista_txt = [f"{i['quantidade']}{i['unidade']} de {i['produto']}" for i in itens]
-            produtos_txt = ", ".join(lista_txt)
+            cliente_nome = "CLIENTE"
+            if entrega.cliente:
+                raw = entrega.cliente.razao_social
+                # Pega apenas o texto após o hífen, se existir
+                cliente_nome = raw.split('-', 1)[1].strip() if '-' in raw else raw
             
-            texto_padrao = (
-                f"Foram encontradas {produtos_txt}, referente a NF {nf_num}, "
-                f"avariadas durante descarga {tipo_descarga or 'Manual'} no cliente {cliente_nome}."
-            )
-            nova_avaria.observacoes = texto_padrao
+            descarga_txt = tipo_descarga
+            if tipo_descarga in ['Empilhadeira', 'Munck', 'Grua']: descarga_txt = f"com {tipo_descarga}"
 
+            # Decide se é "a NF" ou "as NFs"
+            prefixo_nf = "as NFs" if ('/' in nota_fiscal_manual or ',' in nota_fiscal_manual) else "a NF"
+
+            if len(itens) == 1:
+                it = itens[0]
+                texto = (f"Conforme imagens em anexo, foram encontradas {it['quantidade']} {it['unidade']} "
+                         f"avariadas no meio do pallet ref. ao produto {it['produto']}, NFe {nota_fiscal_manual}. "
+                         f"A quebra foi percebida durante a descarga {descarga_txt} no cliente {cliente_nome}.")
+            else:
+                texto = (f"Durante a descarga {descarga_txt}, foram encontradas avarias no meio do pallet referente {prefixo_nf} {nota_fiscal_manual} "
+                         f"do cliente {cliente_nome}. Seguem em anexo registros feitos pelo motorista e abaixo segue quantidade e produtos:\n")
+                for it in itens:
+                    texto += f"\n- NF {nota_fiscal_manual} - {it['produto']} - {it['quantidade']} {it['unidade']}"
+            
+            nova_avaria.observacoes = texto
             db.session.commit()
-            return jsonify(message='Avaria registrada com sucesso!', avaria_id=nova_avaria.id)
-
+            return jsonify(message='Registrado!', avaria_id=nova_avaria.id)
         except Exception as e:
             db.session.rollback()
-            print(f"Erro ao criar avaria: {e}")
+            print(f"Erro POST avaria: {e}")
             return jsonify(error=f"Erro interno: {str(e)}"), 500
+            
+@app.route('/api/avarias/<int:avaria_id>', methods=['PUT'])
+@login_required
+def update_avaria(avaria_id):
+    try:
+        data = request.json
+        avaria = Avaria.query.get(avaria_id)
+        if not avaria: return jsonify(error='Não encontrada'), 404
 
+        if 'observacoes' in data: avaria.observacoes = data['observacoes']
+
+        if 'acao' in data:
+            acao = data['acao']
+            if acao == 'registrar_envio':
+                if not data.get('registro_envio'): return jsonify(error='Registro obrigatório'), 400
+                avaria.status = 'Enviado'
+                avaria.registro_envio = data['registro_envio']
+            elif acao == 'finalizar':
+                if not data.get('retorno_fabrica'): return jsonify(error='Retorno obrigatório'), 400
+                avaria.status = 'Finalizada'
+                avaria.retorno_fabrica = data['retorno_fabrica']
+                avaria.valor_cobranca = float(data.get('valor_cobranca') or 0.0)
+
+        db.session.commit()
+        return jsonify(message='Atualizado!')
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(error=str(e)), 500
+        
 @app.route('/api/avarias/<int:avaria_id>/upload', methods=['POST'])
 @login_required
 def upload_fotos_avaria(avaria_id):
@@ -1635,6 +1725,33 @@ def upload_fotos_avaria(avaria_id):
         print(f"Erro no upload de fotos: {e}")
         return jsonify(error=f"Erro interno ao salvar fotos: {str(e)}"), 500
         
+@app.route('/api/avarias/<int:avaria_id>', methods=['DELETE'])
+@login_required
+def delete_avaria(avaria_id):
+    if session.get('user_permission') != 'admin':
+        return jsonify(error='Apenas administradores podem excluir avarias.'), 403
+        
+    try:
+        avaria = Avaria.query.options(joinedload(Avaria.fotos)).get(avaria_id)
+        if not avaria: return jsonify(error='Avaria não encontrada'), 404
+        
+        # 1. Apagar fotos do Google Drive
+        count_fotos = 0
+        for foto in avaria.fotos:
+            if delete_from_drive(foto.google_drive_id):
+                count_fotos += 1
+                
+        # 2. Apagar do Banco de Dados
+        db.session.delete(avaria)
+        db.session.commit()
+        
+        return jsonify(message=f'Avaria excluída com sucesso! ({count_fotos} fotos removidas da nuvem)')
+    except Exception as e:
+        db.session.rollback()
+        print(f"Erro ao excluir avaria: {e}")
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
+        
+        
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
@@ -1642,7 +1759,7 @@ if __name__ == '__main__':
         # --- AUTO-SEED: Cria as marcas se não existirem ---
         if not Marca.query.first():
             print("Criando marcas padrão...")
-            marcas_padrao = ["ELIANE", "PORTINARI", "PORTOBELLO", "INCEPA", "CEUSA", "ELIZABETH", "BIANCHOGRES", "DELTA"]
+            marcas_padrao = ["ELIANE", "PORTINARI", "PORTOBELLO", "INCEPA", "CEUSA", "ELIZABETH"]
             for m in marcas_padrao:
                 db.session.add(Marca(nome=m))
             db.session.commit()

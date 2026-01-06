@@ -1,18 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>B. Nunes - Gestão de Motoristas</title>
+    <title>Gestão de Marcas - Regina System</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-
     <header>
-        <h1>Gestão de Motoristas</h1>
+        <h1>Gestão de Marcas</h1>
         <div>
             <a href="/" class="btn-navegacao">Painel Principal</a>
             <a href="/montagem.html" class="btn-navegacao">Montagem de Carga</a>
@@ -33,38 +31,41 @@
         </div>
     </header>
 
-    <main class="container-clientes">
-        <div class="card-importacao">
-            <h2>Importar Motoristas</h2>
-            <p>Selecione um arquivo (.xls, .xlsx, .csv) para importar novos motoristas.</p>
-            <p><b>Estrutura:</b> Coluna A = Código, Coluna B = Nome.</p>
-            <form id="form-importar">
-                <input type="file" id="arquivo-importar" accept=".xls, .xlsx, .csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required>
-                <button type="submit">Importar Arquivo</button>
-            </form>
-            <div id="mensagem-importacao" class="mensagem"></div>
-        </div>
-
+    <main style="padding: 20px; max-width: 800px; margin: 0 auto;">
         <div class="card-lista-clientes">
-            <h2>Motoristas Cadastrados</h2>
-			<div class="form-acao" style="margin-bottom: 15px;">
-				<input type="text" id="pesquisa-motorista" placeholder="Buscar por Nome ou Código..." style="width: 100%;">
-			</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>Marcas Cadastradas</h2>
+                <button id="btn-nova-marca" class="btn-acao-verde">+ Nova Marca</button>
+            </div>
+            
             <div class="tabela-wrapper">
                 <table>
                     <thead>
                         <tr>
-                            <th>Código</th>
-                            <th>Nome</th>
+                            <th>ID</th>
+                            <th>Nome da Marca</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
-                    <tbody id="tabela-motoristas-corpo">
-                        </tbody>
+                    <tbody id="tabela-marcas"></tbody>
                 </table>
             </div>
         </div>
     </main>
-	
-    <script src="motoristas.js"></script>
+
+    <div id="modal-marca" class="modal">
+        <div class="modal-conteudo" style="max-width: 400px;">
+            <span class="fechar-modal" id="fechar-modal-marca">&times;</span>
+            <h2 id="titulo-modal">Nova Marca</h2>
+            <input type="hidden" id="input-id-marca">
+            <label>Nome:</label>
+            <input type="text" id="input-nome-marca" style="width: 100%; padding: 10px; margin-bottom: 15px;">
+            <div style="text-align: right;">
+                <button id="btn-salvar-marca" class="btn-acao-verde">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="marcas.js"></script>
 </body>
 </html>

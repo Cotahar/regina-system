@@ -168,7 +168,7 @@ button:hover, .btn-navegacao:hover, .btn-navegacao-secundario:hover {
 #detalhes-header span{ font-size:16px; padding:5px 10px; border-radius:8px; font-weight:bold; color:#1e293b; text-transform: capitalize; }
 .status-pendente{ background-color:#94a3b8; }
 .status-agendada{ background-color:#60a5fa; }
-.status-em-transito{ background-color:#fde047; }
+.status-em-trânsito{ background-color:#fde047; }
 .status-finalizada{ background-color:#4ade80; }
 
 .modal-body-grid{ display:grid; grid-template-columns:1fr; gap:20px; }

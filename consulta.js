@@ -353,7 +353,24 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             botoesEntregaHtml += `<button id="btn-add-entrega" class="btn-acao">+ Coleta Rápida (V1)</button>`;
         }
         // ***** FIM DA ALTERAÇÃO DOS BOTÕES *****
-
+		// --- CORREÇÃO: BOTÃO DE AVARIA (AGORA FORA DO BLOCO ACIMA) ---
+        // Este bloco deve ficar SOLTO aqui embaixo para funcionar em qualquer status
+        const statusAtual = (detalhes_carga.status || '').trim();
+        
+        // Verifica se é "Em Trânsito" ou "Finalizada"
+        if (
+            statusAtual.includes('Trânsito') || 
+            statusAtual.includes('Transito') || 
+            statusAtual === 'Finalizada'
+        ) {
+            botoesEntregaHtml += `
+                <button class="btn-navegacao" 
+                    style="background-color: #ef4444; color: white; margin-left: 15px;" 
+                    onclick="window.location.href='/avarias.html?carga_id=${detalhes_carga.id}'">
+                    ⚠️ Registrar Avaria
+                </button>`;
+        }
+		
         detalhesConteudo.innerHTML = `
             <div id="detalhes-header">
               <h2>${detalhes_carga.codigo_carga}</h2>
