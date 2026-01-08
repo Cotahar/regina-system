@@ -152,7 +152,7 @@ button:hover, .btn-navegacao:hover, .btn-navegacao-secundario:hover {
 .card-importacao, .card-lista-clientes { background-color: #334155; border-radius: 12px; padding: 25px; box-shadow: 0 4px 12px rgba(0,0,0,.3); }
 .card-importacao h2, .card-lista-clientes h2 { margin-top: 0; color: #fde047; }
 .card-importacao p { margin-bottom: 15px; line-height: 1.5; }
-
+.card-lista-clientes {max-height: 80%}
 /* ================================================= */
 /* --- MODAIS --- */
 /* ================================================= */

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Formas de Pagamento</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header>
+        <h1>💲 Formas de Pagamento</h1>
+        <div>
+            <a href="/" class="btn-navegacao">Voltar ao Painel</a>
+        </div>
+    </header>
+
+    <main class="container" style="max-width: 800px; margin: 0 auto;">
+        
+        <div class="coluna" style="background-color: #334155; padding: 20px; border-radius: 12px;">
+            <h2 style="color: #fde047;">Nova Forma de Pagamento</h2>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="nova-forma" placeholder="Ex: 45 DIAS, À VISTA..." style="flex-grow: 1; margin-bottom: 0;">
+                <button id="btn-adicionar" class="btn-acao-verde" style="margin-top: 0;">Adicionar</button>
+            </div>
+        </div>
+
+        <div class="coluna" style="background-color: #334155; padding: 20px; border-radius: 12px; margin-top: 20px;">
+            <h2 style="color: #cbd5e1;">Itens Cadastrados</h2>
+            <div class="tabela-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Descrição</th>
+                            <th style="width: 50px;">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabela-formas">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('nova-forma');
+            const btnAdd = document.getElementById('btn-adicionar');
+            const tbody = document.getElementById('tabela-formas');
+
+            // Carregar Lista
+            async function carregar() {
+                const res = await fetch('/api/auxiliar/formas-pagamento');
+                const dados = await res.json();
+                tbody.innerHTML = '';
+                dados.forEach(d => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${d.descricao}</td>
+                            <td>
+                                <button onclick="excluir(${d.id})" class="btn-excluir-entrega" title="Excluir">🗑️</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // Adicionar
+            btnAdd.onclick = async () => {
+                const desc = input.value.trim();
+                if(!desc) return alert('Digite algo!');
+                
+                const res = await fetch('/api/auxiliar/formas-pagamento', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({descricao: desc})
+                });
+                
+                if(res.ok) {
+                    input.value = '';
+                    carregar();
+                } else {
+                    alert('Erro ao salvar');
+                }
+            };
+
+            // Excluir
+            window.excluir = async (id) => {
+                if(!confirm('Tem certeza?')) return;
+                const res = await fetch(`/api/auxiliar/formas-pagamento/${id}`, { method: 'DELETE' });
+                if(res.ok) carregar();
+                else alert('Erro: Item provavelmente em uso.');
+            };
+
+            carregar();
+        });
+    </script>
+</body>
+</html>

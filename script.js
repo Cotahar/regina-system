@@ -277,6 +277,18 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         const podeEditarGeral = ['admin', 'operador'].includes(sessaoUsuario.user_permission);
         const podeEditarEntregas = podeEditarGeral && ['Pendente', 'Agendada'].includes(detalhes_carga.status);
 
+        // --- LÓGICA DO BOTÃO DE ALERTA DE AVARIA ---
+        let htmlAvariaAlert = '';
+        if (detalhes_carga.tem_avaria) {
+            htmlAvariaAlert = `
+                <a href="/avarias.html?consultar_carga_id=${detalhes_carga.id}" 
+                   style="color: #dc2626; font-weight: bold; margin-left: 15px; text-decoration: underline; cursor: pointer; font-size: 1.1em;"
+                   title="Clique para ver os detalhes das avarias">
+                   ⚠️ Avaria Registrada
+                </a>`;
+        }
+        // -------------------------------------------
+
         // Agrupa coletas para resumo
         const coletasPorRemetente = entregas.reduce((acc, e) => {
             const remetenteKey = e.remetente_nome || 'Desconhecido';
@@ -312,14 +324,13 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
              acc[clienteKey].sub_entregas.push(e);
              return acc;
          }, {});
-
+	
         const pesoTotalGeral = entregas.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
         const cubadoTotalGeral = entregas.reduce((acc, e) => acc + (e.peso_cubado || e.peso_bruto || 0), 0);
         const freteTotalGeral = entregas.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
         let secaoDados, secaoAcoes;
 
-        // --- GERAÇÃO DOS DADOS DA VIAGEM ---
-		if (detalhes_carga.status === 'Pendente') {
+if (detalhes_carga.status === 'Pendente') {
             secaoDados = `<div class="detalhes-secao"><h4>Dados da Viagem</h4><div class="detalhes-form-grid-4">
             <div class="campo-form"><label>Origem</label><input type="text" id="detalhe-origem" value="${detalhes_carga.origem || ''}"></div>
             <div class="campo-form"><label>Peso Total</label><p>${formatarPeso(pesoTotalGeral)}</p></div>
@@ -399,24 +410,14 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         }
 
         let botoesEntregaHtml = '';
-        
-        // Bloco para status Pendente/Agendada (Edição)
         if (podeEditarEntregas) {
             botoesEntregaHtml += `<button id="btn-devolver-rascunho" class="btn-navegacao">Editar Carga na Montagem</button>`;
             botoesEntregaHtml += `<button id="btn-add-entrega" class="btn-acao">+ Coleta Rápida (V1)</button>`;
             botoesEntregaHtml += `<button id="btn-toggle-selecao-detalhes" class="btn-navegacao" style="background-color: #64748b; color: white; margin-left: 25px; border-left: 1px solid #94a3b8; padding-left: 15px;">✅ Seleção / Lote</button>`;
         }
 
-        // --- CORREÇÃO: BOTÃO DE AVARIA (AGORA FORA DO BLOCO ACIMA) ---
-        // Este bloco deve ficar SOLTO aqui embaixo para funcionar em qualquer status
         const statusAtual = (detalhes_carga.status || '').trim();
-        
-        // Verifica se é "Em Trânsito" ou "Finalizada"
-        if (
-            statusAtual.includes('Trânsito') || 
-            statusAtual.includes('Transito') || 
-            statusAtual === 'Finalizada'
-        ) {
+        if (statusAtual.includes('Trânsito') || statusAtual.includes('Transito') || statusAtual === 'Finalizada') {
             botoesEntregaHtml += `
                 <button class="btn-navegacao" 
                     style="background-color: #ef4444; color: white; margin-left: 15px;" 
@@ -425,7 +426,6 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                 </button>`;
         }
         
-        // HTML da barra de ação em lote
         const acoesLoteHtml = podeEditarEntregas ? `
         <div id="acoes-lote-wrapper-detalhes" style="display: none; background-color: #fff7ed; padding: 10px; margin-bottom: 10px; border: 1px solid #fdba74; border-radius: 6px; align-items: center; gap: 10px;">
             <span style="color: #c2410c; font-weight: bold; font-size: 0.9em;">Ações em Lote:</span>
@@ -434,16 +434,24 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             </button>
         </div>` : '';
 
-        // Estilo das colunas (Esconde ou mostra baseado na variável)
         const displaySel = selecaoDetalhesAtiva ? 'table-cell' : 'none';
 
+        // --- AQUI INSERIMOS O htmlAvariaAlert NO HEADER ---
         detalhesConteudo.innerHTML = `
-			<div id="detalhes-header">
-              <h2>${detalhes_carga.codigo_carga}</h2>
+			<div id="detalhes-header" style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center;">
+                  <h2>${detalhes_carga.codigo_carga}</h2>
+                  ${htmlAvariaAlert} </div>
               <div class="form-acao">
-                  <button id="btn-imprimir-espelho" class="btn-navegacao">🖨️ Imprimir Espelho</button>
-                  <span class="status-${statusClass}">${detalhes_carga.status}</span>
-              </div>
+				<button onclick="window.open('gerenciar_carga.html?id=${detalhes_carga.id}', '_blank')" 
+					class="btn-acao" 
+					style="background: #2563eb; color: white; border: none; margin-right: 10px;">
+					📝 Gerenciar / Fat.
+				</button>
+    
+				<button id="btn-imprimir-espelho" class="btn-navegacao">🖨️ Imprimir Espelho</button>
+					<span class="status-${statusClass}">${detalhes_carga.status}</span>
+			  </div>
 			</div>           
 			<div class="modal-body-grid">
                 ${secaoDados}
@@ -528,16 +536,12 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
             tabelaCorpoEntregas.innerHTML = `<tr><td colspan="${colspanCount}">Nenhuma entrega adicionada.</td></tr>`;
         }
 
-        // --- LISTENERS ---
-        // Novo Listener para o botão de toggle
-        const btnToggle = document.getElementById('btn-toggle-selecao-detalhes');
+	const btnToggle = document.getElementById('btn-toggle-selecao-detalhes');
         if (btnToggle) {
             btnToggle.addEventListener('click', () => {
                 selecaoDetalhesAtiva = !selecaoDetalhesAtiva;
                 const display = selecaoDetalhesAtiva ? 'table-cell' : 'none';
                 document.querySelectorAll('.col-selecao-detalhes').forEach(el => el.style.display = display);
-                
-                // Limpa seleções se esconder
                 if (!selecaoDetalhesAtiva) {
                     document.querySelectorAll('.cb-lote-detalhes').forEach(cb => cb.checked = false);
                     if(document.getElementById('cb-all-detalhes')) document.getElementById('cb-all-detalhes').checked = false;
@@ -546,7 +550,6 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                 }
             });
         }
-
         document.querySelectorAll('.btn-detalhes-entrega').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const targetId = e.target.dataset.target;
@@ -557,10 +560,8 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
                 }
             });
         });
-
         document.querySelectorAll('.btn-editar-entrega').forEach(btn => btn.addEventListener('click', abrirModalEdicaoEntrega));
         document.querySelectorAll('.btn-excluir-entrega').forEach(btn => btn.addEventListener('click', (e) => { if(confirm('Tem certeza? Esta linha será devolvida para "Disponíveis".')) handleExcluirEntrega(e.target.dataset.id); }));
-
         document.querySelectorAll('.radio-ultima-entrega-grupo').forEach(radio => {
              radio.addEventListener('change', async (event) => {
                 const idEntregaDoGrupo = event.target.dataset.grupoId; 

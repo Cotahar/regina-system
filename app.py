@@ -18,7 +18,7 @@ from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 import io
 
 from database import db
-from models import Carga, Cliente, Entrega, Usuario, Motorista, Veiculo, Avaria, AvariaItem, AvariaFoto, Marca
+from models import Carga, Cliente, Entrega, Usuario, Motorista, Veiculo, Avaria, AvariaItem, AvariaFoto, Marca, Unidade, TipoCte, FormaPagamento
 
 # --- INICIALIZAÇÃO ---
 load_dotenv('.env.railway') 
@@ -230,6 +230,15 @@ def usuarios_page():
 @login_required
 def avarias_page():
     return send_from_directory('.', 'avarias.html')
+    
+    
+@app.route('/formas-pagamento.html')
+@login_required
+def formas_pagamento_page():
+    if session.get('user_permission') != 'admin':
+        return redirect(url_for('index'))
+    return send_from_directory('.', 'formas_pagamento.html')    
+    
 # --- ROTAS DA API (DADOS) ---
 
 # --- API: CLIENTES ---
@@ -264,10 +273,14 @@ def get_clientes_detalhes():
                 'cidade': c.cidade,
                 'estado': c.estado,
                 'is_remetente': c.is_remetente,
-                'entregas_count': entregas_count, # A contagem vem do JOIN
+                
+                # --- NOVOS CAMPOS PARA EDIÇÃO ---
+                'padrao_forma_pagamento_id': c.padrao_forma_pagamento_id,
+                'padrao_tipo_pagamento': c.padrao_tipo_pagamento,
+                # --------------------------------
+                
+                'entregas_count': entregas_count, 
                 'text': text,
-
-                # Adiciona os campos que o dataset do JS precisa (CORREÇÃO 4.1)
                 'ddd': c.ddd,
                 'telefone': c.telefone,
                 'observacoes': c.observacoes
@@ -602,12 +615,13 @@ def get_cargas_consulta():
 @login_required
 def get_carga_detalhes(carga_id):
     try:
-        # CORREÇÃO: Usar joinedload para trazer tudo de uma vez e evitar erros de sessão
+        # Carrega relacionamentos necessários, incluindo as avarias das entregas
         carga = Carga.query.options(
             joinedload(Carga.motorista_rel),
             joinedload(Carga.veiculo_rel),
             joinedload(Carga.entregas).joinedload(Entrega.cliente),
-            joinedload(Carga.entregas).joinedload(Entrega.remetente)
+            joinedload(Carga.entregas).joinedload(Entrega.remetente),
+            joinedload(Carga.entregas).joinedload(Entrega.avarias) # <--- Carrega as avarias
         ).get(carga_id)
         
         if not carga:
@@ -618,6 +632,15 @@ def get_carga_detalhes(carga_id):
         detalhes_carga['motorista_nome'] = carga.motorista_rel.nome if carga.motorista_rel else None
         detalhes_carga['placa_veiculo'] = carga.veiculo_rel.placa if carga.veiculo_rel else None
 
+        # --- VERIFICAÇÃO DE AVARIA (NOVA LÓGICA) ---
+        tem_avaria = False
+        for e in carga.entregas:
+            if e.avarias: # Se a lista de avarias da entrega não for vazia
+                tem_avaria = True
+                break
+        detalhes_carga['tem_avaria'] = tem_avaria
+        # -------------------------------------------
+
         # 2. Prepara os detalhes das entregas
         entregas_data = []
         for entrega in carga.entregas:
@@ -625,21 +648,16 @@ def get_carga_detalhes(carga_id):
                 'id': entrega.id,
                 'remetente_id': entrega.remetente_id,
                 'cliente_id': entrega.cliente_id,
-                # Dados do Remetente (Protegido contra Nulos)
                 'remetente_nome': (entrega.remetente.razao_social or 'N/A') if entrega.remetente else 'N/A',
                 'remetente_cidade': (entrega.remetente.cidade or 'N/A') if entrega.remetente else 'N/A', 
-                # Dados do Destinatário
                 'razao_social': (entrega.cliente.razao_social or 'N/A') if entrega.cliente else 'N/A',
-                # Cidade/Estado (Com override)
                 'cidade': entrega.cidade_entrega or (entrega.cliente.cidade or '') if entrega.cliente else (entrega.cidade_entrega or ''),
                 'estado': entrega.estado_entrega or (entrega.cliente.estado or '') if entrega.cliente else (entrega.estado_entrega or ''),
                 'ddd': (entrega.cliente.ddd or '') if entrega.cliente else '',
                 'telefone': (entrega.cliente.telefone or '') if entrega.cliente else '',
                 'obs_cliente': (entrega.cliente.observacoes or '') if entrega.cliente else '',
-                # Campos de Override
                 'cidade_entrega_override': entrega.cidade_entrega,
                 'estado_entrega_override': entrega.estado_entrega,
-                # Valores
                 'peso_bruto': entrega.peso_bruto,
                 'valor_frete': entrega.valor_frete,
                 'peso_cubado': entrega.peso_cubado,
@@ -654,10 +672,9 @@ def get_carga_detalhes(carga_id):
     except Exception as e:
         print(f"Erro em /api/cargas/<id>: {e}")
         traceback.print_exc()
-        return jsonify(error=f"Erro interno: {str(e)}"), 500        
-#
-# --- NOVA ROTA DO ESPELHO DE CARGA (VERSÃO HTML) ---
-#
+        return jsonify(error=f"Erro interno: {str(e)}"), 500
+        
+        # --- NOVA ROTA DO ESPELHO DE CARGA (VERSÃO HTML) --- #
 @app.route('/cargas/<int:carga_id>/espelho_impressao')
 @login_required
 def get_carga_espelho_html(carga_id):
@@ -1477,7 +1494,7 @@ def agrupar_entregas():
 # --- Servir arquivos estáticos (CSS, JS) ---
 @app.route('/<path:filename>')
 def serve_static(filename):
-    if filename in ['style.css', 'script.js', 'clientes.js', 'montagem.js', 'consulta.js', 'motoristas.js', 'veiculos.js', 'usuarios.js', 'avarias.js', 'marcas.js', 'marcas.html']:
+    if filename in ['style.css', 'script.js', 'clientes.js', 'montagem.js', 'consulta.js', 'motoristas.js', 'veiculos.js', 'usuarios.js', 'avarias.js', 'marcas.js', 'marcas.html', 'gerenciar_carga.html', 'gerenciar_carga.js']:
         return send_from_directory('.', filename)
     # Correção do bug do favicon.ico
     return "Arquivo não encontrado", 404
@@ -1561,7 +1578,9 @@ def handle_avarias():
         if request.args.get('data_fim'): query = query.filter(func.date(Avaria.data_criacao) <= request.args.get('data_fim'))
         if request.args.get('cliente_id'): query = query.join(Avaria.entrega).filter(Entrega.cliente_id == request.args.get('cliente_id'))
         if request.args.get('motorista_id'): query = query.join(Avaria.entrega).join(Entrega.carga).filter(Carga.motorista_id == request.args.get('motorista_id'))
-
+        if request.args.get('carga_id'): 
+            query = query.join(Avaria.entrega).filter(Entrega.carga_id == request.args.get('carga_id'))
+            
         avarias = query.order_by(Avaria.data_criacao.desc()).all()
         lista = []
         for a in avarias:
@@ -1751,19 +1770,169 @@ def delete_avaria(avaria_id):
         print(f"Erro ao excluir avaria: {e}")
         return jsonify(error=f"Erro interno: {str(e)}"), 500
         
-        
-if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        
-        # --- AUTO-SEED: Cria as marcas se não existirem ---
-        if not Marca.query.first():
-            print("Criando marcas padrão...")
-            marcas_padrao = ["ELIANE", "PORTINARI", "PORTOBELLO", "INCEPA", "CEUSA", "ELIZABETH"]
-            for m in marcas_padrao:
-                db.session.add(Marca(nome=m))
+@app.route('/api/cargas/<int:carga_id>/gerenciar', methods=['GET', 'PUT'])
+@login_required
+def handle_gerenciar_carga(carga_id):
+    carga = Carga.query.options(
+        joinedload(Carga.entregas).joinedload(Entrega.cliente),
+        joinedload(Carga.motorista_rel),
+        joinedload(Carga.veiculo_rel)
+    ).get(carga_id)
+    
+    if not carga: return jsonify(error='Carga não encontrada'), 404
+
+# --- GET: Carrega os dados para preencher a tela ---
+    if request.method == 'GET':
+        dados_carga = carga.to_dict()
+        # Adiciona os campos extras que não estão no to_dict padrão
+        dados_carga.update({
+            'motorista_nome': carga.motorista_rel.nome if carga.motorista_rel else '',
+            'placa_veiculo': carga.veiculo_rel.placa if carga.veiculo_rel else '',
+            'observacoes_faturamento': carga.observacoes_faturamento,
+            'rota_manifesto': carga.rota_manifesto,
+            'vale_pedagio_marca': carga.vale_pedagio_marca,
+            'vale_pedagio_rota': carga.vale_pedagio_rota,
+            'vale_pedagio_eixos': carga.vale_pedagio_eixos,
+            'adiantamento_percentual': carga.adiantamento_percentual or 70.0,
+            'adiantamento_valor': carga.adiantamento_valor
+        })
+
+        entregas = []
+        for e in carga.entregas:
+            entrega_dict = {
+                'id': e.id,
+                'cliente_nome': e.cliente.razao_social if e.cliente else 'N/A',
+                'nota_fiscal': e.nota_fiscal,
+                'peso_bruto': e.peso_bruto,
+                'peso_cubado': e.peso_cubado,
+                'valor_frete': e.valor_frete,
+                'valor_tonelada': e.valor_tonelada,
+                'unidade_id': e.unidade_id,
+                'tipo_cte_id': e.tipo_cte_id,
+                'forma_pagamento_id': e.forma_pagamento_id,
+                'tipo_pagamento': e.tipo_pagamento
+            }
+
+            # --- PARTE NOVA: Envia dados do cliente para o JavaScript fazer a automação ---
+            if e.cliente:
+                entrega_dict['cliente_uf'] = e.cliente.estado
+                entrega_dict['cliente_is_remetente'] = e.cliente.is_remetente
+                entrega_dict['cliente_forma_padrao_id'] = e.cliente.padrao_forma_pagamento_id
+                entrega_dict['cliente_tipo_padrao'] = e.cliente.padrao_tipo_pagamento
+            # ----------------------------------------------------------------------------
+
+            entregas.append(entrega_dict)
+            
+        return jsonify({'carga': dados_carga, 'entregas': entregas})
+
+    # --- PUT: Salva as alterações em massa ---
+    if request.method == 'PUT':
+        try:
+            data = request.json
+            
+            # 1. Atualiza dados da Carga (Manifesto/Carta Frete)
+            if 'carga' in data:
+                c = data['carga']
+                if 'motorista_id' in c: carga.motorista_id = c['motorista_id'] # Permite trocar motorista
+                if 'veiculo_id' in c: carga.veiculo_id = c['veiculo_id']     # Permite trocar placa
+                carga.observacoes_faturamento = c.get('observacoes_faturamento')
+                carga.rota_manifesto = c.get('rota_manifesto')
+                carga.vale_pedagio_marca = c.get('vale_pedagio_marca')
+                carga.vale_pedagio_rota = c.get('vale_pedagio_rota')
+                carga.vale_pedagio_eixos = c.get('vale_pedagio_eixos')
+                carga.frete_pago = c.get('frete_pago') # Valor total pago ao motorista
+                carga.adiantamento_percentual = c.get('adiantamento_percentual')
+                carga.adiantamento_valor = c.get('adiantamento_valor')
+
+            # 2. Atualiza cada Entrega (Loop na tabela)
+            if 'entregas' in data:
+                for item in data['entregas']:
+                    entrega = Entrega.query.get(item['id'])
+                    if entrega and entrega.carga_id == carga.id:
+                        entrega.nota_fiscal = item.get('nota_fiscal')
+                        entrega.peso_bruto = item.get('peso_bruto')
+                        entrega.peso_cubado = item.get('peso_cubado')
+                        entrega.valor_frete = item.get('valor_frete')
+                        entrega.valor_tonelada = item.get('valor_tonelada')
+                        entrega.unidade_id = item.get('unidade_id') or None
+                        entrega.tipo_cte_id = item.get('tipo_cte_id') or None
+                        entrega.forma_pagamento_id = item.get('forma_pagamento_id') or None
+                        entrega.tipo_pagamento = item.get('tipo_pagamento')
+
             db.session.commit()
-            print("Marcas cadastradas com sucesso!")
+            return jsonify(message='Dados de gerenciamento salvos com sucesso!')
+            
+        except Exception as e:
+            db.session.rollback()
+            print(f"Erro ao salvar gerenciamento: {e}")
+            return jsonify(error=f"Erro interno: {str(e)}"), 500
+        
+# --- ROTAS DE CADASTROS AUXILIARES (FATURAMENTO) ---
+@app.route('/api/auxiliar/unidades', methods=['GET'])
+@login_required
+def get_unidades():
+    return jsonify([u.to_dict() for u in Unidade.query.order_by(Unidade.nome).all()])
+
+@app.route('/api/auxiliar/tipos-cte', methods=['GET'])
+@login_required
+def get_tipos_cte():
+    return jsonify([t.to_dict() for t in TipoCte.query.order_by(TipoCte.descricao).all()])
+
+# --- SUBSTITUA A ROTA ANTIGA POR ESTE BLOCO NOVO ---
+@app.route('/api/auxiliar/formas-pagamento', methods=['GET', 'POST'])
+@login_required
+def handle_formas_pagamento():
+    # GET: Listar
+    if request.method == 'GET':
+        return jsonify([f.to_dict() for f in FormaPagamento.query.order_by(FormaPagamento.descricao).all()])
+
+    # POST: Criar Nova
+    if request.method == 'POST':
+        if session.get('user_permission') != 'admin':
+            return jsonify(error='Apenas admin'), 403
+        
+        data = request.json
+        descricao = (data.get('descricao') or '').strip().upper()
+        if not descricao: return jsonify(error='Descrição obrigatória'), 400
+        
+        nova = FormaPagamento(descricao=descricao)
+        db.session.add(nova)
+        db.session.commit()
+        return jsonify(message='Cadastrado!', id=nova.id)
+
+@app.route('/api/auxiliar/formas-pagamento/<int:id>', methods=['DELETE'])
+@login_required
+def delete_forma_pagamento(id):
+    if session.get('user_permission') != 'admin': return jsonify(error='Apenas admin'), 403
+    try:
+        item = FormaPagamento.query.get(id)
+        if not item: return jsonify(error='Não encontrado'), 404
+        db.session.delete(item)
+        db.session.commit()
+        return jsonify(message='Excluído!')
+    except Exception as e:
+        db.session.rollback()
+        return jsonify(error='Não é possível excluir pois já está em uso em alguma carga/cliente.'), 500
+
+        
+        # --- AUTO-SEED: Cadastros de Faturamento ---
+        if not Unidade.query.first():
+            print("Criando Unidades Padrão...")
+            unidades = ["MATRIZ SC", "FILIAL PR", "FILIAL ES", "FILIAL RS", "FILIAL MA"]
+            for u in unidades: db.session.add(Unidade(nome=u))
+            db.session.commit()
+            
+        if not TipoCte.query.first():
+            print("Criando Tipos de CT-e Padrão...")
+            tipos = ["4 - SC", "17 - SC", "1 - SC", "11 - PR"]
+            for t in tipos: db.session.add(TipoCte(descricao=t))
+            db.session.commit()
+
+        if not FormaPagamento.query.first():
+            print("Criando Formas de Pagamento Padrão...")
+            formas = ["15 DIAS", "28 DIAS", "30 DIAS", "30/60/90 DIAS", "30/60 DIAS", "30/45/60 DIAS", "30/45 DIAS"]
+            for f in formas: db.session.add(FormaPagamento(descricao=f))
+            db.session.commit()
             
     app.run(debug=True, host='0.0.0.0', port=5000)
     

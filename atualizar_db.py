@@ -1,46 +1,58 @@
 from app import app, db
 from sqlalchemy import text
-from models import Marca # Importa para o SQLAlchemy reconhecer
+import os
 
-def atualizar_banco():
+def corrigir_banco():
+    print("=== INICIANDO CORREÇÃO DO BANCO DE DADOS ===")
+    
+    # Pega o caminho exato que o Flask usa
+    db_url = app.config['SQLALCHEMY_DATABASE_URI']
+    print(f"Configuração do Banco: {db_url}")
+    
+    # Remove o prefixo sqlite:/// para checar se o arquivo existe
+    arquivo_db = db_url.replace('sqlite:///', '')
+    if not os.path.exists(arquivo_db):
+        print(f"ERRO: O arquivo '{arquivo_db}' não foi encontrado nesta pasta!")
+        return
+
     with app.app_context():
-        print("--- INICIANDO ATUALIZAÇÃO DO BANCO DE DADOS ---")
-        
-        # 1. Cria novas tabelas (Como a 'marcas' e 'avaria_fotos' se não existirem)
-        print("1. Verificando novas tabelas...")
-        db.create_all()
-        print("   ✅ Tabelas garantidas.")
-
-        # 2. Popula Marcas Padrão se estiver vazio
-        if not Marca.query.first():
-            print("2. Populando marcas padrão...")
-            marcas_padrao = ["ELIANE", "PORTINARI", "PORTOBELLO", "INCEPA", "CEUSA", "ELIZABETH", "BIANCHOGRES", "DELTA"]
-            for m in marcas_padrao:
-                db.session.add(Marca(nome=m))
-            db.session.commit()
-            print("   ✅ Marcas criadas.")
-
-        # 3. Adiciona colunas novas na tabela 'avarias' (Migração Manual)
-        print("3. Verificando novas colunas na tabela 'avarias'...")
+        # Usa a conexão direta do SQLAlchemy (Engine)
         with db.engine.connect() as conn:
-            # Lista de colunas para adicionar
-            novas_colunas = [
-                ("registro_envio", "TEXT"),
-                ("retorno_fabrica", "TEXT"),
-                ("valor_cobranca", "FLOAT")
-            ]
-            
-            for col_nome, col_tipo in novas_colunas:
+            transaction = conn.begin()
+            try:
+                # 1. Adicionar padrao_forma_pagamento_id
                 try:
-                    conn.execute(text(f"ALTER TABLE avarias ADD COLUMN {col_nome} {col_tipo}"))
-                    print(f"   ✅ Coluna '{col_nome}' criada.")
+                    print("Tentando criar coluna 'padrao_forma_pagamento_id'...")
+                    conn.execute(text("ALTER TABLE clientes ADD COLUMN padrao_forma_pagamento_id INTEGER"))
+                    print("✅ Sucesso.")
                 except Exception as e:
-                    # Se der erro, provavelmente já existe (ignora)
-                    print(f"   ℹ️ Coluna '{col_nome}' já existe ou erro: {e.__class__.__name__}")
-            
-            conn.commit()
-            
-        print("\n--- ATUALIZAÇÃO CONCLUÍDA COM SUCESSO! 🚀 ---")
+                    if "duplicate column" in str(e).lower(): print("⚠ Coluna já existe (Ignorado).")
+                    else: print(f"❌ Erro: {e}")
+
+                # 2. Adicionar padrao_tipo_pagamento
+                try:
+                    print("Tentando criar coluna 'padrao_tipo_pagamento'...")
+                    conn.execute(text("ALTER TABLE clientes ADD COLUMN padrao_tipo_pagamento TEXT"))
+                    print("✅ Sucesso.")
+                except Exception as e:
+                    if "duplicate column" in str(e).lower(): print("⚠ Coluna já existe (Ignorado).")
+                    else: print(f"❌ Erro: {e}")
+
+                # 3. Adicionar is_remetente
+                try:
+                    print("Tentando criar coluna 'is_remetente'...")
+                    conn.execute(text("ALTER TABLE clientes ADD COLUMN is_remetente BOOLEAN DEFAULT 0"))
+                    print("✅ Sucesso.")
+                except Exception as e:
+                    if "duplicate column" in str(e).lower(): print("⚠ Coluna já existe (Ignorado).")
+                    else: print(f"❌ Erro: {e}")
+
+                transaction.commit()
+                print("\n=== CORREÇÃO FINALIZADA COM SUCESSO ===")
+                
+            except Exception as main_error:
+                transaction.rollback()
+                print(f"\n❌ ERRO CRÍTICO NA TRANSAÇÃO: {main_error}")
 
 if __name__ == "__main__":
-    atualizar_banco()
+    corrigir_banco()

@@ -196,19 +196,24 @@ const mascaraDecimal = (input) => {
                 buscarCargas(page);
             });
         });
-    };
+    };  reabrirFormularioEntrega = false
 
     async function abrirModalDetalhes(id, reabrirFormularioEntrega = false) {
+		selecaoDetalhesAtiva = false;
         try {
             const response = await fetch(`/api/cargas/${id}`);
-            if (!response.ok) throw new Error('Carga não encontrada');
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Carga não encontrada');
+            }
             cargaAtual = await response.json();
             renderizarModalDetalhes(reabrirFormularioEntrega);
             modalDetalhes.style.display = 'block';
             inicializarSelect2MotoristaVeiculo();
         } catch (error) {
             console.error("Erro ao buscar detalhes:", error);
-            alert("Não foi possível carregar os detalhes.");
+            // Agora o alerta vai te dizer QUAL é o erro (ex: Erro 500, JSON inválido, etc)
+            alert(`Não foi possível carregar os detalhes: ${error.message}`);
         }
     }
 
@@ -219,6 +224,19 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         const podeEditarGeral = ['admin', 'operador'].includes(sessaoUsuario.user_permission);
         const podeEditarEntregas = podeEditarGeral && ['Pendente', 'Agendada'].includes(detalhes_carga.status);
 
+		// --- LÓGICA DO BOTÃO DE ALERTA DE AVARIA ---
+        let htmlAvariaAlert = '';
+        if (detalhes_carga.tem_avaria) {
+            htmlAvariaAlert = `
+                <a href="/avarias.html?consultar_carga_id=${detalhes_carga.id}" 
+				   target="_blank"
+                   style="color: #dc2626; font-weight: bold; margin-left: 15px; text-decoration: underline; cursor: pointer; font-size: 1.1em;"
+                   title="Clique para ver os detalhes das avarias">
+                   ⚠️ Avaria Registrada
+                </a>`;
+        }
+        // -------------------------------------------
+		
         // Agrupa entregas por Remetente
         const coletasPorRemetente = entregas.reduce((acc, e) => {
             const remetenteKey = e.remetente_nome || 'Desconhecido';
@@ -372,8 +390,10 @@ function renderizarModalDetalhes(reabrirFormularioEntrega = false) {
         }
 		
         detalhesConteudo.innerHTML = `
-            <div id="detalhes-header">
-              <h2>${detalhes_carga.codigo_carga}</h2>
+            <div id="detalhes-header" style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center;">
+                  <h2>${detalhes_carga.codigo_carga}</h2>
+                  ${htmlAvariaAlert} </div>
               <div class="form-acao">
                   <button id="btn-imprimir-espelho" class="btn-navegacao">🖨️ Imprimir Espelho</button>
                   <span class="status-${statusClass}">${detalhes_carga.status}</span>
