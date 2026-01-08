@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- VARIÁVEIS GLOBAIS ---
-    let idsAvariaAtual = []; // Agora é um Array para suportar ações em lote
+    let idsAvariaAtual = []; 
 
     // --- SELETORES GERAIS ---
     const viewLista = document.getElementById('view-lista-avarias');
@@ -40,13 +40,11 @@ document.addEventListener('DOMContentLoaded', () => {
         carregarListaAvarias();
     }
 
-// --- LISTAGEM COM AGRUPAMENTO INTELIGENTE (DATA + FILTRO NF NO GRUPO) ---
+    // --- LISTAGEM COM AGRUPAMENTO INTELIGENTE (DATA + FILTRO NF NO GRUPO) ---
     async function carregarListaAvarias() {
         const tbody = tabelaAvarias;
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
         
-        // Coleta Filtros para o BACKEND (Todos menos a NF)
-        // A NF nós não enviamos para o banco, para recebermos o grupo completo e filtrar aqui
         const params = new URLSearchParams();
         const status = document.getElementById('filtro-status').value;
         const dtIni = document.getElementById('filtro-data-inicio').value;
@@ -62,11 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if(cliId) params.append('cliente_id', cliId);
         if(marId) params.append('marca_id', marId);
 
-        // Coleta o Filtro de NF para usar no FRONTEND
         const filtroNfTexto = document.getElementById('filtro-nf').value.trim().toLowerCase();
 
         try {
-            // Busca dados do backend (traz o grupo todo, mesmo se eu quiser só uma NF dele)
             const res = await fetch(`/api/avarias?${params.toString()}`);
             const listaRaw = await res.json();
             tbody.innerHTML = '';
@@ -76,11 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 return; 
             }
 
-            // 1. AGRUPAR (Incluindo a DATA na chave)
             const grupos = {};
             
             listaRaw.forEach(avaria => {
-                // Chave única: Carga + Cliente + Status + DATA (Nova Regra)
                 const key = `${avaria.carga_id}_${avaria.cliente_id}_${avaria.status}_${avaria.data}`;
                 
                 if (!grupos[key]) {
@@ -96,28 +90,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 grupos[key].todasAvarias.push(avaria);
             });
 
-            // 2. FILTRAR E RENDERIZAR
             let encontrouAlgum = false;
+            const isAdmin = sessionStorage.getItem('user_permission') === 'admin'; // Verifica admin
 
             Object.values(grupos).forEach(grupo => {
-                // Lógica de Filtro de NF (Frontend):
-                // Se tiver texto no filtro de NF, verifica se ALGUMA nota do grupo contém o texto.
-                // Se sim, exibe o GRUPO TODO.
                 if (filtroNfTexto) {
                     const match = grupo.nfs.some(nf => nf.toLowerCase().includes(filtroNfTexto));
-                    if (!match) return; // Pula este grupo se não tiver a NF
+                    if (!match) return; 
                 }
 
                 encontrouAlgum = true;
                 const a = grupo.dados;
                 const qtd = grupo.ids.length;
                 
-                // Formatação da NF [12345 +2]
                 let nfDisplay = grupo.nfs[0];
                 if (qtd > 1) {
-                    // Se estiver filtrando, tenta mostrar a NF pesquisada como principal visualmente?
-                    // Por simplicidade, mantemos a primeira do grupo + contagem, 
-                    // mas o usuário sabe que o grupo apareceu porque a NF dele está lá dentro.
                     nfDisplay = `${grupo.nfs[0]} <span style="color:#64748b; font-size:0.9em; font-weight:normal;">[+${qtd-1}]</span>`;
                 }
 
@@ -136,7 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     btnAcaoStatus = '<span style="color:#22c55e; font-weight:bold;">Concluído</span>';
                 }
 
-                // ID visual para o acordeão
                 const domId = grupo.ids[0]; 
 
                 const tr = document.createElement('tr');
@@ -152,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td style="color: ${corStatus}; font-weight: bold;">${a.status}</td>
                     <td>
                         <button class="btn-acao" onclick='abrirRelatorioAgrupado(${idsString})' title="Imprimir">🖨️</button>
-                        ${sessionStorage.getItem('user_permission') === 'admin' ? 
+                        ${isAdmin ? 
                           `<button class="btn-navegacao" style="background-color: #ef4444; color: white; margin-left: 5px;" onclick='excluirAvariaLote(${idsString})' title="Excluir">🗑️</button>` : ''}
                     </td>
                 `;
@@ -168,10 +154,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 grupo.todasAvarias.forEach(av => {
                     if (av.itens && av.itens.length > 0) {
                         av.itens.forEach(i => {
-                            // Marca a NF em negrito/destaque se for a que o usuário buscou
                             let styleNf = "color:#334155; font-weight:600;";
                             if (filtroNfTexto && av.nota_fiscal.toLowerCase().includes(filtroNfTexto)) {
-                                styleNf = "color:#dc2626; font-weight:800; background:#fef08a;"; // Destaca amarelo/vermelho
+                                styleNf = "color:#dc2626; font-weight:800; background:#fef08a;";
                             }
                             itensHtml += `<li><span style="${styleNf}">NF ${av.nota_fiscal}</span> - ${i.produto}: ${i.quantidade} ${i.unidade}</li>`;
                         });
@@ -181,6 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const obsDisplay = a.observacoes || 'Sem observações.';
 
+                // --- AQUI ADICIONEI O BOTÃO DE EXCLUIR NOS DETALHES PARA ADMIN ---
                 trDet.innerHTML = `
                     <td colspan="7" style="padding: 20px; border-left: 5px solid ${corStatus}; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
                         <div style="display: flex; gap: 40px;">
@@ -197,6 +183,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                 ${a.registro_envio ? `<div style="background:#fff7ed; padding:10px; border-radius:4px; margin-bottom:10px; border:1px solid #ffedd5;"><p style="margin:0; font-size:0.9em; color:#9a3412;"><strong>📤 Registro de Envio:</strong><br>${a.registro_envio}</p></div>` : ''}
                                 ${a.retorno_fabrica ? `<div style="background:#f0fdf4; padding:10px; border-radius:4px; margin-bottom:10px; border:1px solid #bbf7d0;"><p style="margin:0; font-size:0.9em; color:#166534;"><strong>📥 Retorno da Fábrica:</strong><br>${a.retorno_fabrica}</p></div>` : ''}
                                 ${a.valor_cobranca > 0 ? `<div style="background:#fef2f2; padding:10px; border-radius:4px; border:1px solid #fecaca;"><p style="margin:0; color:#b91c1c; font-weight:bold;">💲 Valor Cobrado: R$ ${a.valor_cobranca.toFixed(2)}</p></div>` : ''}
+
+                                ${isAdmin ? `
+                                    <div style="margin-top: 25px; border-top: 1px dashed #cbd5e1; padding-top: 15px;">
+                                        <button class="btn-navegacao" style="background-color: #ef4444; color: white; width: 100%; font-size: 0.9em;" 
+                                            onclick='excluirAvariaLote(${idsString})'>
+                                            🗑️ Excluir Ocorrência (Admin)
+                                        </button>
+                                    </div>
+                                ` : ''}
                             </div>
                         </div>
                     </td>
@@ -210,7 +205,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch(e) { console.error(e); }
     }
-	
+
+    // ... (restante das funções de filtro e carregamento permanecem iguais) ...
+    // ... (funções carregarFiltrosSelects, eventos de botões, carregarEntregasDaCargaAgrupadas, carregarMarcas, atualizarBotoesRemover, adicionarLinhaItem, inputFotos.change) ...
+
     window.toggleDetalhe = (id) => {
         const el = document.getElementById(`detalhe-${id}`);
         document.querySelectorAll('tr[id^="detalhe-"]').forEach(tr => {
@@ -260,16 +258,13 @@ document.addEventListener('DOMContentLoaded', () => {
         carregarListaAvarias();
     });
 
-    // --- CADASTRO ---
     async function carregarEntregasDaCargaAgrupadas(id) {
         try {
             const res = await fetch(`/api/cargas/${id}`);
             if(!res.ok) throw new Error('Erro ao buscar carga');
             const dados = await res.json();
-            
             const tbody = document.getElementById('lista-entregas-carga');
             tbody.innerHTML = '';
-            
             const grupos = {};
             dados.entregas.forEach(e => {
                 if(!grupos[e.cliente_id]) {
@@ -282,25 +277,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 if(e.nota_fiscal) grupos[e.cliente_id].nfs.push(e.nota_fiscal);
             });
-
             Object.values(grupos).forEach(grupo => {
                 const nfsString = grupo.nfs.join(' / ');
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>
-                        <button class="btn-acao btn-selecionar-entrega" 
-                            data-id="${grupo.id_principal}" 
-                            data-nfs="${nfsString}">
-                            Selecionar
-                        </button>
-                    </td>
-                    <td>${nfsString || 'S/N'}</td>
-                    <td>${grupo.cliente_nome}</td>
-                    <td>${grupo.cidade}</td>
-                `;
+                tr.innerHTML = `<td><button class="btn-acao btn-selecionar-entrega" data-id="${grupo.id_principal}" data-nfs="${nfsString}">Selecionar</button></td><td>${nfsString || 'S/N'}</td><td>${grupo.cliente_nome}</td><td>${grupo.cidade}</td>`;
                 tbody.appendChild(tr);
             });
-
             document.querySelectorAll('.btn-selecionar-entrega').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const wrapper = document.getElementById('form-cadastro-wrapper');
@@ -343,32 +325,9 @@ document.addEventListener('DOMContentLoaded', () => {
         div.style.gap = '10px';
         div.style.marginBottom = '10px';
         div.style.alignItems = 'end'; 
-
-        div.innerHTML = `
-            <div>
-                <label style="font-size: 0.8em; color: #666;">Produto</label>
-                <input type="text" class="input-prod" placeholder="Ex: Porcelanato 60x60" required style="width: 100%; margin:0;">
-            </div>
-            <div>
-                <label style="font-size: 0.8em; color: #666;">Qtd</label>
-                <input type="number" class="input-qtd" placeholder="0.00" step="0.01" required style="width: 100%; margin:0;">
-            </div>
-            <div>
-                <label style="font-size: 0.8em; color: #666;">Unid.</label>
-                <select class="input-un" style="width: 100%; padding: 10px; margin:0;">
-                    <option value="cx">Caixas</option>
-                    <option value="m²">m²</option>
-                    <option value="pç">Peças</option>
-                </select>
-            </div>
-            <button type="button" class="btn-remove-item" style="height: 42px; margin-bottom: 1px;">X</button>
-        `;
-        
+        div.innerHTML = `<div><label style="font-size: 0.8em; color: #666;">Produto</label><input type="text" class="input-prod" placeholder="Ex: Porcelanato 60x60" required style="width: 100%; margin:0;"></div><div><label style="font-size: 0.8em; color: #666;">Qtd</label><input type="number" class="input-qtd" placeholder="0.00" step="0.01" required style="width: 100%; margin:0;"></div><div><label style="font-size: 0.8em; color: #666;">Unid.</label><select class="input-un" style="width: 100%; padding: 10px; margin:0;"><option value="cx">Caixas</option><option value="m²">m²</option><option value="pç">Peças</option></select></div><button type="button" class="btn-remove-item" style="height: 42px; margin-bottom: 1px;">X</button>`;
         div.querySelector('.btn-remove-item').addEventListener('click', function() {
-            if (document.querySelectorAll('.item-row').length > 1) {
-                div.remove();
-                atualizarBotoesRemover();
-            }
+            if (document.querySelectorAll('.item-row').length > 1) { div.remove(); atualizarBotoesRemover(); }
         });
         containerItens.appendChild(div);
         atualizarBotoesRemover();
@@ -388,12 +347,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- NOVA LÓGICA DE UPLOAD (SEQUENCIAL) ---
+    // Isso evita o erro 502 enviando um arquivo de cada vez
     if(formAvaria) {
         formAvaria.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = formAvaria.querySelector('button[type="submit"]');
             const txtOriginal = btn.textContent;
-            btn.textContent = 'Salvando...'; btn.disabled = true;
+            btn.textContent = 'Salvando Dados...'; btn.disabled = true;
             msgCadastro.textContent = '';
 
             try {
@@ -422,10 +383,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 const jsonDados = await resDados.json();
                 if(!resDados.ok) throw new Error(jsonDados.error);
 
+                // --- UPLOAD SEQUENCIAL DE IMAGENS ---
                 if (inputFotos.files.length > 0) {
-                    btn.textContent = 'Enviando Fotos...';
                     progressContainer.style.display = 'block';
-                    await uploadComProgresso(jsonDados.avaria_id, inputFotos.files);
+                    const totalArquivos = inputFotos.files.length;
+
+                    for (let i = 0; i < totalArquivos; i++) {
+                        const arquivo = inputFotos.files[i];
+                        btn.textContent = `Enviando Foto ${i + 1}/${totalArquivos}...`;
+                        
+                        try {
+                            await uploadUnico(jsonDados.avaria_id, arquivo);
+                            
+                            // Atualiza barra
+                            const percent = ((i + 1) / totalArquivos) * 100;
+                            progressBar.style.width = percent + '%';
+                            progressBar.textContent = Math.round(percent) + '%';
+                        } catch (err) {
+                            console.error('Falha no arquivo ' + i, err);
+                            // Opcional: avisar usuário mas continuar ou parar
+                            // alert(`Erro ao enviar imagem ${i+1}. O processo continuará.`);
+                        }
+                    }
+                    progressBar.style.backgroundColor = '#22c55e';
                 }
 
                 msgCadastro.textContent = 'Sucesso! Avaria registrada.';
@@ -441,34 +421,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function uploadComProgresso(avariaId, fileList) {
+    // Função auxiliar para enviar UM arquivo por vez
+    function uploadUnico(avariaId, file) {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
-            Array.from(fileList).forEach(f => formData.append('fotos', f));
+            formData.append('fotos', file); // Back espera 'fotos'
+
             const xhr = new XMLHttpRequest();
             xhr.open('POST', `/api/avarias/${avariaId}/upload`, true);
-            xhr.upload.onprogress = function(e) {
-                if (e.lengthComputable) {
-                    const percentComplete = (e.loaded / e.total) * 100;
-                    progressBar.style.width = percentComplete + '%';
-                    progressBar.textContent = Math.round(percentComplete) + '%';
-                }
-            };
+
             xhr.onload = function() {
-                if (xhr.status === 200) {
-                    progressBar.style.backgroundColor = '#22c55e';
-                    resolve(xhr.response);
-                } else {
-                    reject(new Error('Falha no upload das imagens'));
-                }
+                if (xhr.status === 200) resolve(xhr.response);
+                else reject(new Error('Erro no upload'));
             };
-            xhr.onerror = function() { reject(new Error('Erro de rede no upload')); };
+            xhr.onerror = function() { reject(new Error('Erro de rede')); };
             xhr.send(formData);
         });
     }
 
     // --- FUNÇÕES DE LOTE (WORKFLOW) ---
-    // Agora aceitam ARRAYS de IDs
     window.abrirModalEnvio = (idsArray) => {
         idsAvariaAtual = Array.isArray(idsArray) ? idsArray : [idsArray];
         document.getElementById('input-registro-envio').value = '';
@@ -481,7 +452,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const texto = document.getElementById('input-registro-envio').value;
             if(!texto) return alert('Preencha os dados do envio.');
             
-            // Loop para atualizar todos os IDs do grupo
             for(let id of idsAvariaAtual) {
                 await atualizarStatusAvaria(id, 'registrar_envio', { registro_envio: texto }, false);
             }
@@ -517,7 +487,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // Função de update genérica
     async function atualizarStatusAvaria(id, acao, dadosExtras, reload=true) {
         try {
             const res = await fetch(`/api/avarias/${id}`, {
@@ -532,28 +501,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch(e) { console.error(e); }
     }
 
-// --- LÓGICA DE TEXTO DINÂMICO UNIFICADO ---
     function gerarTextoCombinado(listaAvarias) {
         if (!listaAvarias || listaAvarias.length === 0) return '';
-
-        // Pega dados base do primeiro registro (Cliente e Descarga são iguais no grupo)
         const principal = listaAvarias[0];
         const cliente = principal.cliente;
         const tipoDescarga = principal.tipo_descarga || 'Manual';
-        
-        // Coleta todas as NFs únicas
         const nfs = [...new Set(listaAvarias.map(a => a.nota_fiscal))].join(', ');
-        
-        // Ajuste gramatical
         let descargaTxt = tipoDescarga;
         if (['Empilhadeira', 'Munck', 'Grua'].includes(tipoDescarga)) {
             descargaTxt = `com ${tipoDescarga}`;
         }
-
-        // Monta o cabeçalho do texto
         let texto = `Durante a descarga ${descargaTxt}, foram encontradas avarias no meio do pallet referente às NFs ${nfs} do cliente ${cliente}. Seguem em anexo registros feitos pelo motorista e abaixo segue quantidade e produtos:\n`;
-
-        // Itera sobre cada avaria para listar os itens
         listaAvarias.forEach(av => {
             if (av.itens && av.itens.length > 0) {
                 av.itens.forEach(item => {
@@ -561,49 +519,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         });
-
         return texto;
     }
-	
-// --- RELATÓRIO E IMPRESSÃO (AGRUPADO/LOTE) ---
+    
     window.abrirRelatorioAgrupado = async (idsArray) => {
         try {
             const ids = Array.isArray(idsArray) ? idsArray : [idsArray];
-            
-            // 1. Busca todos os dados atualizados
             const res = await fetch('/api/avarias'); 
             const todas = await res.json();
-            
-            // 2. Filtra apenas as avarias do grupo selecionado
             const avariasDoGrupo = todas.filter(a => ids.includes(a.id));
-            
             if (avariasDoGrupo.length === 0) return alert("Erro: Dados não encontrados.");
 
-            // 3. Prepara o Objeto Combinado (Para o cabeçalho do PDF)
             const dadosCombinados = {
                 data: avariasDoGrupo[0].data, 
-                // Junta NFs visualmente: "123 / 456"
                 nota_fiscal: [...new Set(avariasDoGrupo.map(a => a.nota_fiscal))].join(' / '), 
                 cliente: avariasDoGrupo[0].cliente,
                 marca: avariasDoGrupo[0].marca,
-                // Combina todas as fotos
                 fotos: avariasDoGrupo.flatMap(a => a.fotos) 
             };
 
-            // 4. Gera o Texto Unificado
-            // Se for apenas 1, usa o que tem. Se for grupo, gera o combinado.
             let textoFinal = '';
             if (avariasDoGrupo.length === 1 && avariasDoGrupo[0].observacoes) {
                 textoFinal = avariasDoGrupo[0].observacoes;
             } else {
-                // Aqui chamamos a função que cria o texto com todas as NFs
                 textoFinal = gerarTextoCombinado(avariasDoGrupo);
             }
 
-            // 5. Preenche o Modal
             document.getElementById('texto-relatorio').value = textoFinal;
             
-            // --- AQUI ESTÁ A MUDANÇA (SALVAR EM TODAS) ---
             document.getElementById('btn-imprimir-final').onclick = async () => {
                 const btn = document.getElementById('btn-imprimir-final');
                 const txtOriginal = btn.textContent;
@@ -612,7 +555,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const textoEditado = document.getElementById('texto-relatorio').value;
                 
-                // Loop para atualizar o texto em TODAS as avarias do grupo no banco
                 for (const idAvaria of ids) {
                     try {
                         await fetch(`/api/avarias/${idAvaria}`, {
@@ -628,7 +570,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.textContent = txtOriginal;
                 btn.disabled = false;
 
-                // Pega o tipo de impressão selecionado e gera o PDF
                 const radios = document.getElementsByName('tipo_imp');
                 let tipoImp = 'completo';
                 for(let r of radios) { if(r.checked) tipoImp = r.value; }
@@ -641,8 +582,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { console.error("Erro ao gerar relatório agrupado:", e); }
     };
 
-    // Mantém a função abrirRelatorio (Individual) como atalho para a agrupada
-		window.abrirRelatorio = (id) => {
+    window.abrirRelatorio = (id) => {
         window.abrirRelatorioAgrupado([id]);
     };
 
@@ -669,7 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 htmlFotos += `
                     <div style="text-align: center; margin-bottom: 10px;">
                         <img src="https://lh3.googleusercontent.com/d/${foto.id}" 
-                             style="max-width: 85%; max-height: 85%; border: 1px solid #ccc; border-radius: 4px;" 
+                             style="max-width: 80%; max-height: 80%; border: 1px solid #ccc; border-radius: 4px;" 
                              alt="Foto Avaria">
                     </div>`;
             });
@@ -697,7 +637,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </body></html>
         `);
         janela.document.close();
-        
+        setTimeout(() => { janela.print(); }, 1000);
     }
 
     // --- EXCLUSÃO EM LOTE ---
