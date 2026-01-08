@@ -1,6 +1,31 @@
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // --- VARIÁVEIS GLOBAIS ---
     let idsAvariaAtual = []; 
+
+    // --- VERIFICAÇÃO DE SESSÃO (CORREÇÃO DO ADMIN) ---
+    // Busca quem é o usuário antes de carregar o resto da página
+    try {
+        const resSession = await fetch('/api/session');
+        if (resSession.ok) {
+            const sessao = await resSession.json();
+            // Salva a permissão para o restante do script usar
+            sessionStorage.setItem('user_permission', sessao.user_permission);
+            
+            // Corrige o Menu Dropdown (Adiciona "Usuários" se for admin)
+            if (sessao.user_permission === 'admin') {
+                const navAdmin = document.getElementById('nav-admin-dropdown');
+                if (navAdmin) {
+                    navAdmin.innerHTML = `<a href="/usuarios.html">Usuários</a>`;
+                }
+            }
+        } else {
+            // Se não estiver logado, manda pro login
+            window.location.href = '/login.html';
+            return;
+        }
+    } catch (e) {
+        console.error("Erro ao verificar sessão:", e);
+    }
 
     // --- SELETORES GERAIS ---
     const viewLista = document.getElementById('view-lista-avarias');
@@ -91,7 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             let encontrouAlgum = false;
-            const isAdmin = sessionStorage.getItem('user_permission') === 'admin'; // Verifica admin
+            // Agora garantimos que o sessionStorage está atualizado
+            const isAdmin = sessionStorage.getItem('user_permission') === 'admin'; 
 
             Object.values(grupos).forEach(grupo => {
                 if (filtroNfTexto) {
@@ -166,7 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 const obsDisplay = a.observacoes || 'Sem observações.';
 
-                // --- AQUI ADICIONEI O BOTÃO DE EXCLUIR NOS DETALHES PARA ADMIN ---
+                // BOTÃO DE EXCLUIR NOS DETALHES (ADMIN)
                 trDet.innerHTML = `
                     <td colspan="7" style="padding: 20px; border-left: 5px solid ${corStatus}; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
                         <div style="display: flex; gap: 40px;">
@@ -205,9 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } catch(e) { console.error(e); }
     }
-
-    // ... (restante das funções de filtro e carregamento permanecem iguais) ...
-    // ... (funções carregarFiltrosSelects, eventos de botões, carregarEntregasDaCargaAgrupadas, carregarMarcas, atualizarBotoesRemover, adicionarLinhaItem, inputFotos.change) ...
 
     window.toggleDetalhe = (id) => {
         const el = document.getElementById(`detalhe-${id}`);
