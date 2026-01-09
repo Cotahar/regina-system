@@ -1878,28 +1878,6 @@ def get_unidades():
 def get_tipos_cte():
     return jsonify([t.to_dict() for t in TipoCte.query.order_by(TipoCte.descricao).all()])
 
-# --- SUBSTITUA A ROTA ANTIGA POR ESTE BLOCO NOVO ---
-@app.route('/api/auxiliar/formas-pagamento', methods=['GET', 'POST'])
-@login_required
-def handle_formas_pagamento():
-    # GET: Listar
-    if request.method == 'GET':
-        return jsonify([f.to_dict() for f in FormaPagamento.query.order_by(FormaPagamento.descricao).all()])
-
-    # POST: Criar Nova
-    if request.method == 'POST':
-        if session.get('user_permission') != 'admin':
-            return jsonify(error='Apenas admin'), 403
-        
-        data = request.json
-        descricao = (data.get('descricao') or '').strip().upper()
-        if not descricao: return jsonify(error='Descrição obrigatória'), 400
-        
-        nova = FormaPagamento(descricao=descricao)
-        db.session.add(nova)
-        db.session.commit()
-        return jsonify(message='Cadastrado!', id=nova.id)
-
 @app.route('/api/auxiliar/formas-pagamento/<int:id>', methods=['DELETE'])
 @login_required
 def delete_forma_pagamento(id):
@@ -1914,7 +1892,19 @@ def delete_forma_pagamento(id):
         db.session.rollback()
         return jsonify(error='Não é possível excluir pois já está em uso em alguma carga/cliente.'), 500
 
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
         
+        # --- AUTO-SEED: Cria as marcas se não existirem ---
+        if not Marca.query.first():
+            print("Criando marcas padrão...")
+            marcas_padrao = ["ELIANE", "PORTINARI", "PORTOBELLO", "INCEPA", "CEUSA", "ELIZABETH"]
+            for m in marcas_padrao:
+                db.session.add(Marca(nome=m))
+            db.session.commit()
+            print("Marcas cadastradas com sucesso!")
+            
         # --- AUTO-SEED: Cadastros de Faturamento ---
         if not Unidade.query.first():
             print("Criando Unidades Padrão...")
@@ -1935,4 +1925,3 @@ def delete_forma_pagamento(id):
             db.session.commit()
             
     app.run(debug=True, host='0.0.0.0', port=5000)
-    
