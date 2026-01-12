@@ -2,16 +2,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- VARIÁVEIS GLOBAIS ---
     let idsAvariaAtual = []; 
 
-    // --- VERIFICAÇÃO DE SESSÃO (CORREÇÃO DO ADMIN) ---
-    // Busca quem é o usuário antes de carregar o resto da página
+    // --- VERIFICAÇÃO DE SESSÃO ---
     try {
         const resSession = await fetch('/api/session');
         if (resSession.ok) {
             const sessao = await resSession.json();
-            // Salva a permissão para o restante do script usar
             sessionStorage.setItem('user_permission', sessao.user_permission);
-            
-            // Corrige o Menu Dropdown (Adiciona "Usuários" se for admin)
             if (sessao.user_permission === 'admin') {
                 const navAdmin = document.getElementById('nav-admin-dropdown');
                 if (navAdmin) {
@@ -19,13 +15,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
         } else {
-            // Se não estiver logado, manda pro login
             window.location.href = '/login.html';
             return;
         }
-    } catch (e) {
-        console.error("Erro ao verificar sessão:", e);
-    }
+    } catch (e) { console.error("Erro ao verificar sessão:", e); }
 
     // --- SELETORES GERAIS ---
     const viewLista = document.getElementById('view-lista-avarias');
@@ -41,7 +34,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const progressContainer = document.getElementById('progress-container');
     const progressBar = document.getElementById('progress-bar');
 
-    // --- CONFIGURAÇÃO GLOBAL SELECT2 ---
     $(document).on('select2:open', () => {
         document.querySelector('.select2-search__field').focus();
     });
@@ -50,9 +42,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     carregarFiltrosSelects();
     
     const urlParams = new URLSearchParams(window.location.search);
-    const cargaIdParam = urlParams.get('carga_id');
+    const cargaIdParam = urlParams.get('carga_id'); // Para REGISTRO (Botão "Registrar Avaria")
+    let consultarCargaId = urlParams.get('consultar_carga_id'); // Para CONSULTA (Link "Avaria Registrada")
 
     if (cargaIdParam) {
+        // MODO REGISTRO
         viewLista.style.display = 'none';
         viewRegistro.style.display = 'block';
         carregarMarcas();
@@ -60,12 +54,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('lbl-codigo-carga').textContent = cargaIdParam;
         adicionarLinhaItem(); 
     } else {
+        // MODO LISTA (Padrão ou Filtrado)
         viewLista.style.display = 'block';
         viewRegistro.style.display = 'none';
+        
+        // Se veio do link de consulta, avisa visualmente (opcional)
+        if (consultarCargaId) {
+            // Poderíamos adicionar um aviso visual aqui, ex: "Filtrando pela Carga X"
+            // Por enquanto, apenas o filtro é aplicado.
+        }
+        
         carregarListaAvarias();
     }
 
-    // --- LISTAGEM COM AGRUPAMENTO INTELIGENTE (DATA + FILTRO NF NO GRUPO) ---
+    // --- LISTAGEM COM AGRUPAMENTO INTELIGENTE ---
     async function carregarListaAvarias() {
         const tbody = tabelaAvarias;
         tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>';
@@ -84,6 +86,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if(motId) params.append('motorista_id', motId);
         if(cliId) params.append('cliente_id', cliId);
         if(marId) params.append('marca_id', marId);
+
+        // *** NOVO: Aplica filtro de Carga se vier pela URL ***
+        if (consultarCargaId) {
+            params.append('carga_id', consultarCargaId);
+        }
 
         const filtroNfTexto = document.getElementById('filtro-nf').value.trim().toLowerCase();
 
@@ -116,7 +123,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             let encontrouAlgum = false;
-            // Agora garantimos que o sessionStorage está atualizado
             const isAdmin = sessionStorage.getItem('user_permission') === 'admin'; 
 
             Object.values(grupos).forEach(grupo => {
@@ -170,7 +176,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 `;
                 tbody.appendChild(tr);
 
-                // --- DETALHES DO GRUPO (ACORDEÃO) ---
                 const trDet = document.createElement('tr');
                 trDet.id = `detalhe-${domId}`;
                 trDet.style.display = 'none';
@@ -192,7 +197,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 const obsDisplay = a.observacoes || 'Sem observações.';
 
-                // BOTÃO DE EXCLUIR NOS DETALHES (ADMIN)
                 trDet.innerHTML = `
                     <td colspan="7" style="padding: 20px; border-left: 5px solid ${corStatus}; box-shadow: inset 0 0 10px rgba(0,0,0,0.05);">
                         <div style="display: flex; gap: 40px;">
@@ -269,8 +273,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch(e) { console.error("Erro ao carregar filtros", e); }
     }
 
-    document.getElementById('btn-aplicar-filtros').addEventListener('click', carregarListaAvarias);
+    // --- BOTÕES DE AÇÃO DOS FILTROS (Lógica Inteligente) ---
+
+    // 1. Botão FILTRAR (Lupa)
+    document.getElementById('btn-aplicar-filtros').addEventListener('click', () => {
+        // Se o usuário clicou aqui, ele quer buscar algo novo.
+        // Então, limpamos o filtro "forçado" da URL (consultarCargaId)
+        consultarCargaId = null; 
+        
+        // Remove a "sujeira" da URL visualmente (sem recarregar a página)
+        window.history.replaceState({}, document.title, "/avarias.html");
+        
+        carregarListaAvarias();
+    });
+
+    // 2. Botão LIMPAR (Vassoura)
     document.getElementById('btn-limpar-filtros').addEventListener('click', () => {
+        // Limpa os campos visuais da tela
         document.getElementById('filtro-nf').value = '';
         document.getElementById('filtro-data-inicio').value = '';
         document.getElementById('filtro-data-fim').value = '';
@@ -278,6 +297,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         $('#filtro-motorista').val(null).trigger('change');
         $('#filtro-cliente').val(null).trigger('change');
         $('#filtro-marca').val(null).trigger('change');
+        
+        // Limpa o filtro "forçado" da URL
+        consultarCargaId = null;
+        window.history.replaceState({}, document.title, "/avarias.html");
+
+        // Recarrega a lista completa (sem filtros)
         carregarListaAvarias();
     });
 

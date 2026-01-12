@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório Faturamento - {{ carga.codigo_carga }}</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000; margin: 0; padding: 20px; font-size: 12px; }
+        
+        /* Cabeçalho */
+        .header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .header h1 { margin: 0; font-size: 20px; text-transform: uppercase; }
+        .header p { margin: 0; font-size: 12px; }
+
+        /* Blocos */
+        .box { border: 1px solid #000; padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+        .box-title { font-weight: bold; text-transform: uppercase; background: #eee; padding: 5px; margin: -10px -10px 10px -10px; border-bottom: 1px solid #000; font-size: 11px; }
+        
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+        
+        .label { font-weight: bold; display: block; font-size: 10px; color: #444; text-transform: uppercase; }
+        .value { font-size: 13px; font-weight: 600; }
+
+        /* Tabela */
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 10px; }
+        th, td { border: 1px solid #999; padding: 5px; text-align: left; vertical-align: top; }
+        th { background-color: #ddd; font-weight: bold; text-transform: uppercase; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+
+        .totais-row td { background-color: #eee; font-weight: bold; border-top: 2px solid #000; font-size: 11px; }
+
+        /* Impressão */
+        .no-print { margin-bottom: 20px; padding: 10px; background: #fef08a; border: 1px solid #eab308; text-align: center; }
+        .btn-print { background: #000; color: #fff; padding: 8px 15px; border: none; cursor: pointer; font-size: 12px; border-radius: 4px; }
+        
+        @media print {
+            .no-print { display: none; }
+            body { padding: 0; }
+            .box { break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="no-print">
+        <button onclick="window.print()" class="btn-print">🖨️ IMPRIMIR / PDF</button>
+        <button onclick="window.close()" class="btn-print" style="background: #ef4444; margin-left: 10px;">FECHAR</button>
+    </div>
+
+    <div class="header">
+        <div>
+            <h1>Faturamento de Carga</h1>
+            <p><strong>Motorista:</strong> {{ carga.motorista_rel.nome if carga.motorista_rel else 'N/A' }}</p>
+            <p><strong>Placa:</strong> {{ carga.veiculo_rel.placa if carga.veiculo_rel else 'N/A' }}</p>
+        </div>
+        <div style="text-align: right;">
+            <p>Carga ID: <strong>{{ carga.id }}</strong></p>
+            <p>Data: <script>document.write(new Date().toLocaleDateString())</script></p>
+        </div>
+    </div>
+
+    <div class="box">
+        <div class="box-title">Lista de Entregas</div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 10%;">Tipo CT-e</th>
+                    <th style="width: 15%;">Nota Fiscal</th>
+                    <th style="width: 20%;">Remetente</th>
+                    <th style="width: 20%;">Destinatário</th>
+                    <th style="width: 10%; text-align: right;">Peso (Kg)</th>
+                    <th style="width: 10%; text-align: right;">Frete (R$)</th>
+                    <th style="width: 15%;">Pagamento</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set ns = namespace(total_peso=0, total_frete=0) %}
+                {% for e in carga.entregas %}
+                <tr>
+                    <td>
+                        {{ e.tipo_cte_rel.descricao if e.tipo_cte_rel else (e.unidade_rel.nome if e.unidade_rel else '-') }}
+                    </td>
+                    
+                    <td>
+                        {% if e.nota_fiscal %}
+                            {{ e.nota_fiscal.replace('/', '<br>')|safe }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+
+                    <td>{{ e.remetente.razao_social if e.remetente else '-' }}</td>
+
+                    <td>{{ e.cliente.razao_social if e.cliente else '-' }}</td>
+
+                    <td style="text-align: right;">{{ "{:,.2f}".format(e.peso_bruto or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}</td>
+
+                    <td style="text-align: right;">{{ "{:,.2f}".format(e.valor_frete or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}</td>
+
+                    <td>
+                        {{ e.forma_pagamento_rel.descricao if e.forma_pagamento_rel else '-' }}<br>
+                        <span style="font-size:0.9em; font-style:italic;">{{ e.tipo_pagamento or '' }}</span>
+                    </td>
+                </tr>
+                {% set ns.total_peso = ns.total_peso + (e.peso_bruto or 0) %}
+                {% set ns.total_frete = ns.total_frete + (e.valor_frete or 0) %}
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="totais-row">
+                    <td colspan="4" style="text-align: right;">TOTAIS:</td>
+                    <td style="text-align: right;">{{ "{:,.2f}".format(ns.total_peso).replace(',', 'X').replace('.', ',').replace('X', '.') }}</td>
+                    <td style="text-align: right;">R$ {{ "{:,.2f}".format(ns.total_frete).replace(',', 'X').replace('.', ',').replace('X', '.') }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        
+        <div class="box">
+            <div class="box-title">Instruções Manifesto</div>
+            <div class="grid-2">
+                <div><span class="label">Rota Manifesto</span><span class="value">{{ carga.rota_manifesto or '-' }}</span></div>
+                <div><span class="label">Eixos</span><span class="value">{{ carga.vale_pedagio_eixos or '-' }}</span></div>
+                <div><span class="label">Marca Vale Pedágio</span><span class="value">{{ carga.vale_pedagio_marca or '-' }}</span></div>
+                <div><span class="label">Rota Vale Pedágio</span><span class="value">{{ carga.vale_pedagio_rota or '-' }}</span></div>
+            </div>
+        </div>
+
+        <div class="box" style="background-color: #fcfcfc;">
+            <div class="box-title">Financeiro Motorista</div>
+            <div class="grid-2">
+                <div>
+                    <span class="label">Frete Pago (Valor Total)</span>
+                    <span class="value">R$ {{ "{:,.2f}".format(carga.frete_pago or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}</span>
+                </div>
+                <div>
+                    <span class="label">Adiantamento ({{ carga.adiantamento_percentual or 70 }}%)</span>
+                    <span class="value">R$ {{ "{:,.2f}".format(carga.adiantamento_valor or 0).replace(',', 'X').replace('.', ',').replace('X', '.') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if carga.observacoes_faturamento %}
+    <div class="box">
+        <div class="box-title">Observações</div>
+        <p>{{ carga.observacoes_faturamento }}</p>
+    </div>
+    {% endif %}
+
+</body>
+</html>

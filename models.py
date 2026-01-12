@@ -37,6 +37,46 @@ class Veiculo(db.Model):
             'text': (self.placa or '').upper()
         }
 
+# --- NOVAS TABELAS DE CADASTRO (MÓDULO FATURAMENTO) ---
+# No models.py
+
+class Unidade(db.Model):
+    __tablename__ = 'unidades'
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String, unique=True, nullable=False)
+    
+    # --- NOVOS CAMPOS PARA A LÓGICA ---
+    uf = db.Column(db.String(2)) # Ex: 'PR', 'ES'
+    is_matriz = db.Column(db.Boolean, default=False) # Define se é a Matriz (Padrão)
+    
+    # Tipo de CT-e Padrão para esta unidade
+    tipo_cte_padrao_id = db.Column(db.Integer, db.ForeignKey('tipos_cte.id'), nullable=True)
+    
+    # Relacionamento para acessar o nome do tipo cte
+    tipo_cte_rel = db.relationship('TipoCte')
+
+    def to_dict(self): 
+        return {
+            'id': self.id, 
+            'nome': self.nome, 
+            'text': self.nome,
+            'uf': self.uf,
+            'is_matriz': self.is_matriz,
+            'tipo_cte_padrao_id': self.tipo_cte_padrao_id
+        }
+
+class TipoCte(db.Model):
+    __tablename__ = 'tipos_cte'
+    id = db.Column(db.Integer, primary_key=True)
+    descricao = db.Column(db.String, unique=True, nullable=False)
+    def to_dict(self): return {'id': self.id, 'descricao': self.descricao, 'text': self.descricao}
+
+class FormaPagamento(db.Model):
+    __tablename__ = 'formas_pagamento'
+    id = db.Column(db.Integer, primary_key=True)
+    descricao = db.Column(db.String, unique=True, nullable=False)
+    def to_dict(self): return {'id': self.id, 'descricao': self.descricao, 'text': self.descricao}
+
 class Cliente(db.Model):
     __tablename__ = 'clientes'
     id = db.Column(db.Integer, primary_key=True)
@@ -48,6 +88,10 @@ class Cliente(db.Model):
     estado = db.Column(db.String)
     observacoes = db.Column(db.String)
     is_remetente = db.Column(db.Boolean, default=False, nullable=False)
+    
+    # Preferências de Pagamento
+    padrao_forma_pagamento_id = db.Column(db.Integer, db.ForeignKey('formas_pagamento.id'), nullable=True)
+    padrao_tipo_pagamento = db.Column(db.String(50), nullable=True) # 'Boleto', 'Transferência'
     
     # Relação como Destinatário
     # LADO 1: O Cliente usa a chave 'Entrega.cliente_id' para encontrar suas entregas
@@ -62,6 +106,8 @@ class Cliente(db.Model):
                                                foreign_keys='Entrega.remetente_id', 
                                                back_populates='remetente',
                                                lazy=True)
+                                               
+                                            
 
 class Carga(db.Model):
     __tablename__ = 'cargas'
@@ -79,6 +125,18 @@ class Carga(db.Model):
     previsao_entrega = db.Column(db.String)
     observacoes = db.Column(db.String)
     data_finalizacao = db.Column(db.String)
+    
+    observacoes_faturamento = db.Column(db.Text) # Observação exclusiva do fat.
+    
+    # Dados Manifesto
+    rota_manifesto = db.Column(db.String)
+    vale_pedagio_marca = db.Column(db.String) # Sem Parar / Move Mais
+    vale_pedagio_rota = db.Column(db.String(45)) # Max 45 chars
+    vale_pedagio_eixos = db.Column(db.Integer)
+    
+    # Dados Carta Frete
+    adiantamento_percentual = db.Column(db.Float, default=70.0)
+    adiantamento_valor = db.Column(db.Float)
     
     # Relação com Motorista
     motorista_rel = db.relationship('Motorista', back_populates='cargas')
@@ -124,6 +182,20 @@ class Entrega(db.Model):
     cidade_entrega = db.Column(db.String, nullable=True) # Override
     estado_entrega = db.Column(db.String, nullable=True) # Override
     is_last_delivery = db.Column(db.Integer, default=0) 
+
+# --- NOVOS CAMPOS (GERENCIAMENTO / FATURAMENTO) ---
+    valor_tonelada = db.Column(db.Float)
+    tipo_pagamento = db.Column(db.String) # 'Boleto' ou 'Transferência'
+    
+    # Chaves Estrangeiras para os novos cadastros
+    unidade_id = db.Column(db.Integer, db.ForeignKey('unidades.id'), nullable=True)
+    tipo_cte_id = db.Column(db.Integer, db.ForeignKey('tipos_cte.id'), nullable=True)
+    forma_pagamento_id = db.Column(db.Integer, db.ForeignKey('formas_pagamento.id'), nullable=True)
+
+    # Relacionamentos para facilitar o acesso aos nomes
+    unidade_rel = db.relationship('Unidade')
+    tipo_cte_rel = db.relationship('TipoCte')
+    forma_pagamento_rel = db.relationship('FormaPagamento')
 
     # Relação com Carga
     carga = db.relationship('Carga', foreign_keys='Entrega.carga_id', back_populates='entregas')

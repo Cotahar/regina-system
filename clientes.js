@@ -17,6 +17,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+	async function carregarFormasPagamento() {
+        try {
+            const res = await fetch('/api/auxiliar/formas-pagamento');
+            const formas = await res.json();
+            const select = document.getElementById('cli-forma-padrao');
+            select.innerHTML = '<option value="">Padrão (Nenhum)</option>';
+            formas.forEach(f => {
+                select.innerHTML += `<option value="${f.id}">${f.descricao}</option>`;
+            });
+            // Ativa Select2 (opcional, mas recomendado se já usou no HTML)
+            $('#cli-forma-padrao').select2();
+            $('#cli-tipo-padrao').select2();
+        } catch(e) { console.error('Erro ao carregar formas pagto:', e); }
+    }
+
     // --- FUNÇÃO PRINCIPAL PARA CARREGAR DADOS ---
     async function carregarClientes() {
         try {
@@ -54,6 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     tr.dataset.telefone = cliente.telefone || '';
                     tr.dataset.observacoes = cliente.observacoes || '';
 					tr.dataset.is_remetente = cliente.is_remetente;
+					tr.dataset.is_remetente = cliente.is_remetente;
+					tr.dataset.forma_pagto = cliente.padrao_forma_pagamento_id || '';
+					tr.dataset.tipo_pagto = cliente.padrao_tipo_pagamento || '';
 
                     // ***** CORREÇÃO AQUI: Usa os nomes corretos das colunas *****
                     tr.innerHTML = `
@@ -111,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mensagemDiv.style.color = '#2ecc71'; // Verde sucesso
             formImportar.reset();
             carregarClientes();
+			carregarFormasPagamento();
         } catch (error) {
             mensagemDiv.textContent = `Erro: ${error.message}`;
             mensagemDiv.style.color = '#e74c3c'; // Vermelho erro
@@ -131,12 +150,16 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('edit-telefone').value = linha.dataset.telefone;
             document.getElementById('edit-observacoes').value = linha.dataset.observacoes;
             
-            // --- LINHA NOVA ADICIONADA ---
-            // Converte a string 'true'/'false' do dataset para booleano
-            document.getElementById('edit-is-remetente').checked = (linha.dataset.is_remetente === 'true');
-            // --- FIM DA LINHA NOVA ---
+			// Checkbox (converte string 'true'/'false' para boolean)
+			document.getElementById('edit-is-remetente').checked = (linha.dataset.is_remetente === 'true');
 
-            modalEditar.style.display = 'block';
+			// Selects (Pega do dataset que adicionamos acima)
+			$('#cli-forma-padrao').val(linha.dataset.forma_pagto).trigger('change');
+			$('#cli-tipo-padrao').val(linha.dataset.tipo_pagto).trigger('change');
+    
+			// --- FIM DA CORREÇÃO ---
+
+			modalEditar.style.display = 'block';
         }
     });
 	
@@ -146,10 +169,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keydown', (event) => { if (event.key === "Escape" && modalEditar.style.display === 'block') modalEditar.style.display = 'none'; });
 
 
-// 5. Lógica para Salvar Edição (Atualizada)
+// 5. Lógica para Salvar Edição (CORRIGIDA)
     formEditar.addEventListener('submit', async (event) => {
         event.preventDefault();
         const clienteId = document.getElementById('edit-cliente-id').value;
+        
         const dadosAtualizados = {
             razao_social: document.getElementById('edit-razao-social').value,
             cidade: document.getElementById('edit-cidade').value,
@@ -157,10 +181,13 @@ document.addEventListener('DOMContentLoaded', () => {
             ddd: document.getElementById('edit-ddd').value,
             telefone: document.getElementById('edit-telefone').value,
             observacoes: document.getElementById('edit-observacoes').value,
-            // --- LINHA NOVA ADICIONADA ---
-            is_remetente: document.getElementById('edit-is-remetente').checked
-            // --- FIM DA LINHA NOVA ---
+            
+            // Novos campos (com vírgulas corretas)
+            is_remetente: document.getElementById('edit-is-remetente').checked,
+            padrao_forma_pagamento_id: $('#cli-forma-padrao').val() || null,
+            padrao_tipo_pagamento: $('#cli-tipo-padrao').val() || null
         };
+
         try {
             const response = await fetch(`/api/clientes/${clienteId}`, {
                 method: 'PUT',
@@ -169,10 +196,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const resultado = await response.json();
             if (!response.ok) throw new Error(resultado.error || 'Falha ao atualizar.');
+            
             alert(resultado.message || "Atualizado com sucesso!");
             modalEditar.style.display = 'none';
             carregarClientes(); // Recarrega a tabela
-        } catch (error) { console.error("Erro ao salvar:", error); alert(`Erro: ${error.message}`); }
+			carregarFormasPagamento();
+        } catch (error) { 
+            console.error("Erro ao salvar:", error); 
+            alert(`Erro: ${error.message}`); 
+        }
     });
 
     // --- APLICAÇÃO DAS MÁSCARAS ---
@@ -181,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- CARREGAMENTO INICIAL ---
     carregarClientes();
+	carregarFormasPagamento();
 
      // Carrega info de sessão (para o menu 'nav-admin' se aplicável)
 fetch('/api/session').then(res => res.json()).then(data => {

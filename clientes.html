@@ -24,8 +24,9 @@
                     <a href="/clientes.html">Clientes</a>
                     <a href="/motoristas.html">Motoristas</a>
                     <a href="/veiculos.html">Veículos</a>
-					<a href="/marcas.html" >Gerenciar Marcas</a>
-                    <span id="nav-admin-dropdown"></span> 
+					<a href="/marcas.html" >Gerenciar Marcas</a> <span id="nav-admin-dropdown"></span> 
+					<a href="/formas-pagamento.html">Formas de Pagto</a> <span id="nav-admin-dropdown"></span>
+                   
                 </div>
             </div>
             <a href="/avarias.html" class="btn-navegacao" style="background-color: #ef4444;">Avarias</a>
@@ -96,11 +97,44 @@
                     <input type="checkbox" id="edit-is-remetente">
                     <label for="edit-is-remetente">Marcar como Remetente/Ponto de Coleta</label>
                 </div>
+				<div class="divisor-form"></div>
+
+					<details class="secao-expansivel" style="background: #334155; padding: 10px; border-radius: 8px; margin-top: 10px;">
+						<summary style="color: #fde047; font-weight: bold; cursor: pointer;">
+							⚙️ Configurações Administrativas (Automação)
+						</summary>
+						
+						<div class="grid-col-2" style="margin-top: 15px;">
+							<div>
+								<label>Forma de Pagto Padrão</label>
+								<select name="padrao_forma_pagamento_id" id="cli-forma-padrao">
+								
+								</select>
+							</div>
+
+							<div>
+								<label>Tipo de Pagto Padrão</label>
+								<select name="padrao_tipo_pagamento" id="cli-tipo-padrao">
+									<option value="">Nenhum</option>
+									<option value="Boleto">Boleto</option>
+									<option value="Transferência">Transferência</option>
+									<option value="Cheque">Cheque</option>
+								</select>
+							</div>
+
+						</div>
+					</details>
+				
                 <button type="submit">Salvar Alterações</button>
             </form>
         </div>
     </div>
 	
+  
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+
     <script src="clientes.js"></script>
 </body>
 </html>

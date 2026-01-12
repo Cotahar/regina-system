@@ -23,7 +23,7 @@
                     <a href="/motoristas.html">Motoristas</a>
                     <a href="/veiculos.html">Veículos</a>
 					<a href="/marcas.html" >Gerenciar Marcas</a>
-                    <span id="nav-admin-dropdown"></span> 
+                    <a href="/formas-pagamento.html">Formas de Pagto</a> <span id="nav-admin-dropdown"></span>
                 </div>
             </div>
             <a href="/avarias.html" class="btn-navegacao" style="background-color: #ef4444;">Avarias</a>
@@ -67,6 +67,70 @@
                 </table>
             </div>
         </div>
+		<div style="margin-top: 40px; border-top: 2px dashed #475569; padding-top: 20px;"></div>
+
+    <div class="card-lista-clientes"> <h2 style="color: #fde047;">🏢 Configuração de Unidades e Regras de Origem</h2>
+        <p style="margin-bottom: 15px;">Configure qual Unidade e CT-e o sistema deve selecionar automaticamente baseado no estado (UF) de origem.</p>
+
+        <div class="form-acao" style="background: #1e293b; padding: 15px; border-radius: 8px; align-items: flex-end;">
+            <input type="hidden" id="uni-id"> 
+
+            <div style="flex-grow: 2;">
+                <label style="display:block; color:#cbd5e1; margin-bottom:5px;">Nome da Unidade</label>
+                <input type="text" id="uni-nome" placeholder="Ex: FILIAL PR" style="margin:0;">
+            </div>
+            <div style="width: 80px;">
+                <label style="display:block; color:#cbd5e1; margin-bottom:5px;">UF</label>
+                <input type="text" id="uni-uf" maxlength="2" placeholder="PR" style="margin:0; text-align:center;">
+            </div>
+            <div style="flex-grow: 1;">
+                <label style="display:block; color:#cbd5e1; margin-bottom:5px;">CT-e Padrão</label>
+                <select id="uni-cte" style="margin:0;"></select>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60px;">
+                <label style="color:#cbd5e1; font-size: 0.8em; margin-bottom: 5px;">É Matriz?</label>
+                <input type="checkbox" id="uni-matriz" style="width: 20px; height: 20px;">
+            </div>
+            
+            <button id="btn-add-unidade" class="btn-acao-verde">Salvar</button>
+            <button id="btn-cancel-unidade" class="btn-acao-secundario" style="display:none;">Cancelar</button>
+        </div>
+		
+        <div class="tabela-wrapper" style="margin-top: 15px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>UF Atendida</th>
+                        <th>CT-e Automático</th>
+                        <th>Matriz (Padrão)</th>
+                        <th style="width: 50px;">Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-unidades">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+	
+	<div style="margin-top: 40px; border-top: 2px dashed #475569; padding-top: 20px;"></div>
+
+    <div class="card-lista-clientes">
+        <h2 style="color: #60a5fa;">🚛 Tipos de CT-e / Documentos</h2>
+        <p style="margin-bottom: 15px;">Cadastre os tipos de documentos fiscais (Ex: 11 - PR, 17 - SC).</p>
+
+        <div class="form-acao" style="background: #1e293b; padding: 15px; border-radius: 8px;">
+            <input type="text" id="cte-desc" placeholder="Descrição (Ex: 5 - SP)" style="margin:0; flex-grow:1;">
+            <button id="btn-add-cte" class="btn-acao-verde" style="margin:0;">Adicionar</button>
+        </div>
+
+        <div class="tabela-wrapper" style="margin-top: 15px; max-height: 250px;">
+            <table>
+                <thead><tr><th>Descrição</th><th style="width:50px;">Ação</th></tr></thead>
+                <tbody id="tabela-ctes"></tbody>
+            </table>
+        </div>
+    </div>
     </main>
 
     <div id="modal-editar-usuario" class="modal">

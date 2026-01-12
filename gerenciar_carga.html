@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Faturamento - Regina System</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <style>
+    /* === CORREÇÕES DE CONFLITO DARK/LIGHT MODE === */
+    
+    /* Força o container principal a ter fundo branco e texto escuro */
+    .painel-gerenciar { 
+        max-width: 98%; 
+        margin: 20px auto; 
+        background: #f8fafc; /* Cinza muito claro, melhor para os olhos que branco puro */
+        padding: 20px; 
+        border-radius: 8px; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+        color: #1e293b; /* Texto escuro */
+    }
+
+    /* === RESETA OS INPUTS PARA O MODO CLARO DENTRO DO PAINEL === */
+    .painel-gerenciar input, 
+    .painel-gerenciar select, 
+    .painel-gerenciar textarea {
+        background-color: #fff !important; /* Fundo branco */
+        color: #1e293b !important;       /* Texto escuro (Azul navy) */
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 4px;
+    }
+
+    .painel-gerenciar input:focus, 
+    .painel-gerenciar select:focus, 
+    .painel-gerenciar textarea:focus {
+        border-color: #3b82f6 !important; /* Azul ao focar */
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Correção específica para inputs desabilitados (Origem/Destino) */
+    .painel-gerenciar input:disabled {
+        background-color: #e2e8f0 !important; /* Fundo cinza */
+        color: #475569 !important;           /* Texto cinza escuro */
+        font-weight: bold;
+        cursor: not-allowed;
+        opacity: 1; /* Correção para iOS/Safari */
+    }
+
+    /* === GRID DO CABEÇALHO === */
+    .grid-header { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+        gap: 15px; 
+        margin-bottom: 20px; 
+        background: #fff; 
+        padding: 20px; 
+        border-radius: 8px; 
+        border: 1px solid #e2e8f0; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .grid-header label {
+        color: #64748b;
+        font-size: 0.85em;
+        font-weight: 600;
+        margin-bottom: 5px;
+        display: block;
+    }
+
+    /* === ESTILO DA TABELA (Excel Look) === */
+    .tabela-wrapper {
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        overflow: hidden;
+        background: #fff;
+    }
+
+    .tabela-excel { 
+        width: 100%; 
+        border-collapse: collapse; 
+        font-size: 0.9em; 
+    }
+
+    .tabela-excel th { 
+        background: #334155; /* Cabeçalho escuro */
+        color: #fde047;      /* Texto Amarelo */
+        padding: 10px 8px; 
+        text-align: left; 
+        position: sticky; 
+        top: 0; 
+        z-index: 10;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .tabela-excel td { 
+        border: 1px solid #e2e8f0; 
+        padding: 0; /* Padding zero para o input preencher tudo */
+        height: 35px;
+    }
+
+    .tabela-excel tr:nth-child(even) { background-color: #f8fafc; }
+    .tabela-excel tr:hover { background-color: #f1f5f9; }
+
+    /* Inputs DENTRO da tabela (Parecerem transparentes) */
+    .tabela-excel input, 
+    .tabela-excel select { 
+        width: 100%; 
+        height: 100%;
+        border: none !important; 
+        background: transparent !important; 
+        padding: 0 8px;
+        color: #334155 !important;
+        font-family: inherit;
+        border-radius: 0;
+    }
+    
+    .tabela-excel input:focus, 
+    .tabela-excel select:focus { 
+        background-color: #e0f2fe !important; /* Azul claro ao focar na célula */
+        box-shadow: none;
+    }
+
+    /* Checkbox centralizado */
+    .tabela-excel td:first-child, 
+    .tabela-excel th:first-child {
+        text-align: center;
+        vertical-align: middle;
+    }
+    .tabela-excel input[type="checkbox"] {
+        width: 16px;
+        height: 16px;
+        margin: 0 auto;
+        display: block;
+        cursor: pointer;
+    }
+
+    /* === RODAPÉ DE TOTAIS E CARDS === */
+    .footer-section { 
+        display: grid; 
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); 
+        gap: 20px; 
+        margin-top: 25px; 
+        padding-top: 20px; 
+        border-top: 2px dashed #cbd5e1; 
+    }
+
+    .card-info { 
+        background: #fff; 
+        padding: 20px; 
+        border-radius: 8px; 
+        border: 1px solid #e2e8f0; 
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    .card-info h4 { 
+        margin-top: 0; 
+        color: #334155; 
+        border-bottom: 2px solid #e2e8f0; 
+        padding-bottom: 10px; 
+        margin-bottom: 15px;
+        font-size: 1.1em;
+    }
+    
+    .form-grid label {
+        color: #64748b;
+        font-size: 0.85em;
+        font-weight: 600;
+    }
+
+    /* Estilos especiais para valores monetários grandes */
+    .input-destaque { 
+        font-weight: bold; 
+        color: #0f172a !important; 
+        font-size: 1.1em;
+    }
+    
+    .total-row td { 
+        background-color: #cbd5e1; 
+        color: #1e293b;
+        font-weight: 800; 
+        padding: 10px; 
+        border-top: 2px solid #64748b;
+    }
+
+    /* Ajuste para Select2 ficar bonito no fundo branco */
+    .select2-container--default .select2-selection--single {
+        background-color: #fff !important;
+        border-color: #cbd5e1 !important;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: #334155 !important;
+    }
+</style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">Regina System - Faturamento</div>
+        <div class="user-info">
+            <button onclick="window.close()" class="btn-navegacao-secundario">Fechar / Voltar</button>
+        </div>
+    </nav>
+
+    <div class="painel-gerenciar">
+        <div class="grid-header">
+            <div>
+                <label>Origem (Fixo)</label>
+                <input type="text" id="head-origem" disabled style="background: #e2e8f0; font-weight: bold;">
+            </div>
+            <div>
+                <label>Destino Principal (Fixo)</label>
+                <input type="text" id="head-destino" disabled style="background: #e2e8f0; font-weight: bold;">
+            </div>
+            <div>
+                <label>Motorista (Editável)</label>
+                <select id="head-motorista" style="width: 100%;"></select>
+            </div>
+            <div>
+                <label>Placa (Editável)</label>
+                <select id="head-veiculo" style="width: 100%;"></select>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label>Observações para Faturamento:</label>
+            <textarea id="head-obs-faturamento" rows="2" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;"></textarea>
+        </div>
+
+        <div style="margin-bottom: 10px; display: flex; gap: 10px;">
+            <button id="btn-agrupar" class="btn-navegacao" style="background: #f59e0b; color: white;">🔗 Agrupar Selecionados</button>
+            <button id="btn-salvar-topo" class="btn-acao-verde">💾 Salvar Alterações</button>
+            
+            <button id="btn-imprimir-fat" class="btn-navegacao" style="background: #3b82f6; color: white; margin-left: auto;">
+                📄 Relatório Faturamento
+            </button>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table class="tabela-excel">
+                <thead>
+                    <tr>
+                        <th style="width: 30px;"><input type="checkbox" id="cb-todos"></th>
+                        <th style="width: 150px;">Cliente</th>
+                        <th style="width: 100px;">Unidade</th>
+                        <th style="width: 100px;">Tipo CT-e</th>
+                        <th style="width: 80px;">Nota Fiscal</th>
+                        <th style="width: 80px;">Peso (kg)</th>
+                        <th style="width: 80px;">Cubado (kg)</th>
+                        <th style="width: 80px;">R$/Ton</th>
+                        <th style="width: 100px;">Valor Frete</th>
+                        <th style="width: 100px;">Forma Pagto</th>
+                        <th style="width: 100px;">Tipo Pagto</th>
+                        <th style="width: 50px;">Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-itens-corpo">
+                    </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td colspan="5" style="text-align: right;">TOTAIS:</td>
+                        <td id="total-peso">0,00</td>
+                        <td id="total-cubado">0,00</td>
+                        <td>-</td>
+                        <td id="total-frete">R$ 0,00</td>
+                        <td colspan="3"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+
+        <div class="footer-section">
+            <div class="card-info">
+                <h4>📜 Dados do Manifesto</h4>
+                <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div><label>Rota Manifesto</label><input type="text" id="man-rota" maxlength="100"></div>
+                    <div><label>Marca Vale Pedágio</label>
+                        <select id="man-vale-marca">
+                            <option value="">Selecione...</option>
+                            <option value="Sem Parar">Sem Parar</option>
+                            <option value="Move Mais">Move Mais</option>
+                            <option value="Veloe">Veloe</option>
+                            <option value="ConectCar">ConectCar</option>
+                        </select>
+                    </div>
+                    <div><label>Rota Vale Pedágio (Max 45)</label><input type="text" id="man-vale-rota" maxlength="45"></div>
+                    <div><label>Qtd. Eixos</label><input type="number" id="man-eixos" min="2" max="9"></div>
+                </div>
+            </div>
+
+            <div class="card-info" style="background: #fff7ed; border-color: #fdba74;">
+                <h4>💰 Dados Carta Frete / Adiantamento</h4>
+                <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label>Frete Pago ao Motorista (R$)</label>
+                        <input type="text" id="cf-frete-pago" class="input-destaque input-monetario">
+                    </div>
+                    <div>
+                        <label>% Adiantamento (Padrão 70%)</label>
+                        <input type="number" id="cf-percentual" value="70" step="1">
+                    </div>
+                    <div style="grid-column: span 2;">
+                        <label style="color: #c2410c; font-weight: bold;">Valor do Adiantamento (R$)</label>
+                        <input type="text" id="cf-valor-adiantamento" class="input-destaque input-monetario" style="background: #ffedd5; font-size: 1.1em;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; text-align: right;">
+            <button id="btn-salvar-final" class="btn-acao-verde" style="padding: 15px 30px; font-size: 1.1em;">💾 SALVAR TUDO</button>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="gerenciar_carga.js"></script>
+</body>
+</html>
