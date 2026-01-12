@@ -2064,7 +2064,7 @@ def delete_forma_pagamento(id):
         db.session.rollback()
         return jsonify(error='Não é possível excluir pois já está em uso em alguma carga/cliente.'), 500
 
-# --- ROTA DE EMERGÊNCIA PARA CORRIGIR BANCO (DATA REPAIR) ---
+# --- ROTA DE EMERGÊNCIA PARA CORRIGIR BANCO (DATA REPAIR COMPLETO) ---
 @app.route('/fix-db-emergency')
 def fix_db_emergency():
     from sqlalchemy import text
@@ -2074,36 +2074,52 @@ def fix_db_emergency():
         # 1. Cria tabelas que ainda não existem (Unidades, TiposCte, etc)
         try:
             db.create_all()
-            result.append("✅ (Passo 1) Tabelas ausentes foram criadas com sucesso.")
+            result.append("✅ (Passo 1) Tabelas ausentes foram criadas.")
         except Exception as e:
             result.append(f"❌ Erro no db.create_all: {str(e)}")
 
-        # 2. Adiciona colunas faltantes manualmente (Modo PostgreSQL Seguro)
-        # O comando IF NOT EXISTS evita erros se a coluna já existir
+        # 2. Adiciona TODAS as colunas novas manualmente
         cmds = [
+            # Tabela UNIDADES
             "ALTER TABLE unidades ADD COLUMN IF NOT EXISTS uf VARCHAR(2)",
             "ALTER TABLE unidades ADD COLUMN IF NOT EXISTS is_matriz BOOLEAN DEFAULT FALSE",
             "ALTER TABLE unidades ADD COLUMN IF NOT EXISTS tipo_cte_padrao_id INTEGER",
             
+            # Tabela CLIENTES
             "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS is_remetente BOOLEAN DEFAULT FALSE",
             "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS padrao_forma_pagamento_id INTEGER",
-            "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS padrao_tipo_pagamento VARCHAR(50)"
+            "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS padrao_tipo_pagamento VARCHAR(50)",
+            
+            # Tabela CARGAS (Faturamento) - FALTAVAM ESTAS
+            "ALTER TABLE cargas ADD COLUMN IF NOT EXISTS observacoes_faturamento TEXT",
+            "ALTER TABLE cargas ADD COLUMN IF NOT EXISTS rota_manifesto VARCHAR(255)",
+            "ALTER TABLE cargas ADD COLUMN IF NOT EXISTS vale_pedagio_marca VARCHAR(50)",
+            "ALTER TABLE cargas ADD COLUMN IF NOT EXISTS vale_pedagio_rota VARCHAR(45)",
+            "ALTER TABLE cargas ADD COLUMN IF NOT EXISTS vale_pedagio_eixos INTEGER",
+            "ALTER TABLE cargas ADD COLUMN IF NOT EXISTS adiantamento_percentual FLOAT DEFAULT 70.0",
+            "ALTER TABLE cargas ADD COLUMN IF NOT EXISTS adiantamento_valor FLOAT",
+            
+            # Tabela ENTREGAS (Faturamento) - FALTAVAM ESTAS
+            "ALTER TABLE entregas ADD COLUMN IF NOT EXISTS valor_tonelada FLOAT",
+            "ALTER TABLE entregas ADD COLUMN IF NOT EXISTS tipo_pagamento VARCHAR(50)",
+            "ALTER TABLE entregas ADD COLUMN IF NOT EXISTS unidade_id INTEGER",
+            "ALTER TABLE entregas ADD COLUMN IF NOT EXISTS tipo_cte_id INTEGER",
+            "ALTER TABLE entregas ADD COLUMN IF NOT EXISTS forma_pagamento_id INTEGER"
         ]
         
         with db.engine.connect() as conn:
             for sql in cmds:
-                # Abre uma transação para cada comando
                 trans = conn.begin()
                 try:
                     conn.execute(text(sql))
                     trans.commit()
-                    result.append(f"✅ (Passo 2) Executado: {sql}")
+                    result.append(f"✅ Executado: {sql}")
                 except Exception as e:
                     trans.rollback()
-                    # Se der erro, geralmente é porque já existe ou tabela travada
-                    result.append(f"⚠ Aviso (Comando ignorado): {sql} <br> <small>{e}</small>")
+                    # Se der erro, geralmente é porque já existe
+                    result.append(f"⚠ Aviso (Ignorado): {sql} <br> <small>{e}</small>")
                     
-    return "<h2>Relatório da Correção:</h2>" + "<br><hr><br>".join(result)
+    return "<h2>Relatório da Correção Completa:</h2>" + "<br><hr><br>".join(result)
 
 
 if __name__ == '__main__':
