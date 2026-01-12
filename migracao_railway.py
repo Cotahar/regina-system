@@ -1,74 +1,50 @@
-# migracao_railway.py
 import os
 from app import app, db
 from sqlalchemy import text
 
-def migrar_banco_producao():
-    print("=== INICIANDO MIGRAÇÃO DO BANCO DE DADOS (RAILWAY) ===")
-    
-    # Pega a URL do banco do ambiente (Railway injeta isso automaticamente)
-    db_url = os.environ.get('DATABASE_URL')
-    if not db_url:
-        print("⚠ ATENÇÃO: DATABASE_URL não encontrada. Se estiver rodando local, certifique-se que o .env está carregado.")
-        # Não aborta, pois pode estar usando SQLite local de fallback
+def corrigir_banco_producao():
+    print("=== INICIANDO CORREÇÃO TOTAL DO BANCO (RAILWAY/POSTGRES) ===")
     
     with app.app_context():
+        # 1. GARANTIR QUE AS TABELAS EXISTEM
+        # Isso cria 'unidades', 'tipos_cte', 'formas_pagamento' se elas não existirem
+        print(">> Passo 1: Criando tabelas inexistentes (db.create_all)...")
+        try:
+            db.create_all()
+            print("✅ Tabelas verificadas/criadas.")
+        except Exception as e:
+            print(f"❌ Erro ao criar tabelas: {e}")
+
+        # 2. LISTA DE COMANDOS SQL (Usando sintaxe segura do PostgreSQL)
+        # O 'IF NOT EXISTS' impede que o script quebre se a coluna já existir
+        comandos_sql = [
+            # Tabela Unidades
+            "ALTER TABLE unidades ADD COLUMN IF NOT EXISTS uf VARCHAR(2)",
+            "ALTER TABLE unidades ADD COLUMN IF NOT EXISTS is_matriz BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE unidades ADD COLUMN IF NOT EXISTS tipo_cte_padrao_id INTEGER",
+            
+            # Tabela Clientes
+            "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS is_remetente BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS padrao_forma_pagamento_id INTEGER",
+            "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS padrao_tipo_pagamento VARCHAR(50)"
+        ]
+
+        print(">> Passo 2: Adicionando colunas novas...")
+        
+        # Conecta ao banco
         with db.engine.connect() as conn:
-            transaction = conn.begin()
-            try:
-                print(">> Verificando tabelas e colunas...")
-
-                # --- 1. Tabela UNIDADES ---
-                # Adiciona UF
+            # Executa cada comando em uma transação separada
+            for sql in comandos_sql:
                 try:
-                    conn.execute(text("ALTER TABLE unidades ADD COLUMN uf VARCHAR(2)"))
-                    print("✅ [Unidades] Coluna 'uf' criada.")
+                    trans = conn.begin() # Abre transação
+                    conn.execute(text(sql))
+                    trans.commit()       # Salva imediatamente
+                    print(f"✅ Executado: {sql}")
                 except Exception as e:
-                    print(f"ℹ [Unidades] Coluna 'uf' já existe ou erro: {e}")
+                    trans.rollback()     # Cancela apenas este comando se der erro
+                    print(f"⚠ Erro (Ignorado) ao executar '{sql}': {e}")
 
-                # Adiciona Is_Matriz
-                try:
-                    # Postgres usa BOOLEAN, SQLite aceita também. O DEFAULT ajuda a não quebrar dados antigos.
-                    conn.execute(text("ALTER TABLE unidades ADD COLUMN is_matriz BOOLEAN DEFAULT FALSE"))
-                    print("✅ [Unidades] Coluna 'is_matriz' criada.")
-                except Exception as e:
-                    print(f"ℹ [Unidades] Coluna 'is_matriz' já existe ou erro: {e}")
-
-                # Adiciona Tipo CT-e Padrão
-                try:
-                    conn.execute(text("ALTER TABLE unidades ADD COLUMN tipo_cte_padrao_id INTEGER"))
-                    print("✅ [Unidades] Coluna 'tipo_cte_padrao_id' criada.")
-                except Exception as e:
-                    print(f"ℹ [Unidades] Coluna 'tipo_cte_padrao_id' já existe ou erro: {e}")
-
-                # --- 2. Tabela CLIENTES ---
-                # Adiciona Is_Remetente
-                try:
-                    conn.execute(text("ALTER TABLE clientes ADD COLUMN is_remetente BOOLEAN DEFAULT FALSE"))
-                    print("✅ [Clientes] Coluna 'is_remetente' criada.")
-                except Exception as e:
-                    print(f"ℹ [Clientes] Coluna 'is_remetente' já existe ou erro: {e}")
-
-                # Adiciona Padrão Forma Pagamento
-                try:
-                    conn.execute(text("ALTER TABLE clientes ADD COLUMN padrao_forma_pagamento_id INTEGER"))
-                    print("✅ [Clientes] Coluna 'padrao_forma_pagamento_id' criada.")
-                except Exception as e:
-                    print(f"ℹ [Clientes] Coluna 'padrao_forma_pagamento_id' já existe ou erro: {e}")
-
-                # Adiciona Padrão Tipo Pagamento
-                try:
-                    conn.execute(text("ALTER TABLE clientes ADD COLUMN padrao_tipo_pagamento VARCHAR(50)"))
-                    print("✅ [Clientes] Coluna 'padrao_tipo_pagamento' criada.")
-                except Exception as e:
-                    print(f"ℹ [Clientes] Coluna 'padrao_tipo_pagamento' já existe ou erro: {e}")
-
-                transaction.commit()
-                print("\n=== MIGRAÇÃO CONCLUÍDA COM SUCESSO! ===")
-                
-            except Exception as main_error:
-                transaction.rollback()
-                print(f"\n❌ ERRO CRÍTICO NA MIGRAÇÃO: {main_error}")
+    print("\n=== PROCESSO FINALIZADO ===")
 
 if __name__ == "__main__":
-    migrar_banco_producao()
+    corrigir_banco_producao()
