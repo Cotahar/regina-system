@@ -2064,6 +2064,48 @@ def delete_forma_pagamento(id):
         db.session.rollback()
         return jsonify(error='Não é possível excluir pois já está em uso em alguma carga/cliente.'), 500
 
+# --- ROTA DE EMERGÊNCIA PARA CORRIGIR BANCO (DATA REPAIR) ---
+@app.route('/fix-db-emergency')
+def fix_db_emergency():
+    from sqlalchemy import text
+    result = []
+    
+    with app.app_context():
+        # 1. Cria tabelas que ainda não existem (Unidades, TiposCte, etc)
+        try:
+            db.create_all()
+            result.append("✅ (Passo 1) Tabelas ausentes foram criadas com sucesso.")
+        except Exception as e:
+            result.append(f"❌ Erro no db.create_all: {str(e)}")
+
+        # 2. Adiciona colunas faltantes manualmente (Modo PostgreSQL Seguro)
+        # O comando IF NOT EXISTS evita erros se a coluna já existir
+        cmds = [
+            "ALTER TABLE unidades ADD COLUMN IF NOT EXISTS uf VARCHAR(2)",
+            "ALTER TABLE unidades ADD COLUMN IF NOT EXISTS is_matriz BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE unidades ADD COLUMN IF NOT EXISTS tipo_cte_padrao_id INTEGER",
+            
+            "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS is_remetente BOOLEAN DEFAULT FALSE",
+            "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS padrao_forma_pagamento_id INTEGER",
+            "ALTER TABLE clientes ADD COLUMN IF NOT EXISTS padrao_tipo_pagamento VARCHAR(50)"
+        ]
+        
+        with db.engine.connect() as conn:
+            for sql in cmds:
+                # Abre uma transação para cada comando
+                trans = conn.begin()
+                try:
+                    conn.execute(text(sql))
+                    trans.commit()
+                    result.append(f"✅ (Passo 2) Executado: {sql}")
+                except Exception as e:
+                    trans.rollback()
+                    # Se der erro, geralmente é porque já existe ou tabela travada
+                    result.append(f"⚠ Aviso (Comando ignorado): {sql} <br> <small>{e}</small>")
+                    
+    return "<h2>Relatório da Correção:</h2>" + "<br><hr><br>".join(result)
+
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
