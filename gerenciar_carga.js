@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return parseFloat(v).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
     };
     
-    // Parser que entende "1.500,00" e transforma em float JS (1500.00)
     const parseMoney = (v) => {
         if (!v) return 0;
         if (typeof v === 'number') return v;
@@ -36,7 +35,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- LISTENERS DOS BOTÕES ---
     document.getElementById('btn-salvar-topo').onclick = salvarTudo;
     document.getElementById('btn-salvar-final').onclick = salvarTudo;
-    
+    document.getElementById('btn-imprimir-fat').onclick = () => {
+        // Abre em nova aba
+        window.open(`/cargas/${cargaId}/relatorio_faturamento`, '_blank');
+    };
     // Cálculo do Adiantamento no Rodapé
     const inpFretePago = document.getElementById('cf-frete-pago');
     const inpPerc = document.getElementById('cf-percentual');
@@ -59,7 +61,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1. SOLUÇÃO DO FOCO NO SELECT2 (PESQUISA AUTOMÁTICA)
     // ============================================================
     $(document).on('select2:open', () => {
-        document.querySelector('.select2-search__field').focus();
+        const searchField = document.querySelector('.select2-search__field');
+        if(searchField) searchField.focus();
     });
 
     // --- FUNÇÕES DE CARREGAMENTO ---
@@ -112,35 +115,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         const tbody = document.getElementById('tabela-itens-corpo');
         tbody.innerHTML = '';
 
+        // Encontra a Matriz nas configurações carregadas
+        const unidadeMatriz = unidades.find(u => u.is_matriz);
+
         entregas.forEach(e => {
             
-            // --- INÍCIO DA INTELIGÊNCIA ---
-            
-            // A. Regra de Unidade (Baseada na UF se for Remetente/Origem)
-            // Se o campo já estiver salvo no banco (e.unidade_id), usa ele.
-            // Se estiver vazio, tenta adivinhar pelo Estado do Cliente.
+            // --- LÓGICA DE AUTOMAÇÃO INTELIGENTE (UF -> UNIDADE -> CT-e) ---
             let idUnidade = e.unidade_id;
             let idTipoCte = e.tipo_cte_id;
 
-            // Se ainda não tem unidade definida E temos a UF do cliente vindo do backend
-            if (!idUnidade && e.cliente_uf) {
-                const uf = e.cliente_uf.toUpperCase();
-                
-                // Procura na lista de unidades uma que contenha a UF (Ex: "Filial PR")
-                const unidadeEncontrada = unidades.find(u => u.nome.toUpperCase().includes(uf));
-                if (unidadeEncontrada) idUnidade = unidadeEncontrada.id;
+            // Só aplica se não tiver unidade definida
+            if (!idUnidade) {
+                // Tenta pegar UF do Cliente (se for remetente)
+                const ufAlvo = e.cliente_is_remetente ? e.cliente_uf : null; 
 
-                // Tenta achar o Tipo Cte correspondente (Ex: "11 - PR")
-                const cteEncontrado = tiposCte.find(t => t.descricao.toUpperCase().includes(uf));
-                if (cteEncontrado) idTipoCte = cteEncontrado.id;
+                if (ufAlvo) {
+                    // 1. Tenta achar unidade específica
+                    const unidadeRegra = unidades.find(u => u.uf === ufAlvo);
+                    if (unidadeRegra) {
+                        idUnidade = unidadeRegra.id;
+                        if (unidadeRegra.tipo_cte_padrao_id) idTipoCte = unidadeRegra.tipo_cte_padrao_id;
+                    } else if (unidadeMatriz) {
+                        // 2. Se não achou, vai de Matriz
+                        idUnidade = unidadeMatriz.id;
+                        if (unidadeMatriz.tipo_cte_padrao_id) idTipoCte = unidadeMatriz.tipo_cte_padrao_id;
+                    }
+                } else if (unidadeMatriz) {
+                    // Sem UF de origem definida, vai de Matriz
+                    idUnidade = unidadeMatriz.id;
+                    if(unidadeMatriz.tipo_cte_padrao_id) idTipoCte = unidadeMatriz.tipo_cte_padrao_id;
+                }
             }
-
-            // B. Regra de Pagamento (Padrão do Cliente)
+            
+            // Lógica de Pagamento
             let idForma = e.forma_pagamento_id || e.cliente_forma_padrao_id;
             let tipoPagto = e.tipo_pagamento || e.cliente_tipo_padrao;
 
-            // --- FIM DA INTELIGÊNCIA ---
-
+            // --- RENDERIZAÇÃO ---
             const tr = document.createElement('tr');
             tr.dataset.id = e.id; 
 
@@ -168,25 +179,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </td>
             `;
             tbody.appendChild(tr);
-
-            // --- CONFIGURAÇÃO DOS INPUTS E EVENTOS ---
+            
+            // --- LISTENERS DOS INPUTS ---
             const inpPeso = tr.querySelector('.inp-peso');
             const inpVton = tr.querySelector('.inp-vton');
             const inpFrete = tr.querySelector('.inp-frete');
             const inpCubado = tr.querySelector('.inp-cubado');
 
-            // Função de Recálculo (Peso * Valor Ton)
             const recalculaFrete = () => {
-                const peso = parseMoney(inpPeso.value) / 1000; // Converte Kg para Ton
+                const peso = parseMoney(inpPeso.value) / 1000; 
                 const vTon = parseMoney(inpVton.value);
-                
                 if(peso > 0 && vTon > 0) {
                     inpFrete.value = formatMoney(peso * vTon);
                     atualizarTotais();
                 }
             };
             
-            // Aplica a NOVA máscara Excel em todos os campos monetários
             aplicarMascaraExcel(inpPeso, () => { recalculaFrete(); atualizarTotais(); });
             aplicarMascaraExcel(inpVton, recalculaFrete);
             aplicarMascaraExcel(inpFrete, atualizarTotais);
@@ -204,22 +212,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     function aplicarMascaraExcel(input, callbackChange) {
         if(!input) return;
 
-        // Ao entrar no campo: remove formatação visual, deixa o valor "cru" (ex: 1500,50)
         input.addEventListener('focus', (e) => {
             let valor = e.target.value;
-            // Mantém apenas números e vírgula
             valor = valor.replace(/[^\d,]/g, '');
             if (valor === '0,00') valor = '';
             e.target.value = valor;
-            e.target.select(); // Seleciona tudo para facilitar apagar
+            e.target.select(); 
         });
 
-        // Ao digitar: impede letras, permite apenas uma vírgula
         input.addEventListener('input', (e) => {
             let valor = e.target.value;
-            valor = valor.replace(/[^0-9,]/g, ''); // Remove lixo
-            
-            // Garante apenas uma vírgula
+            valor = valor.replace(/[^0-9,]/g, ''); 
             const partes = valor.split(',');
             if (partes.length > 2) {
                 valor = partes[0] + ',' + partes.slice(1).join('');
@@ -227,14 +230,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.target.value = valor;
         });
 
-        // Ao sair: formata bonito (ex: 1.500,50) e dispara o callback
         input.addEventListener('blur', (e) => {
             let valor = e.target.value;
             if (!valor) {
                 e.target.value = '0,00';
             } else {
-                // Converte para float para o formatMoney funcionar
-                // Troca , por . apenas para conversão
                 let numero = parseFloat(valor.replace('.', '').replace(',', '.'));
                 if (isNaN(numero)) numero = 0;
                 e.target.value = formatMoney(numero);
@@ -246,7 +246,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     function gerarOptions(lista, selecionadoId) {
         let html = '<option value="">...</option>';
         lista.forEach(i => {
-            // Verifica ID como string e int para evitar erros de tipo
             const selected = (i.id == selecionadoId) ? 'selected' : '';
             html += `<option value="${i.id}" ${selected}>${i.text || i.nome || i.descricao}</option>`;
         });
@@ -265,7 +264,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('total-frete').innerText = 'R$ ' + formatMoney(totalFrete);
     }
 
-    // --- SALVAMENTO E REMOÇÃO (Mantidos iguais, apenas chamando parseMoney novo) ---
+    // --- SALVAMENTO E REMOÇÃO ---
     async function salvarTudo() {
         const btn = document.getElementById('btn-salvar-final');
         const txtOriginal = btn.innerText;

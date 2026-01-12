@@ -38,11 +38,32 @@ class Veiculo(db.Model):
         }
 
 # --- NOVAS TABELAS DE CADASTRO (MÓDULO FATURAMENTO) ---
+# No models.py
+
 class Unidade(db.Model):
     __tablename__ = 'unidades'
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String, unique=True, nullable=False)
-    def to_dict(self): return {'id': self.id, 'nome': self.nome, 'text': self.nome}
+    
+    # --- NOVOS CAMPOS PARA A LÓGICA ---
+    uf = db.Column(db.String(2)) # Ex: 'PR', 'ES'
+    is_matriz = db.Column(db.Boolean, default=False) # Define se é a Matriz (Padrão)
+    
+    # Tipo de CT-e Padrão para esta unidade
+    tipo_cte_padrao_id = db.Column(db.Integer, db.ForeignKey('tipos_cte.id'), nullable=True)
+    
+    # Relacionamento para acessar o nome do tipo cte
+    tipo_cte_rel = db.relationship('TipoCte')
+
+    def to_dict(self): 
+        return {
+            'id': self.id, 
+            'nome': self.nome, 
+            'text': self.nome,
+            'uf': self.uf,
+            'is_matriz': self.is_matriz,
+            'tipo_cte_padrao_id': self.tipo_cte_padrao_id
+        }
 
 class TipoCte(db.Model):
     __tablename__ = 'tipos_cte'

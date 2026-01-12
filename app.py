@@ -204,6 +204,12 @@ def montagem_page():
 @login_required
 def consulta_page():
     return send_from_directory('.', 'consulta.html')
+    
+@app.route('/unidades.html')
+@login_required
+def unidades_page():
+    if session.get('user_permission') != 'admin': return redirect(url_for('index'))
+    return send_from_directory('.', 'unidades.html')
 
 @app.route('/motoristas.html')
 @login_required
@@ -389,7 +395,12 @@ def update_cliente(cliente_id):
         cliente.ddd = data.get('ddd') or None
         cliente.telefone = data.get('telefone') or None
         cliente.observacoes = data.get('observacoes') or None
+        
+        # --- CAMPOS QUE FALTAVAM ---
         cliente.is_remetente = data.get('is_remetente', False)
+        cliente.padrao_forma_pagamento_id = data.get('padrao_forma_pagamento_id') or None
+        cliente.padrao_tipo_pagamento = data.get('padrao_tipo_pagamento') or None
+        # ---------------------------
         
         db.session.commit()
         return jsonify(message='Cliente atualizado com sucesso!')
@@ -397,7 +408,7 @@ def update_cliente(cliente_id):
         db.session.rollback()
         print(f"Erro ao atualizar cliente {cliente_id}: {e}")
         return jsonify(error=f'Erro interno: {str(e)}'), 500
-
+        
 @app.route('/api/cargas', methods=['GET', 'POST'])
 @login_required
 def handle_cargas():
@@ -1433,7 +1444,7 @@ def handle_usuario(user_id):
             db.session.rollback()
             return jsonify(error=f"Erro interno: {str(e)}"), 500
 
-# --- NOVA ROTA: AGRUPAR ENTREGAS (MÓDULO 7) ---
+# --- ROTA ATUALIZADA: AGRUPAR ENTREGAS (CORREÇÃO DE CONCATENAÇÃO) ---
 @app.route('/api/entregas/agrupar', methods=['POST'])
 @login_required
 def agrupar_entregas():
@@ -1450,41 +1461,46 @@ def agrupar_entregas():
         if not entregas:
             return jsonify(error='Entregas não encontradas.'), 404
 
-        # Validação 1: Verificar se todas são do mesmo cliente (Destinatário)
-        primeiro_cliente_id = entregas[0].cliente_id
-        if any(e.cliente_id != primeiro_cliente_id for e in entregas):
-            return jsonify(error='Todas as entregas devem pertencer ao mesmo Cliente (Destinatário).'), 400
-
         # A "sobrevivente" será a primeira da lista
         entrega_principal = entregas[0]
         
-        # Variáveis para somar/concatenar
+        # Lista para guardar todas as NFs (começa com a da principal, se tiver)
+        lista_nfs = []
+        if entrega_principal.nota_fiscal:
+            lista_nfs.append(str(entrega_principal.nota_fiscal).strip())
+
+        # Variáveis para somar
         total_peso = entrega_principal.peso_bruto or 0.0
         total_frete = entrega_principal.valor_frete or 0.0
         total_cubado = entrega_principal.peso_cubado or 0.0
-        notas_fiscais = [str(entrega_principal.nota_fiscal)] if entrega_principal.nota_fiscal else []
 
-        # Itera sobre as outras para somar e depois excluir
+        # Itera sobre as outras para somar, pegar NF e excluir
         for e in entregas[1:]:
             total_peso += (e.peso_bruto or 0.0)
             total_frete += (e.valor_frete or 0.0)
             total_cubado += (e.peso_cubado or 0.0)
-            if e.nota_fiscal:
-                notas_fiscais.append(str(e.nota_fiscal))
             
-            # Marca para deletar do banco
+            # Pega a NF, limpa espaços e adiciona na lista se não estiver vazia
+            if e.nota_fiscal:
+                nf_limpa = str(e.nota_fiscal).strip()
+                if nf_limpa:
+                    lista_nfs.append(nf_limpa)
+            
+            # Marca para deletar do banco (pois ela foi fundida na principal)
             db.session.delete(e)
 
-        # Atualiza a entrega principal
+        # Atualiza a entrega principal com os totais
         entrega_principal.peso_bruto = total_peso
         entrega_principal.valor_frete = total_frete
         entrega_principal.peso_cubado = total_cubado
-        # Concatena as NFs
-        entrega_principal.nota_fiscal = " / ".join(filter(None, notas_fiscais))
+        
+        # Concatena as NFs com " / " (Ex: "100 / 101 / 102")
+        # O filtro remove duplicatas visuais se houver
+        entrega_principal.nota_fiscal = " / ".join(lista_nfs)
 
         db.session.commit()
         
-        return jsonify(message=f'Sucesso! {len(entregas)} entregas foram agrupadas em uma única linha.')
+        return jsonify(message=f'Sucesso! {len(entregas)} entregas agrupadas. NFs resultantes: {entrega_principal.nota_fiscal}')
 
     except Exception as e:
         db.session.rollback()
@@ -1868,15 +1884,171 @@ def handle_gerenciar_carga(carga_id):
             return jsonify(error=f"Erro interno: {str(e)}"), 500
         
 # --- ROTAS DE CADASTROS AUXILIARES (FATURAMENTO) ---
-@app.route('/api/auxiliar/unidades', methods=['GET'])
+@app.route('/api/auxiliar/unidades', methods=['GET', 'POST'])
 @login_required
-def get_unidades():
-    return jsonify([u.to_dict() for u in Unidade.query.order_by(Unidade.nome).all()])
+def handle_unidades():
+    # GET: Listar
+    if request.method == 'GET':
+        return jsonify([u.to_dict() for u in Unidade.query.order_by(Unidade.nome).all()])
 
-@app.route('/api/auxiliar/tipos-cte', methods=['GET'])
+    # POST: Criar/Editar
+    if request.method == 'POST':
+        if session.get('user_permission') != 'admin': return jsonify(error='Acesso negado'), 403
+
+        data = request.json
+        nome = data.get('nome').upper()
+        uf = (data.get('uf') or '').upper()
+        is_matriz = data.get('is_matriz', False)
+        tipo_cte_id = data.get('tipo_cte_padrao_id') or None
+
+        # Se esta for Matriz, remove o flag de matriz das outras
+        if is_matriz:
+            Unidade.query.update({Unidade.is_matriz: False})
+
+        nova = Unidade(nome=nome, uf=uf, is_matriz=is_matriz, tipo_cte_padrao_id=tipo_cte_id)
+        db.session.add(nova)
+        db.session.commit()
+        return jsonify(message='Unidade Salva!')
+
+# --- ROTA PARA O RELATÓRIO DE FATURAMENTO (PDF) ---
+@app.route('/cargas/<int:carga_id>/relatorio_faturamento')
 @login_required
-def get_tipos_cte():
-    return jsonify([t.to_dict() for t in TipoCte.query.order_by(TipoCte.descricao).all()])
+def relatorio_faturamento_view(carga_id):
+    try:
+        # Carrega a carga com TODOS os relacionamentos necessários para o relatório
+        carga = Carga.query.options(
+            joinedload(Carga.motorista_rel),
+            joinedload(Carga.veiculo_rel),
+            joinedload(Carga.entregas).joinedload(Entrega.cliente),
+            joinedload(Carga.entregas).joinedload(Entrega.remetente),
+            joinedload(Carga.entregas).joinedload(Entrega.unidade_rel),       # Necessário
+            joinedload(Carga.entregas).joinedload(Entrega.tipo_cte_rel),      # Necessário
+            joinedload(Carga.entregas).joinedload(Entrega.forma_pagamento_rel) # Necessário
+        ).get(carga_id)
+
+        if not carga:
+            return "Carga não encontrada", 404
+
+        # Recalcula o destino principal para exibir no cabeçalho
+        destinos = set()
+        destino_principal = "DIVERSOS"
+        for e in carga.entregas:
+            cidade = e.cidade_entrega or (e.cliente.cidade if e.cliente else "")
+            uf = e.estado_entrega or (e.cliente.estado if e.cliente else "")
+            if cidade and uf:
+                destinos.add(f"{cidade}-{uf}")
+                if e.is_last_delivery:
+                    destino_principal = f"{cidade}-{uf}"
+        
+        # Injeta o destino calculado no objeto carga (apenas para exibição, não salva no banco)
+        carga.destino_principal = destino_principal
+
+        return render_template('relatorio_faturamento.html', carga=carga)
+
+    except Exception as e:
+        print(f"Erro no relatório faturamento: {e}")
+        return f"Erro interno: {str(e)}", 500
+
+@app.route('/api/auxiliar/unidades/<int:id>', methods=['PUT', 'DELETE'])
+@login_required
+def handle_single_unidade(id):
+    if session.get('user_permission') != 'admin': return jsonify(error='Acesso negado'), 403
+    
+    unidade = Unidade.query.get(id)
+    if not unidade: return jsonify(error='Não encontrada'), 404
+
+    # --- DELETE (Excluir) ---
+    if request.method == 'DELETE':
+        try:
+            db.session.delete(unidade)
+            db.session.commit()
+            return jsonify(message='Removido!')
+        except: return jsonify(error='Erro ao remover (pode estar em uso).'), 500
+
+    # --- PUT (Editar) ---
+    if request.method == 'PUT':
+        try:
+            data = request.json
+            nome = data.get('nome').upper()
+            
+            if not nome: return jsonify(error='Nome obrigatório'), 400
+
+            # Se esta unidade virou Matriz, remove o status das outras
+            if data.get('is_matriz', False):
+                Unidade.query.filter(Unidade.id != id).update({Unidade.is_matriz: False})
+
+            unidade.nome = nome
+            unidade.uf = (data.get('uf') or '').upper()
+            unidade.is_matriz = data.get('is_matriz', False)
+            unidade.tipo_cte_padrao_id = data.get('tipo_cte_padrao_id') or None
+
+            db.session.commit()
+            return jsonify(message='Unidade atualizada!')
+        except Exception as e:
+            db.session.rollback()
+            return jsonify(error=f'Erro ao atualizar: {str(e)}'), 500
+
+# --- ROTA ATUALIZADA: TIPOS DE CT-E (CRUD COMPLETO) ---
+@app.route('/api/auxiliar/tipos-cte', methods=['GET', 'POST'])
+@login_required
+def handle_tipos_cte():
+    # GET: Listar
+    if request.method == 'GET':
+        return jsonify([t.to_dict() for t in TipoCte.query.order_by(TipoCte.descricao).all()])
+
+    # POST: Criar
+    if request.method == 'POST':
+        if session.get('user_permission') != 'admin': return jsonify(error='Acesso negado'), 403
+        
+        data = request.json
+        descricao = (data.get('descricao') or '').strip().upper()
+        if not descricao: return jsonify(error='Descrição obrigatória'), 400
+        
+        if TipoCte.query.filter_by(descricao=descricao).first():
+             return jsonify(error='Tipo já cadastrado'), 400
+
+        nova = TipoCte(descricao=descricao)
+        db.session.add(nova)
+        db.session.commit()
+        return jsonify(message='Cadastrado!', id=nova.id)
+
+@app.route('/api/auxiliar/tipos-cte/<int:id>', methods=['DELETE'])
+@login_required
+def delete_tipo_cte(id):
+    if session.get('user_permission') != 'admin': return jsonify(error='Acesso negado'), 403
+    try:
+        item = TipoCte.query.get(id)
+        if not item: return jsonify(error='Não encontrado'), 404
+        db.session.delete(item)
+        db.session.commit()
+        return jsonify(message='Excluído!')
+    except: return jsonify(error='Não é possível excluir (em uso).'), 500
+    
+
+@app.route('/api/auxiliar/formas-pagamento', methods=['GET', 'POST'])
+@login_required
+def handle_formas_pagamento():
+    # GET: Listar
+    if request.method == 'GET':
+        return jsonify([f.to_dict() for f in FormaPagamento.query.order_by(FormaPagamento.descricao).all()])
+
+    # POST: Criar Nova
+    if request.method == 'POST':
+        if session.get('user_permission') != 'admin':
+            return jsonify(error='Apenas admin'), 403
+        
+        data = request.json
+        descricao = (data.get('descricao') or '').strip().upper()
+        if not descricao: return jsonify(error='Descrição obrigatória'), 400
+        
+        # Verifica duplicidade
+        if FormaPagamento.query.filter_by(descricao=descricao).first():
+             return jsonify(error='Forma de pagamento já cadastrada'), 400
+
+        nova = FormaPagamento(descricao=descricao)
+        db.session.add(nova)
+        db.session.commit()
+        return jsonify(message='Cadastrado!', id=nova.id)
 
 @app.route('/api/auxiliar/formas-pagamento/<int:id>', methods=['DELETE'])
 @login_required
