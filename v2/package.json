@@ -1,0 +1,23 @@
+{
+  "name": "regina-system",
+  "version": "2.0.0",
+  "description": "Sistema de gestao de cargas, carregamentos, agendamentos e avarias",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:migrate": "node src/db/migrate.js",
+    "css:build": "tailwindcss -i ./src/styles/input.css -o ./public/css/output.css --minify",
+    "css:watch": "tailwindcss -i ./src/styles/input.css -o ./public/css/output.css --watch"
+  },
+  "dependencies": {
+    "express": "^5.0.1",
+    "multer": "^2.0.0"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.14"
+  }
+}
