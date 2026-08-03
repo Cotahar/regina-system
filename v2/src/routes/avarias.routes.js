@@ -8,7 +8,8 @@ import { db } from '../db/connection.js';
 import { requireLogin, requireAdmin } from '../middleware/auth.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadsDir = path.join(__dirname, '..', '..', 'uploads', 'avarias');
+const uploadsRoot = process.env.UPLOADS_DIR || path.join(__dirname, '..', '..', 'uploads');
+const uploadsDir = path.join(uploadsRoot, 'avarias');
 fs.mkdirSync(uploadsDir, { recursive: true });
 
 const upload = multer({
