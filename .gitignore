@@ -1,6 +1,9 @@
 cargas.db
+instance/
 *.pyc
 __pycache__/
-.env.railwaycredentials.json 
+.env
+.env.railway
+client_secret.json
 credentials.json
 token.json
