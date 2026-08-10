@@ -3,6 +3,7 @@ import { escapeHtml } from './escape.js';
 import { formatarMoeda, formatarPeso, formatarDataParaInput, parseDecimal } from './format.js';
 import { abrirModal, fecharModal, exibirMensagem } from './ui.js';
 import { criarCombobox } from './combobox.js';
+import { icones } from './icons.js';
 
 const STATUS_CORES = {
   Pendente: 'bg-slate-500/30 text-slate-200',
@@ -117,26 +118,30 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     }
   }
 
-  function botao(label, className, onClick) {
+  function botao(label, className, onClick, icone) {
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = className;
-    btn.textContent = label;
+    btn.className = `${className} gap-1.5`;
+    btn.innerHTML = `${icone || ''}<span>${label}</span>`;
     btn.addEventListener('click', onClick);
     return btn;
   }
 
   function renderizarAcoes() {
-    const container = document.getElementById('det-acoes');
-    container.innerHTML = '';
+    const fluxo = document.getElementById('det-acoes-fluxo');
+    const ferramentas = document.getElementById('det-acoes-ferramentas');
+    const perigo = document.getElementById('det-acoes-perigo');
+    fluxo.innerHTML = '';
+    ferramentas.innerHTML = '';
+    perigo.innerHTML = '';
     const c = cargaAtual;
 
-    container.appendChild(botao('Salvar Alteracoes', 'btn-secondary', async () => {
+    fluxo.appendChild(botao('Salvar Alteracoes', 'btn-secondary', async () => {
       await atualizarStatus(coletarCamposEditaveis(), 'Alteracoes salvas!');
-    }));
+    }, icones.salvar));
 
     if (c.status === 'Pendente') {
-      container.appendChild(botao('Agendar', 'btn-primary', async () => {
+      fluxo.appendChild(botao('Agendar', 'btn-primary', async () => {
         const campos = coletarCamposEditaveis();
         if (!campos.motorista_id || !campos.veiculo_id || !campos.data_agendamento) {
           return mostrarMensagem('Motorista, veiculo e data de agendamento sao obrigatorios.', 'erro');
@@ -147,22 +152,22 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
           data_agendamento: campos.data_agendamento,
           status: 'Agendada'
         }, 'Carga agendada!');
-      }));
+      }, icones.calendario));
     }
 
     if (c.status === 'Agendada') {
-      container.appendChild(botao('Iniciar Transito', 'btn-primary', async () => {
+      fluxo.appendChild(botao('Iniciar Transito', 'btn-primary', async () => {
         const campos = coletarCamposEditaveis();
         if (!campos.data_carregamento) return mostrarMensagem('Informe a data de carregamento.', 'erro');
         await atualizarStatus({ data_carregamento: campos.data_carregamento, status: 'Em Trânsito' }, 'Carga em transito!');
-      }));
-      container.appendChild(botao('Cancelar Agendamento', 'btn-secondary', async () => {
+      }, icones.caminhao));
+      fluxo.appendChild(botao('Cancelar Agendamento', 'btn-secondary', async () => {
         await atualizarStatus({ status: 'Pendente' }, 'Agendamento cancelado.');
-      }));
+      }, icones.voltar));
     }
 
     if (c.status === 'Em Trânsito') {
-      container.appendChild(botao('Finalizar', 'btn-primary', async () => {
+      fluxo.appendChild(botao('Finalizar', 'btn-primary', async () => {
         const campos = coletarCamposEditaveis();
         if (!campos.data_finalizacao) return mostrarMensagem('Informe a data de finalizacao.', 'erro');
         const senha = prompt('Confirme sua senha para finalizar a carga:');
@@ -173,22 +178,22 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
           return mostrarMensagem(err.message, 'erro');
         }
         await atualizarStatus({ data_finalizacao: campos.data_finalizacao, status: 'Finalizada' }, 'Carga finalizada!');
-      }));
+      }, icones.check));
       if (isAdmin) {
-        container.appendChild(botao('Regredir p/ Agendada', 'btn-secondary', async () => {
+        fluxo.appendChild(botao('Regredir p/ Agendada', 'btn-secondary', async () => {
           await atualizarStatus({ status: 'Agendada' }, 'Status regredido.');
-        }));
+        }, icones.voltar));
       }
     }
 
     if (c.status === 'Finalizada' && isAdmin) {
-      container.appendChild(botao('Regredir p/ Em Transito', 'btn-secondary', async () => {
+      fluxo.appendChild(botao('Regredir p/ Em Transito', 'btn-secondary', async () => {
         await atualizarStatus({ status: 'Em Trânsito' }, 'Status regredido.');
-      }));
+      }, icones.voltar));
     }
 
     if (['Pendente', 'Agendada'].includes(c.status)) {
-      container.appendChild(botao('Devolver p/ Rascunho', 'btn-secondary', async () => {
+      fluxo.appendChild(botao('Devolver p/ Rascunho', 'btn-secondary', async () => {
         if (!confirm('Devolver esta carga para Rascunho? Motorista e datas serao limpos.')) return;
         try {
           await apiPut(`/api/cargas/${c.id}/devolver-rascunho`, {});
@@ -197,23 +202,23 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
         } catch (err) {
           mostrarMensagem(err.message, 'erro');
         }
-      }));
+      }, icones.voltar));
     }
 
-    container.appendChild(botao('Imprimir Espelho', 'btn-secondary', () => {
+    ferramentas.appendChild(botao('Imprimir Espelho', 'btn-secondary', () => {
       window.open(`/cargas/${c.id}/espelho_impressao`, '_blank');
-    }));
+    }, icones.impressora));
 
-    container.appendChild(botao('Gerenciar / Fat.', 'btn-secondary', () => {
+    ferramentas.appendChild(botao('Gerenciar / Fat.', 'btn-secondary', () => {
       window.open(`/gerenciar-carga.html?carga_id=${c.id}`, '_blank');
-    }));
+    }, icones.cifrao));
 
-    container.appendChild(botao('Registrar Avaria', 'btn-secondary', () => {
+    ferramentas.appendChild(botao('Registrar Avaria', 'btn-secondary', () => {
       window.open(`/avarias.html?carga_id=${c.id}`, '_blank');
-    }));
+    }, icones.alerta));
 
     if (isAdmin) {
-      container.appendChild(botao('Excluir Carga', 'btn-danger', async () => {
+      perigo.appendChild(botao('Excluir Carga', 'btn-danger', async () => {
         const acao = confirm(
           'OK = excluir a carga e devolver as entregas para "Disponiveis".\nCancelar = escolher excluir as entregas junto.'
         )
@@ -227,7 +232,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
         } catch (err) {
           mostrarMensagem(err.message, 'erro');
         }
-      }));
+      }, icones.lixeira));
     }
   }
 

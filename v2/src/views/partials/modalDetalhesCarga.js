@@ -47,7 +47,12 @@ export function renderModalDetalhesCarga() {
         </div>
       </div>
 
-      <div class="mt-3 flex flex-wrap gap-2" id="det-acoes"></div>
+      <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-painel-border pt-3">
+        <div class="flex flex-wrap gap-2" id="det-acoes-fluxo"></div>
+        <div class="h-6 w-px bg-painel-border max-sm:hidden"></div>
+        <div class="flex flex-wrap gap-2" id="det-acoes-ferramentas"></div>
+        <div class="ml-auto flex flex-wrap gap-2" id="det-acoes-perigo"></div>
+      </div>
 
       <div class="mt-5">
         <div class="mb-2 flex items-center justify-between">
