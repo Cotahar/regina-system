@@ -16,7 +16,6 @@ import { entregasRouter } from './routes/entregas.routes.js';
 import { gerenciarCargaRouter } from './routes/gerenciarCarga.routes.js';
 import { avariasRouter } from './routes/avarias.routes.js';
 import { usuariosRouter } from './routes/usuarios.routes.js';
-import { adminImportRouter } from './routes/adminImport.routes.js';
 import { registrarClienteSSE, removerClienteSSE } from './services/eventos.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -66,7 +65,6 @@ app.use(entregasRouter);
 app.use(gerenciarCargaRouter);
 app.use(avariasRouter);
 app.use(usuariosRouter);
-app.use(adminImportRouter);
 app.use(pagesRouter);
 
 app.use((req, res) => {
