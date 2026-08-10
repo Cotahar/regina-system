@@ -1,5 +1,6 @@
 cargas.db
 instance/
+export_dados.json
 *.pyc
 __pycache__/
 .env
