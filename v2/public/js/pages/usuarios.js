@@ -83,6 +83,9 @@ async function carregarUnidades() {
   const selectTipoCte = document.getElementById('unidade-tipo-cte');
   selectTipoCte.innerHTML = '<option value="">Tipo CT-e padrao</option>' +
     tiposCte.map((t) => `<option value="${t.id}">${escapeHtml(t.descricao)}</option>`).join('');
+  const selectTipoCteOutraUf = document.getElementById('unidade-tipo-cte-outra-uf');
+  selectTipoCteOutraUf.innerHTML = '<option value="">Tipo CT-e (outra UF)</option>' +
+    tiposCte.map((t) => `<option value="${t.id}">${escapeHtml(t.descricao)}</option>`).join('');
 
   const tbody = document.getElementById('tabela-unidades');
   tbody.innerHTML = unidades.map((u) => `
@@ -90,6 +93,7 @@ async function carregarUnidades() {
       <td class="py-2">${escapeHtml(u.nome)}</td>
       <td class="py-2">${escapeHtml(u.uf || '')}</td>
       <td class="py-2">${u.is_matriz ? 'Sim' : ''}</td>
+      <td class="py-2">${escapeHtml(tiposCte.find((t) => t.id === u.tipo_cte_outra_uf_id)?.descricao || '')}</td>
       <td class="py-2 text-right">
         <button class="btn-secondary btn-editar px-2 py-1 text-xs">Editar</button>
         <button class="btn-danger btn-excluir px-2 py-1 text-xs">Excluir</button>
@@ -104,6 +108,7 @@ async function carregarUnidades() {
       document.getElementById('unidade-nome').value = u.nome;
       document.getElementById('unidade-uf').value = u.uf || '';
       document.getElementById('unidade-tipo-cte').value = u.tipo_cte_padrao_id || '';
+      document.getElementById('unidade-tipo-cte-outra-uf').value = u.tipo_cte_outra_uf_id || '';
       document.getElementById('unidade-matriz').checked = u.is_matriz;
     });
   });
@@ -129,6 +134,7 @@ document.getElementById('form-unidade').addEventListener('submit', async (event)
     nome: document.getElementById('unidade-nome').value.trim(),
     uf: document.getElementById('unidade-uf').value.trim(),
     tipo_cte_padrao_id: document.getElementById('unidade-tipo-cte').value || null,
+    tipo_cte_outra_uf_id: document.getElementById('unidade-tipo-cte-outra-uf').value || null,
     is_matriz: document.getElementById('unidade-matriz').checked
   };
   try {

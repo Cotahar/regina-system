@@ -1,6 +1,7 @@
 import { apiGet, apiPost, apiPut, apiDelete } from '../shared/api.js';
 import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
 import { escapeHtml } from '../shared/escape.js';
+import { configurarColarImport } from '../shared/colar-import.js';
 
 let motoristas = [];
 
@@ -112,6 +113,14 @@ filtro.addEventListener('input', () => {
     (m.nome || '').toLowerCase().includes(termo) || (m.codigo || '').toLowerCase().includes(termo)
   );
   renderizar(filtrados);
+});
+
+configurarColarImport({
+  textareaId: 'colar-texto',
+  botaoId: 'btn-colar-importar',
+  msgId: 'msg-import',
+  url: '/api/motoristas/import',
+  onSucesso: carregar
 });
 
 carregar();

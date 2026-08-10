@@ -34,7 +34,13 @@ clientesRouter.get('/api/clientes/detalhes', requireLogin, (req, res) => {
     text: textoCliente(c),
     ddd: c.ddd,
     telefone: c.telefone,
-    observacoes: c.observacoes
+    observacoes: c.observacoes,
+    autodescarga: !!c.autodescarga,
+    precisa_ajudantes: !!c.precisa_ajudantes,
+    descarga_paga_direto: !!c.descarga_paga_direto,
+    precisa_agendamento: !!c.precisa_agendamento,
+    resolve_com_representante: !!c.resolve_com_representante,
+    contato_extra: c.contato_extra
   })));
 });
 
@@ -45,7 +51,15 @@ clientesRouter.get('/api/clientes', requireLogin, (req, res) => {
     text: textoCliente(c),
     cidade: c.cidade,
     estado: c.estado,
-    is_remetente: !!c.is_remetente
+    is_remetente: !!c.is_remetente,
+    padrao_forma_pagamento_id: c.padrao_forma_pagamento_id,
+    padrao_tipo_pagamento: c.padrao_tipo_pagamento,
+    autodescarga: !!c.autodescarga,
+    precisa_ajudantes: !!c.precisa_ajudantes,
+    descarga_paga_direto: !!c.descarga_paga_direto,
+    precisa_agendamento: !!c.precisa_agendamento,
+    resolve_com_representante: !!c.resolve_com_representante,
+    observacoes: c.observacoes
   })));
 });
 
@@ -59,8 +73,12 @@ clientesRouter.post('/api/clientes', requireLogin, (req, res) => {
   if (existente) return res.status(409).json({ error: 'Codigo de cliente ja cadastrado' });
 
   const info = db.prepare(`
-    INSERT INTO clientes (codigo_cliente, razao_social, ddd, telefone, cidade, estado, observacoes, is_remetente, padrao_forma_pagamento_id, padrao_tipo_pagamento)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO clientes (
+      codigo_cliente, razao_social, ddd, telefone, cidade, estado, observacoes, is_remetente,
+      padrao_forma_pagamento_id, padrao_tipo_pagamento,
+      autodescarga, precisa_ajudantes, descarga_paga_direto, precisa_agendamento, resolve_com_representante, contato_extra
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     codigo,
     razaoSocial,
@@ -71,7 +89,13 @@ clientesRouter.post('/api/clientes', requireLogin, (req, res) => {
     data.observacoes || null,
     data.is_remetente ? 1 : 0,
     data.padrao_forma_pagamento_id || null,
-    data.padrao_tipo_pagamento || null
+    data.padrao_tipo_pagamento || null,
+    data.autodescarga ? 1 : 0,
+    data.precisa_ajudantes ? 1 : 0,
+    data.descarga_paga_direto ? 1 : 0,
+    data.precisa_agendamento ? 1 : 0,
+    data.resolve_com_representante ? 1 : 0,
+    data.contato_extra || null
   );
 
   res.status(201).json({ message: 'Cliente cadastrado com sucesso!', id: Number(info.lastInsertRowid) });
@@ -85,7 +109,9 @@ clientesRouter.put('/api/clientes/:id', requireLogin, (req, res) => {
   db.prepare(`
     UPDATE clientes SET
       razao_social = ?, cidade = ?, estado = ?, ddd = ?, telefone = ?, observacoes = ?,
-      is_remetente = ?, padrao_forma_pagamento_id = ?, padrao_tipo_pagamento = ?
+      is_remetente = ?, padrao_forma_pagamento_id = ?, padrao_tipo_pagamento = ?,
+      autodescarga = ?, precisa_ajudantes = ?, descarga_paga_direto = ?, precisa_agendamento = ?,
+      resolve_com_representante = ?, contato_extra = ?
     WHERE id = ?
   `).run(
     (data.razao_social || '').toUpperCase(),
@@ -97,6 +123,12 @@ clientesRouter.put('/api/clientes/:id', requireLogin, (req, res) => {
     data.is_remetente ? 1 : 0,
     data.padrao_forma_pagamento_id || null,
     data.padrao_tipo_pagamento || null,
+    data.autodescarga ? 1 : 0,
+    data.precisa_ajudantes ? 1 : 0,
+    data.descarga_paga_direto ? 1 : 0,
+    data.precisa_agendamento ? 1 : 0,
+    data.resolve_com_representante ? 1 : 0,
+    data.contato_extra || null,
     req.params.id
   );
 

@@ -52,7 +52,10 @@ export function renderModalDetalhesCarga() {
       <div class="mt-5">
         <div class="mb-2 flex items-center justify-between">
           <h3 class="text-sm font-semibold text-slate-300">Entregas</h3>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2">
+            <button type="button" id="btn-agrupar-entregas" class="btn-secondary hidden px-2 py-1 text-xs">Agrupar selecionadas</button>
+            <button type="button" id="btn-desagrupar-entregas" class="btn-secondary hidden px-2 py-1 text-xs">Desagrupar selecionadas</button>
+            <button type="button" id="btn-excluir-entregas-selecionadas" class="btn-danger hidden px-2 py-1 text-xs">Excluir selecionadas</button>
             <button type="button" id="btn-lote-remetente" class="btn-secondary hidden px-2 py-1 text-xs">Alterar remetente selecionadas</button>
             <button type="button" id="btn-add-entrega" class="btn-secondary px-2 py-1 text-xs">+ Coleta rapida</button>
           </div>
@@ -65,11 +68,12 @@ export function renderModalDetalhesCarga() {
           <button type="submit" class="btn-primary px-3 py-1.5 text-xs">Aplicar</button>
         </form>
 
-        <form id="form-add-entrega" class="mb-3 hidden grid grid-cols-2 gap-2 rounded-md border border-painel-border p-3 sm:grid-cols-5">
+        <form id="form-add-entrega" class="mb-3 hidden grid grid-cols-2 gap-2 rounded-md border border-painel-border p-3 sm:grid-cols-6">
           <input list="lista-clientes" id="add-remetente-input" class="input-field" placeholder="Remetente...">
           <input type="hidden" id="add-remetente-id">
           <input list="lista-clientes" id="add-cliente-input" class="input-field" placeholder="Destinatario...">
           <input type="hidden" id="add-cliente-id">
+          <input type="text" id="add-local-coleta" class="input-field" placeholder="Local de coleta (opcional)">
           <input type="text" id="add-peso" class="input-field" placeholder="Peso bruto (kg)">
           <input type="text" id="add-frete" class="input-field" placeholder="Valor frete (R$)">
           <button type="submit" class="btn-primary">Adicionar</button>
@@ -138,6 +142,13 @@ export function renderModalDetalhesCarga() {
           <input type="text" id="edit-nf" class="input-field">
         </div>
       </div>
+      <div class="mb-2">
+        <label class="mb-1 block text-xs text-slate-400">Local de coleta (se diferente do remetente)</label>
+        <input type="text" id="edit-local-coleta" class="input-field">
+      </div>
+      <label class="mb-2 flex items-center gap-2 text-sm text-slate-300">
+        <input type="checkbox" id="edit-cortesia" class="h-4 w-4"> Cortesia (sem cobranca)
+      </label>
       <p id="edit-msg" class="mb-2 hidden text-sm"></p>
       <div class="flex justify-end gap-2">
         <button type="button" id="btn-cancelar-edicao" class="btn-secondary">Cancelar</button>

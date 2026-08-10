@@ -7,15 +7,20 @@ export function decodeUploadedText(buffer) {
   return utf8.replace(/^﻿/, '');
 }
 
-export function detectarDelimitador(primeiraLinha) {
-  const virgulas = (primeiraLinha.match(/,/g) || []).length;
-  const pontoEVirgulas = (primeiraLinha.match(/;/g) || []).length;
+export function detectarDelimitador(texto) {
+  // Considera o texto inteiro (nao so a 1a linha) - um cabecalho sem
+  // delimitador (ex: linha fake prefixada antes de dados colados) nao pode
+  // enganar a deteccao do formato usado nas linhas de dados reais.
+  const tabs = (texto.match(/\t/g) || []).length;
+  if (tabs > 0) return '\t'; // colado do Excel/planilha
+
+  const virgulas = (texto.match(/,/g) || []).length;
+  const pontoEVirgulas = (texto.match(/;/g) || []).length;
   return pontoEVirgulas > virgulas ? ';' : ',';
 }
 
 export function parseCsv(texto) {
-  const primeiraLinha = texto.split(/\r?\n/, 1)[0] || '';
-  const delimitador = detectarDelimitador(primeiraLinha);
+  const delimitador = detectarDelimitador(texto);
 
   const linhas = [];
   let linhaAtual = [];

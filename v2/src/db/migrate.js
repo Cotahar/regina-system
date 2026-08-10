@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { db } from './connection.js';
 import { seed } from './seed.js';
+import { aplicarPatches } from './patches.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
@@ -10,4 +11,5 @@ const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf-8');
 db.exec(schema);
 console.log('Schema aplicado com sucesso.');
 
+aplicarPatches();
 seed();

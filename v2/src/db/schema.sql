@@ -33,7 +33,8 @@ CREATE TABLE IF NOT EXISTS unidades (
   nome TEXT NOT NULL UNIQUE,
   uf TEXT,
   is_matriz INTEGER NOT NULL DEFAULT 0,
-  tipo_cte_padrao_id INTEGER REFERENCES tipos_cte(id) ON DELETE SET NULL
+  tipo_cte_padrao_id INTEGER REFERENCES tipos_cte(id) ON DELETE SET NULL,
+  tipo_cte_outra_uf_id INTEGER REFERENCES tipos_cte(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS clientes (
@@ -47,7 +48,13 @@ CREATE TABLE IF NOT EXISTS clientes (
   observacoes TEXT,
   is_remetente INTEGER NOT NULL DEFAULT 0,
   padrao_forma_pagamento_id INTEGER REFERENCES formas_pagamento(id) ON DELETE SET NULL,
-  padrao_tipo_pagamento TEXT
+  padrao_tipo_pagamento TEXT,
+  autodescarga INTEGER NOT NULL DEFAULT 0,
+  precisa_ajudantes INTEGER NOT NULL DEFAULT 0,
+  descarga_paga_direto INTEGER NOT NULL DEFAULT 0,
+  precisa_agendamento INTEGER NOT NULL DEFAULT 0,
+  resolve_com_representante INTEGER NOT NULL DEFAULT 0,
+  contato_extra TEXT
 );
 
 CREATE TABLE IF NOT EXISTS marcas (
@@ -93,7 +100,12 @@ CREATE TABLE IF NOT EXISTS entregas (
   tipo_pagamento TEXT,
   unidade_id INTEGER REFERENCES unidades(id) ON DELETE SET NULL,
   tipo_cte_id INTEGER REFERENCES tipos_cte(id) ON DELETE SET NULL,
-  forma_pagamento_id INTEGER REFERENCES formas_pagamento(id) ON DELETE SET NULL
+  forma_pagamento_id INTEGER REFERENCES formas_pagamento(id) ON DELETE SET NULL,
+  is_cortesia INTEGER NOT NULL DEFAULT 0,
+  grupo_id INTEGER,
+  local_coleta TEXT,
+  valor_combinado REAL,
+  repasse_destinatario TEXT
 );
 
 CREATE TABLE IF NOT EXISTS avarias (
@@ -128,5 +140,6 @@ CREATE TABLE IF NOT EXISTS avaria_fotos (
 CREATE INDEX IF NOT EXISTS idx_entregas_carga_id ON entregas(carga_id);
 CREATE INDEX IF NOT EXISTS idx_entregas_cliente_id ON entregas(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_entregas_remetente_id ON entregas(remetente_id);
+CREATE INDEX IF NOT EXISTS idx_entregas_grupo_id ON entregas(grupo_id);
 CREATE INDEX IF NOT EXISTS idx_avarias_entrega_id ON avarias(entrega_id);
 CREATE INDEX IF NOT EXISTS idx_cargas_status ON cargas(status);

@@ -1,6 +1,7 @@
 import { apiGet, apiPost, apiPut } from '../shared/api.js';
 import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
 import { escapeHtml } from '../shared/escape.js';
+import { configurarColarImport } from '../shared/colar-import.js';
 
 let clientes = [];
 let formasPagamento = [];
@@ -24,6 +25,21 @@ async function carregar() {
   renderizar(clientes);
 }
 
+const BADGES_PERFIL = [
+  ['autodescarga', 'Autodescarga'],
+  ['precisa_ajudantes', 'Chapas'],
+  ['descarga_paga_direto', 'Pgto direto'],
+  ['precisa_agendamento', 'Agendar'],
+  ['resolve_com_representante', 'Representante']
+];
+
+function badgesPerfil(c) {
+  return BADGES_PERFIL
+    .filter(([campo]) => c[campo])
+    .map(([, rotulo]) => `<span class="mr-1 mb-1 inline-block rounded bg-painel-border px-1.5 py-0.5 text-xs text-slate-200">${rotulo}</span>`)
+    .join('');
+}
+
 function renderizar(lista) {
   tabela.innerHTML = lista.map((c) => `
     <tr class="border-t border-painel-border" data-id="${c.id}">
@@ -33,11 +49,12 @@ function renderizar(lista) {
       <td class="py-2">${escapeHtml(c.telefone_completo)}</td>
       <td class="py-2">${c.entregas_count}</td>
       <td class="py-2">${c.is_remetente ? '<span class="rounded bg-destaque/20 px-2 py-0.5 text-xs text-destaque">Sim</span>' : ''}</td>
+      <td class="py-2">${badgesPerfil(c)}</td>
       <td class="py-2 text-right">
         <button class="btn-secondary btn-editar px-2 py-1 text-xs">Editar</button>
       </td>
     </tr>
-  `).join('') || '<tr><td colspan="7" class="py-4 text-center text-slate-500">Nenhum cliente cadastrado.</td></tr>';
+  `).join('') || '<tr><td colspan="8" class="py-4 text-center text-slate-500">Nenhum cliente cadastrado.</td></tr>';
 
   tabela.querySelectorAll('.btn-editar').forEach((btn) => {
     btn.addEventListener('click', () => abrirEdicao(Number(btn.closest('tr').dataset.id)));
@@ -65,6 +82,12 @@ function abrirEdicao(id) {
   document.getElementById('cliente-telefone').value = c.telefone || '';
   document.getElementById('cliente-observacoes').value = c.observacoes || '';
   document.getElementById('cliente-remetente').checked = !!c.is_remetente;
+  document.getElementById('cliente-contato-extra').value = c.contato_extra || '';
+  document.getElementById('cliente-autodescarga').checked = !!c.autodescarga;
+  document.getElementById('cliente-ajudantes').checked = !!c.precisa_ajudantes;
+  document.getElementById('cliente-descarga-direto').checked = !!c.descarga_paga_direto;
+  document.getElementById('cliente-precisa-agendamento').checked = !!c.precisa_agendamento;
+  document.getElementById('cliente-representante').checked = !!c.resolve_com_representante;
   selectForma.value = c.padrao_forma_pagamento_id || '';
   document.getElementById('cliente-tipo-pagamento').value = c.padrao_tipo_pagamento || '';
   document.getElementById('modal-titulo').textContent = 'Editar cliente';
@@ -91,7 +114,13 @@ form.addEventListener('submit', async (event) => {
     observacoes: document.getElementById('cliente-observacoes').value.trim(),
     is_remetente: document.getElementById('cliente-remetente').checked,
     padrao_forma_pagamento_id: selectForma.value || null,
-    padrao_tipo_pagamento: document.getElementById('cliente-tipo-pagamento').value || null
+    padrao_tipo_pagamento: document.getElementById('cliente-tipo-pagamento').value || null,
+    contato_extra: document.getElementById('cliente-contato-extra').value.trim(),
+    autodescarga: document.getElementById('cliente-autodescarga').checked,
+    precisa_ajudantes: document.getElementById('cliente-ajudantes').checked,
+    descarga_paga_direto: document.getElementById('cliente-descarga-direto').checked,
+    precisa_agendamento: document.getElementById('cliente-precisa-agendamento').checked,
+    resolve_com_representante: document.getElementById('cliente-representante').checked
   };
 
   try {
@@ -131,6 +160,15 @@ filtro.addEventListener('input', () => {
     (c.codigo_cliente || '').toLowerCase().includes(termo) ||
     (c.cidade || '').toLowerCase().includes(termo)
   ));
+});
+
+configurarColarImport({
+  textareaId: 'colar-texto',
+  botaoId: 'btn-colar-importar',
+  msgId: 'msg-import',
+  url: '/api/clientes/import',
+  precisaCabecalho: true,
+  onSucesso: carregar
 });
 
 carregar();

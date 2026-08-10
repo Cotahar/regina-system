@@ -4,21 +4,49 @@ import { requireLogin } from '../middleware/auth.js';
 
 export const entregasRouter = Router();
 
+// Exclusao em massa: entregas presas a uma carga voltam para "Disponiveis"
+// (mesmo comportamento do X individual); entregas ja soltas sao excluidas de vez.
+entregasRouter.delete('/api/entregas/em-massa', requireLogin, (req, res) => {
+  const entregaIds = req.body?.entrega_ids;
+  if (!entregaIds || !Array.isArray(entregaIds) || !entregaIds.length) {
+    return res.status(400).json({ error: 'Nenhuma entrega selecionada.' });
+  }
+
+  const placeholders = entregaIds.map(() => '?').join(',');
+  const entregas = db.prepare(`SELECT id, carga_id FROM entregas WHERE id IN (${placeholders})`).all(...entregaIds);
+
+  const paraDesvincular = entregas.filter((e) => e.carga_id !== null).map((e) => e.id);
+  const paraExcluir = entregas.filter((e) => e.carga_id === null).map((e) => e.id);
+
+  if (paraDesvincular.length) {
+    const ph = paraDesvincular.map(() => '?').join(',');
+    db.prepare(`UPDATE entregas SET carga_id = NULL, is_last_delivery = 0, grupo_id = NULL WHERE id IN (${ph})`).run(...paraDesvincular);
+  }
+  if (paraExcluir.length) {
+    const ph = paraExcluir.map(() => '?').join(',');
+    db.prepare(`DELETE FROM entregas WHERE id IN (${ph})`).run(...paraExcluir);
+  }
+
+  res.json({
+    message: `${paraDesvincular.length} entrega(s) devolvida(s) para disponiveis, ${paraExcluir.length} excluida(s) definitivamente.`
+  });
+});
+
 // --- ENTREGAS DENTRO DE UMA CARGA (MODAL DE DETALHES) ---
 entregasRouter.post('/api/cargas/:id/entregas', requireLogin, (req, res) => {
   const carga = db.prepare('SELECT id FROM cargas WHERE id = ?').get(req.params.id);
   if (!carga) return res.status(404).json({ error: 'Carga nao encontrada' });
 
-  const { cliente_id: clienteId, remetente_id: remetenteId, peso_bruto: pesoBruto, valor_frete: valorFrete } = req.body || {};
+  const { cliente_id: clienteId, remetente_id: remetenteId, peso_bruto: pesoBruto, valor_frete: valorFrete, local_coleta: localColeta } = req.body || {};
   if (!remetenteId) return res.status(400).json({ error: 'Remetente nao foi selecionado.' });
 
   const cliente = db.prepare('SELECT * FROM clientes WHERE id = ?').get(clienteId);
   if (!cliente) return res.status(404).json({ error: 'Cliente (Destinatario) nao encontrado.' });
 
   db.prepare(`
-    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, cidade_entrega, estado_entrega)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(carga.id, cliente.id, remetenteId, pesoBruto || null, valorFrete || null, cliente.cidade, cliente.estado);
+    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, cidade_entrega, estado_entrega, local_coleta)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(carga.id, cliente.id, remetenteId, pesoBruto || null, valorFrete || null, cliente.cidade, cliente.estado, localColeta || null);
 
   res.status(201).json({ message: 'Entrega rapida adicionada com sucesso!' });
 });
@@ -63,18 +91,23 @@ entregasRouter.get('/api/entregas/disponiveis', requireLogin, (req, res) => {
     valor_frete: e.valor_frete,
     peso_cubado: e.peso_cubado,
     nota_fiscal: e.nota_fiscal,
+    is_cortesia: !!e.is_cortesia,
+    grupo_id: e.grupo_id,
+    local_coleta: e.local_coleta,
     selecionada: false
   })));
 });
 
 entregasRouter.post('/api/entregas/disponiveis', requireLogin, (req, res) => {
   const data = req.body || {};
+  const isCortesia = !!data.is_cortesia;
   db.prepare(`
-    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, peso_cubado, nota_fiscal, cidade_entrega, estado_entrega)
-    VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, peso_cubado, nota_fiscal, cidade_entrega, estado_entrega, local_coleta, is_cortesia)
+    VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
-    data.cliente_id, data.remetente_id || null, data.peso_bruto || null, data.valor_frete || null,
-    data.peso_cubado || null, data.nota_fiscal || null, data.cidade_entrega || null, data.estado_entrega || null
+    data.cliente_id, data.remetente_id || null, data.peso_bruto || null, isCortesia ? 0 : (data.valor_frete || null),
+    data.peso_cubado || null, data.nota_fiscal || null, data.cidade_entrega || null, data.estado_entrega || null,
+    data.local_coleta || null, isCortesia ? 1 : 0
   );
   res.status(201).json({ message: 'Entrega adicionada a lista de disponiveis!' });
 });
@@ -108,13 +141,28 @@ entregasRouter.put('/api/entregas/:id', requireLogin, (req, res) => {
   if (!entrega) return res.status(404).json({ error: 'Entrega nao encontrada' });
 
   const data = req.body || {};
-  const camposSimples = ['remetente_id', 'peso_bruto', 'valor_frete', 'peso_cubado', 'nota_fiscal', 'cidade_entrega', 'estado_entrega'];
+  const cortesiaForcada = 'is_cortesia' in data && data.is_cortesia;
+  const camposSimples = [
+    'remetente_id', 'peso_bruto', 'valor_frete', 'peso_cubado', 'nota_fiscal', 'cidade_entrega', 'estado_entrega',
+    'local_coleta', 'valor_combinado', 'repasse_destinatario'
+  ];
   const sets = [];
   const valores = [];
   for (const campo of camposSimples) {
+    if (campo === 'valor_frete' && cortesiaForcada) continue; // sobrescrito abaixo
     if (campo in data) {
       sets.push(`${campo} = ?`);
       valores.push(data[campo]);
+    }
+  }
+
+  if ('is_cortesia' in data) {
+    sets.push('is_cortesia = ?');
+    valores.push(data.is_cortesia ? 1 : 0);
+    if (cortesiaForcada) {
+      // Nota cortesia nao tem cobranca - o frete e sempre zerado, independente do que foi enviado.
+      sets.push('valor_frete = ?');
+      valores.push(0);
     }
   }
 
@@ -131,6 +179,21 @@ entregasRouter.put('/api/entregas/:id', requireLogin, (req, res) => {
   res.json({ message: 'Entrega atualizada com sucesso!' });
 });
 
+function validarAgrupamento(entregas) {
+  const remetentes = new Set(entregas.map((e) => e.remetente_id));
+  const destinatarios = new Set(entregas.map((e) => e.cliente_id));
+  if (remetentes.size > 1 || destinatarios.size > 1) {
+    return 'So e possivel agrupar entregas com o mesmo remetente E o mesmo destinatario.';
+  }
+  const cortesias = new Set(entregas.map((e) => !!e.is_cortesia));
+  if (cortesias.size > 1) {
+    return 'Notas Cortesia nao podem ser agrupadas com notas normais.';
+  }
+  return null;
+}
+
+// Agrupamento e um vinculo (grupo_id compartilhado), nao um merge destrutivo -
+// cada entrega continua existindo e editavel, e pode ser desfeito a qualquer momento.
 entregasRouter.post('/api/entregas/agrupar', requireLogin, (req, res) => {
   const entregaIds = req.body?.entrega_ids;
   if (!entregaIds || entregaIds.length < 2) {
@@ -139,27 +202,23 @@ entregasRouter.post('/api/entregas/agrupar', requireLogin, (req, res) => {
 
   const placeholders = entregaIds.map(() => '?').join(',');
   const entregas = db.prepare(`SELECT * FROM entregas WHERE id IN (${placeholders})`).all(...entregaIds);
-  if (!entregas.length) return res.status(404).json({ error: 'Entregas nao encontradas.' });
-
-  const principal = entregas[0];
-  const listaNfs = [];
-  if (principal.nota_fiscal) listaNfs.push(String(principal.nota_fiscal).trim());
-
-  let totalPeso = principal.peso_bruto || 0;
-  let totalFrete = principal.valor_frete || 0;
-  let totalCubado = principal.peso_cubado || 0;
-
-  for (const e of entregas.slice(1)) {
-    totalPeso += e.peso_bruto || 0;
-    totalFrete += e.valor_frete || 0;
-    totalCubado += e.peso_cubado || 0;
-    if (e.nota_fiscal && String(e.nota_fiscal).trim()) listaNfs.push(String(e.nota_fiscal).trim());
-    db.prepare('DELETE FROM entregas WHERE id = ?').run(e.id);
+  if (entregas.length !== entregaIds.length) {
+    return res.status(404).json({ error: 'Uma ou mais entregas selecionadas nao foram encontradas.' });
   }
 
-  const notaFiscalFinal = listaNfs.join(' / ');
-  db.prepare('UPDATE entregas SET peso_bruto = ?, valor_frete = ?, peso_cubado = ?, nota_fiscal = ? WHERE id = ?')
-    .run(totalPeso, totalFrete, totalCubado, notaFiscalFinal, principal.id);
+  const erro = validarAgrupamento(entregas);
+  if (erro) return res.status(400).json({ error: erro });
 
-  res.json({ message: `Sucesso! ${entregas.length} entregas agrupadas. NFs resultantes: ${notaFiscalFinal}` });
+  const grupoId = Math.min(...entregas.map((e) => e.id));
+  db.prepare(`UPDATE entregas SET grupo_id = ? WHERE id IN (${placeholders})`).run(grupoId, ...entregaIds);
+
+  res.json({ message: `${entregas.length} entregas agrupadas.`, grupo_id: grupoId });
+});
+
+entregasRouter.post('/api/entregas/desagrupar', requireLogin, (req, res) => {
+  const grupoId = req.body?.grupo_id;
+  if (!grupoId) return res.status(400).json({ error: 'Grupo nao informado.' });
+  const info = db.prepare('UPDATE entregas SET grupo_id = NULL WHERE grupo_id = ?').run(grupoId);
+  if (!info.changes) return res.status(404).json({ error: 'Grupo nao encontrado.' });
+  res.json({ message: `${info.changes} entrega(s) desagrupada(s).` });
 });

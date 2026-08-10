@@ -1,6 +1,6 @@
-import { apiGet, apiPut } from '../shared/api.js';
+import { apiGet, apiPut, apiPost, apiDelete } from '../shared/api.js';
 import { escapeHtml } from '../shared/escape.js';
-import { formatarMoeda, parseDecimal } from '../shared/format.js';
+import { formatarMoeda, formatarPeso, parseDecimal } from '../shared/format.js';
 import { exibirMensagem } from '../shared/ui.js';
 
 const cargaId = new URLSearchParams(window.location.search).get('carga_id');
@@ -12,6 +12,7 @@ let formasPagamento = [];
 let motoristas = [];
 let veiculos = [];
 let entregas = [];
+const selecionadas = new Set();
 
 if (!cargaId) {
   document.body.innerHTML = '<p class="p-6 text-red-400">carga_id nao informado na URL.</p>';
@@ -31,35 +32,42 @@ function preencherDatalist(id, itens) {
   document.getElementById(id).innerHTML = itens.map((i) => `<option value="${escapeHtml(i.text)}">`).join('');
 }
 
-function unidadeAutomatica(entrega) {
-  if (entrega.unidade_id) return entrega.unidade_id;
-  if (entrega.cliente_is_remetente && entrega.cliente_uf) {
-    const porUf = unidades.find((u) => u.uf === entrega.cliente_uf);
-    if (porUf) return porUf.id;
-  }
+// --- PREENCHIMENTO AUTOMATICO (baseado no REMETENTE + cadastro de Unidades) ---
+function autoUnidadeTipoCte(entrega) {
+  const remetenteUf = (entrega.remetente_uf || '').toUpperCase().trim();
+  const porUf = remetenteUf ? unidades.find((u) => (u.uf || '').toUpperCase().trim() === remetenteUf) : null;
+  if (porUf) return { unidadeId: porUf.id, tipoCteId: porUf.tipo_cte_padrao_id || null };
+
   const matriz = unidades.find((u) => u.is_matriz);
-  return matriz ? matriz.id : null;
+  if (matriz) return { unidadeId: matriz.id, tipoCteId: matriz.tipo_cte_outra_uf_id || matriz.tipo_cte_padrao_id || null };
+
+  return { unidadeId: null, tipoCteId: null };
 }
 
-function tipoCteAutomatico(unidadeId) {
-  const unidade = unidades.find((u) => u.id === unidadeId);
-  return unidade?.tipo_cte_padrao_id || null;
+function autoFormaPagamento(entrega) {
+  if (entrega.remetente_forma_padrao_id) {
+    return { formaId: entrega.remetente_forma_padrao_id, tipo: entrega.remetente_tipo_padrao || null };
+  }
+  return { formaId: entrega.cliente_forma_padrao_id || null, tipo: entrega.cliente_tipo_padrao || null };
 }
 
 function opcoes(lista, valorSelecionado) {
-  return `<option value="">-</option>` + lista.map((i) =>
+  return '<option value="">-</option>' + lista.map((i) =>
     `<option value="${i.id}" ${i.id === valorSelecionado ? 'selected' : ''}>${escapeHtml(i.text || i.descricao)}</option>`
   ).join('');
 }
 
 function linhaTabela(e) {
-  const unidadeId = unidadeAutomatica(e);
-  const tipoCteId = e.tipo_cte_id || tipoCteAutomatico(unidadeId);
-  const formaPagamentoId = e.forma_pagamento_id || e.cliente_forma_padrao_id;
-  const tipoPagamento = e.tipo_pagamento || e.cliente_tipo_padrao;
+  const { unidadeId, tipoCteId } = e.unidade_id || e.tipo_cte_id ? { unidadeId: e.unidade_id, tipoCteId: e.tipo_cte_id } : autoUnidadeTipoCte(e);
+  const { formaId, tipo } = e.forma_pagamento_id || e.tipo_pagamento ? { formaId: e.forma_pagamento_id, tipo: e.tipo_pagamento } : autoFormaPagamento(e);
+
+  const agrupada = !!e.grupo_id;
+  const classeGrupo = agrupada ? 'bg-destaque/5 border-l-2 border-l-destaque' : '';
 
   return `
-    <tr class="border-t border-painel-border" data-id="${e.id}">
+    <tr class="border-t border-painel-border ${classeGrupo}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
+      <td class="py-1"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
+      <td class="py-1 pr-2">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-destaque/20 px-1 text-[10px] text-destaque">grupo</span>' : ''}</td>
       <td class="py-1 pr-2">${escapeHtml(e.cliente_nome)}</td>
       <td class="py-1 pr-2"><input type="text" class="input-field campo-nf" value="${escapeHtml(e.nota_fiscal || '')}"></td>
       <td class="py-1 pr-2"><select class="input-field campo-unidade">${opcoes(unidades, unidadeId)}</select></td>
@@ -67,15 +75,17 @@ function linhaTabela(e) {
       <td class="py-1 pr-2"><input type="text" class="input-field campo-peso" value="${e.peso_bruto ?? ''}"></td>
       <td class="py-1 pr-2"><input type="text" class="input-field campo-cubado" value="${e.peso_cubado ?? ''}"></td>
       <td class="py-1 pr-2"><input type="text" class="input-field campo-ton" value="${e.valor_tonelada ?? ''}"></td>
-      <td class="py-1 pr-2"><input type="text" class="input-field campo-frete" value="${e.valor_frete ?? ''}"></td>
-      <td class="py-1 pr-2"><select class="input-field campo-forma">${opcoes(formasPagamento, formaPagamentoId)}</select></td>
+      <td class="py-1 pr-2"><input type="text" class="input-field campo-frete" value="${e.valor_frete ?? ''}" ${e.is_cortesia ? 'readonly' : ''}></td>
+      <td class="py-1 pr-2"><select class="input-field campo-forma">${opcoes(formasPagamento, formaId)}</select></td>
       <td class="py-1 pr-2">
         <select class="input-field campo-tipo-pgto">
           <option value="">-</option>
-          <option value="Boleto" ${tipoPagamento === 'Boleto' ? 'selected' : ''}>Boleto</option>
-          <option value="Transferencia" ${tipoPagamento === 'Transferencia' ? 'selected' : ''}>Transferencia</option>
+          <option value="Boleto" ${tipo === 'Boleto' ? 'selected' : ''}>Boleto</option>
+          <option value="Transferencia" ${tipo === 'Transferencia' ? 'selected' : ''}>Transferencia</option>
         </select>
       </td>
+      <td class="py-1 pr-2 text-center"><input type="checkbox" class="campo-cortesia" ${e.is_cortesia ? 'checked' : ''}></td>
+      <td class="py-1 text-right"><button type="button" class="btn-secondary btn-repasse px-2 py-0.5 text-[11px]">Repasse</button></td>
     </tr>
   `;
 }
@@ -85,8 +95,10 @@ function ligarCalculoFreteLinha(tr) {
   const cubadoInput = tr.querySelector('.campo-cubado');
   const tonInput = tr.querySelector('.campo-ton');
   const freteInput = tr.querySelector('.campo-frete');
+  const cortesiaChk = tr.querySelector('.campo-cortesia');
 
   const recalcular = () => {
+    if (cortesiaChk.checked) return;
     const peso = parseDecimal(pesoInput.value) || 0;
     const cubado = parseDecimal(cubadoInput.value) || 0;
     const ton = parseDecimal(tonInput.value) || 0;
@@ -97,13 +109,48 @@ function ligarCalculoFreteLinha(tr) {
   };
 
   [pesoInput, cubadoInput, tonInput].forEach((input) => input.addEventListener('blur', recalcular));
+
+  cortesiaChk.addEventListener('change', () => {
+    freteInput.readOnly = cortesiaChk.checked;
+    if (cortesiaChk.checked) freteInput.value = '0,00';
+  });
 }
 
 function renderizarTabela() {
   const tbody = document.getElementById('ger-tabela');
   tbody.innerHTML = entregas.map(linhaTabela).join('') ||
-    '<tr><td colspan="10" class="py-3 text-center text-slate-500">Nenhuma entrega nesta carga.</td></tr>';
-  tbody.querySelectorAll('tr[data-id]').forEach(ligarCalculoFreteLinha);
+    '<tr><td colspan="14" class="py-3 text-center text-slate-500">Nenhuma entrega nesta carga.</td></tr>';
+
+  tbody.querySelectorAll('tr[data-id]').forEach((tr) => {
+    ligarCalculoFreteLinha(tr);
+    const id = Number(tr.dataset.id);
+    tr.querySelector('.chk-linha').addEventListener('change', (e) => {
+      if (e.target.checked) selecionadas.add(id); else selecionadas.delete(id);
+      atualizarTotaisSelecionados();
+    });
+    tr.querySelector('.btn-repasse').addEventListener('click', () => abrirRepasse(id));
+  });
+
+  atualizarTotaisGerais();
+  atualizarTotaisSelecionados();
+}
+
+function somarCampo(lista, seletor) {
+  return lista.reduce((acc, tr) => acc + (parseDecimal(tr.querySelector(seletor).value) || 0), 0);
+}
+
+function atualizarTotaisGerais() {
+  const linhas = [...document.querySelectorAll('#ger-tabela tr[data-id]')];
+  document.getElementById('total-geral-peso').textContent = formatarPeso(somarCampo(linhas, '.campo-peso'));
+  document.getElementById('total-geral-cubado').textContent = formatarPeso(somarCampo(linhas, '.campo-cubado'));
+  document.getElementById('total-geral-frete').textContent = formatarMoeda(somarCampo(linhas, '.campo-frete'));
+}
+
+function atualizarTotaisSelecionados() {
+  const linhas = [...document.querySelectorAll('#ger-tabela tr[data-id]')].filter((tr) => selecionadas.has(Number(tr.dataset.id)));
+  document.getElementById('total-sel-peso').textContent = formatarPeso(somarCampo(linhas, '.campo-peso'));
+  document.getElementById('total-sel-cubado').textContent = formatarPeso(somarCampo(linhas, '.campo-cubado'));
+  document.getElementById('total-sel-frete').textContent = formatarMoeda(somarCampo(linhas, '.campo-frete'));
 }
 
 function recalcularAdiantamento() {
@@ -124,6 +171,16 @@ async function carregar() {
   preencherDatalist('lista-veiculos', veiculos);
   ligarBuscaComId('ger-motorista-input', 'ger-motorista-id', motoristas);
   ligarBuscaComId('ger-veiculo-input', 'ger-veiculo-id', veiculos);
+
+  const selectsMassa = [
+    ['bulk-unidade', unidades, 'Unidade (massa)'],
+    ['bulk-tipo-cte', tiposCte, 'Tipo CT-e (massa)'],
+    ['bulk-forma-pgto', formasPagamento, 'Forma Pgto (massa)']
+  ];
+  selectsMassa.forEach(([id, lista, rotulo]) => {
+    document.getElementById(id).innerHTML = `<option value="">${rotulo}</option>` +
+      lista.map((i) => `<option value="${i.id}">${escapeHtml(i.text || i.descricao)}</option>`).join('');
+  });
 
   const data = await apiGet(`/api/cargas/${cargaId}/gerenciar`);
   const c = data.carga;
@@ -149,19 +206,118 @@ async function carregar() {
 document.getElementById('ger-frete-pago').addEventListener('blur', recalcularAdiantamento);
 document.getElementById('ger-adiant-percentual').addEventListener('input', recalcularAdiantamento);
 
+document.getElementById('ger-chk-todas').addEventListener('change', (e) => {
+  document.querySelectorAll('#ger-tabela .chk-linha').forEach((chk) => {
+    chk.checked = e.target.checked;
+    chk.dispatchEvent(new Event('change'));
+  });
+});
+
+// --- REPASSE ---
+function abrirRepasse(id) {
+  const e = entregas.find((it) => it.id === id);
+  if (!e) return;
+  document.getElementById('repasse-entrega-id').value = id;
+  document.getElementById('repasse-valor-combinado').value = e.valor_combinado ?? '';
+  document.getElementById('repasse-destinatario').value = e.repasse_destinatario || '';
+  document.getElementById('modal-repasse').classList.remove('hidden');
+  document.getElementById('modal-repasse').classList.add('flex');
+}
+document.getElementById('btn-cancelar-repasse').addEventListener('click', () => {
+  document.getElementById('modal-repasse').classList.add('hidden');
+  document.getElementById('modal-repasse').classList.remove('flex');
+});
+document.getElementById('form-repasse').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const id = Number(document.getElementById('repasse-entrega-id').value);
+  const entrega = entregas.find((it) => it.id === id);
+  if (entrega) {
+    entrega.valor_combinado = parseDecimal(document.getElementById('repasse-valor-combinado').value);
+    entrega.repasse_destinatario = document.getElementById('repasse-destinatario').value.trim() || null;
+  }
+  document.getElementById('modal-repasse').classList.add('hidden');
+  document.getElementById('modal-repasse').classList.remove('flex');
+  exibirMensagem(msg, 'Repasse definido. Clique em Salvar para gravar.', 'sucesso');
+});
+
+// --- AGRUPAR / DESAGRUPAR / EXCLUIR EM MASSA ---
+document.getElementById('btn-agrupar').addEventListener('click', async () => {
+  if (selecionadas.size < 2) return alert('Selecione pelo menos 2 entregas para agrupar.');
+  try {
+    await apiPost('/api/entregas/agrupar', { entrega_ids: [...selecionadas] });
+    selecionadas.clear();
+    await carregar();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+document.getElementById('btn-desagrupar').addEventListener('click', async () => {
+  const linhas = [...document.querySelectorAll('#ger-tabela tr[data-id]')].filter((tr) => selecionadas.has(Number(tr.dataset.id)));
+  const grupos = new Set(linhas.map((tr) => tr.dataset.grupo).filter(Boolean));
+  if (!grupos.size) return alert('Selecione entregas que estejam agrupadas.');
+  try {
+    for (const grupoId of grupos) {
+      await apiPost('/api/entregas/desagrupar', { grupo_id: Number(grupoId) });
+    }
+    selecionadas.clear();
+    await carregar();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+document.getElementById('btn-excluir-selecionadas').addEventListener('click', async () => {
+  if (!selecionadas.size) return alert('Nenhuma entrega selecionada.');
+  if (!confirm(`Excluir/devolver ${selecionadas.size} entrega(s) selecionada(s)?`)) return;
+  try {
+    await apiDelete('/api/entregas/em-massa', { entrega_ids: [...selecionadas] });
+    selecionadas.clear();
+    await carregar();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+document.getElementById('btn-aplicar-massa').addEventListener('click', () => {
+  if (!selecionadas.size) return alert('Nenhuma entrega selecionada.');
+  const unidadeVal = document.getElementById('bulk-unidade').value;
+  const tipoCteVal = document.getElementById('bulk-tipo-cte').value;
+  const formaVal = document.getElementById('bulk-forma-pgto').value;
+  const tipoPgtoVal = document.getElementById('bulk-tipo-pgto').value;
+
+  document.querySelectorAll('#ger-tabela tr[data-id]').forEach((tr) => {
+    if (!selecionadas.has(Number(tr.dataset.id))) return;
+    if (unidadeVal) tr.querySelector('.campo-unidade').value = unidadeVal;
+    if (tipoCteVal) tr.querySelector('.campo-tipo-cte').value = tipoCteVal;
+    if (formaVal) tr.querySelector('.campo-forma').value = formaVal;
+    if (tipoPgtoVal) tr.querySelector('.campo-tipo-pgto').value = tipoPgtoVal;
+  });
+
+  exibirMensagem(msg, 'Valores aplicados as linhas selecionadas. Clique em Salvar para gravar.', 'sucesso');
+});
+
+// --- SALVAR ---
 document.getElementById('btn-salvar').addEventListener('click', async () => {
-  const linhas = [...document.querySelectorAll('#ger-tabela tr[data-id]')].map((tr) => ({
-    id: Number(tr.dataset.id),
-    nota_fiscal: tr.querySelector('.campo-nf').value.trim() || null,
-    unidade_id: tr.querySelector('.campo-unidade').value || null,
-    tipo_cte_id: tr.querySelector('.campo-tipo-cte').value || null,
-    peso_bruto: parseDecimal(tr.querySelector('.campo-peso').value),
-    peso_cubado: parseDecimal(tr.querySelector('.campo-cubado').value),
-    valor_tonelada: parseDecimal(tr.querySelector('.campo-ton').value),
-    valor_frete: parseDecimal(tr.querySelector('.campo-frete').value),
-    forma_pagamento_id: tr.querySelector('.campo-forma').value || null,
-    tipo_pagamento: tr.querySelector('.campo-tipo-pgto').value || null
-  }));
+  const linhas = [...document.querySelectorAll('#ger-tabela tr[data-id]')].map((tr) => {
+    const id = Number(tr.dataset.id);
+    const entregaOriginal = entregas.find((e) => e.id === id) || {};
+    return {
+      id,
+      nota_fiscal: tr.querySelector('.campo-nf').value.trim() || null,
+      unidade_id: tr.querySelector('.campo-unidade').value || null,
+      tipo_cte_id: tr.querySelector('.campo-tipo-cte').value || null,
+      peso_bruto: parseDecimal(tr.querySelector('.campo-peso').value),
+      peso_cubado: parseDecimal(tr.querySelector('.campo-cubado').value),
+      valor_tonelada: parseDecimal(tr.querySelector('.campo-ton').value),
+      valor_frete: parseDecimal(tr.querySelector('.campo-frete').value),
+      forma_pagamento_id: tr.querySelector('.campo-forma').value || null,
+      tipo_pagamento: tr.querySelector('.campo-tipo-pgto').value || null,
+      is_cortesia: tr.querySelector('.campo-cortesia').checked,
+      valor_combinado: entregaOriginal.valor_combinado ?? null,
+      repasse_destinatario: entregaOriginal.repasse_destinatario ?? null
+    };
+  });
 
   const fretePago = parseDecimal(document.getElementById('ger-frete-pago').value);
   const percentual = Number(document.getElementById('ger-adiant-percentual').value) || null;
@@ -184,6 +340,7 @@ document.getElementById('btn-salvar').addEventListener('click', async () => {
       entregas: linhas
     });
     exibirMensagem(msg, 'Dados salvos com sucesso!', 'sucesso');
+    await carregar();
   } catch (err) {
     exibirMensagem(msg, err.message, 'erro');
   }

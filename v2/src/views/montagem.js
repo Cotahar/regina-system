@@ -11,6 +11,7 @@ export function renderMontagemPage() {
             <input type="hidden" id="nova-remetente-id">
             <input list="lista-clientes" id="nova-cliente-input" class="input-field" placeholder="Destinatario...">
             <input type="hidden" id="nova-cliente-id">
+            <input type="text" id="nova-local-coleta" class="input-field" placeholder="Local de coleta (se diferente do remetente)">
             <div class="grid grid-cols-2 gap-2">
               <input type="text" id="nova-peso" class="input-field" placeholder="Peso bruto (kg)">
               <input type="text" id="nova-cubado" class="input-field" placeholder="Peso cubado (kg)">
@@ -19,6 +20,9 @@ export function renderMontagemPage() {
               <input type="text" id="nova-frete" class="input-field" placeholder="Valor frete (R$)">
               <input type="text" id="nova-nf" class="input-field" placeholder="Nota fiscal">
             </div>
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" id="nova-cortesia" class="h-4 w-4"> Cortesia (sem cobranca)
+            </label>
             <button type="submit" class="btn-primary w-full">Adicionar a lista</button>
           </form>
           <p id="msg-nova" class="mt-2 hidden text-sm"></p>
@@ -46,6 +50,8 @@ export function renderMontagemPage() {
           <div class="mb-3 flex flex-wrap gap-2">
             <input type="text" id="filtro-busca" class="input-field max-w-xs" placeholder="Buscar na lista...">
             <button type="button" id="btn-agrupar" class="btn-secondary px-3 py-1.5 text-xs">Agrupar selecionadas</button>
+            <button type="button" id="btn-desagrupar" class="btn-secondary px-3 py-1.5 text-xs">Desagrupar selecionadas</button>
+            <button type="button" id="btn-excluir-selecionadas" class="btn-danger px-3 py-1.5 text-xs">Excluir selecionadas</button>
             <button type="button" id="btn-lote-remetente" class="btn-secondary px-3 py-1.5 text-xs">Alterar remetente selecionadas</button>
           </div>
 
@@ -107,6 +113,13 @@ export function renderMontagemPage() {
           <div><label class="mb-1 block text-xs text-slate-400">Valor frete</label><input type="text" id="edit-frete" class="input-field"></div>
           <div><label class="mb-1 block text-xs text-slate-400">Nota fiscal</label><input type="text" id="edit-nf" class="input-field"></div>
         </div>
+        <div class="mb-2">
+          <label class="mb-1 block text-xs text-slate-400">Local de coleta (se diferente do remetente)</label>
+          <input type="text" id="edit-local-coleta" class="input-field">
+        </div>
+        <label class="mb-2 flex items-center gap-2 text-sm text-slate-300">
+          <input type="checkbox" id="edit-cortesia" class="h-4 w-4"> Cortesia (sem cobranca)
+        </label>
         <p id="edit-msg" class="mb-2 hidden text-sm"></p>
         <div class="flex justify-end gap-2">
           <button type="button" id="btn-cancelar-edicao" class="btn-secondary">Cancelar</button>

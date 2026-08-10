@@ -12,6 +12,12 @@ export function renderVeiculosPage() {
         <button type="submit" class="btn-secondary">Importar</button>
       </form>
       <p id="msg-import" class="mt-2 hidden text-sm"></p>
+
+      <details class="mt-3">
+        <summary class="cursor-pointer text-xs text-slate-400">ou colar linhas copiadas do Excel (placa)</summary>
+        <textarea id="colar-texto" class="input-field mt-2" rows="4" placeholder="ABC1234"></textarea>
+        <button type="button" id="btn-colar-importar" class="btn-secondary mt-2">Importar do texto colado</button>
+      </details>
     </div>
 
     <div class="card mt-4">

@@ -11,7 +11,8 @@ function toDictUnidade(u) {
     text: u.nome,
     uf: u.uf,
     is_matriz: !!u.is_matriz,
-    tipo_cte_padrao_id: u.tipo_cte_padrao_id
+    tipo_cte_padrao_id: u.tipo_cte_padrao_id,
+    tipo_cte_outra_uf_id: u.tipo_cte_outra_uf_id
   };
 }
 
@@ -22,23 +23,36 @@ auxiliaresRouter.get('/api/auxiliar/unidades', requireLogin, (req, res) => {
 });
 
 auxiliaresRouter.post('/api/auxiliar/unidades', requireLogin, requireAdmin, (req, res) => {
-  const { nome, uf, is_matriz, tipo_cte_padrao_id } = req.body || {};
+  const { nome, uf, is_matriz, tipo_cte_padrao_id, tipo_cte_outra_uf_id } = req.body || {};
   if (!nome || !nome.trim()) return res.status(400).json({ error: 'Nome e obrigatorio' });
   if (is_matriz) db.prepare('UPDATE unidades SET is_matriz = 0').run();
   db.prepare(
-    'INSERT INTO unidades (nome, uf, is_matriz, tipo_cte_padrao_id) VALUES (?, ?, ?, ?)'
-  ).run(nome.trim().toUpperCase(), (uf || '').toUpperCase() || null, is_matriz ? 1 : 0, tipo_cte_padrao_id || null);
+    'INSERT INTO unidades (nome, uf, is_matriz, tipo_cte_padrao_id, tipo_cte_outra_uf_id) VALUES (?, ?, ?, ?, ?)'
+  ).run(
+    nome.trim().toUpperCase(),
+    (uf || '').toUpperCase() || null,
+    is_matriz ? 1 : 0,
+    tipo_cte_padrao_id || null,
+    tipo_cte_outra_uf_id || null
+  );
   res.json({ message: 'Unidade Salva!' });
 });
 
 auxiliaresRouter.put('/api/auxiliar/unidades/:id', requireLogin, requireAdmin, (req, res) => {
   const unidade = db.prepare('SELECT * FROM unidades WHERE id = ?').get(req.params.id);
   if (!unidade) return res.status(404).json({ error: 'Nao encontrada' });
-  const { nome, uf, is_matriz, tipo_cte_padrao_id } = req.body || {};
+  const { nome, uf, is_matriz, tipo_cte_padrao_id, tipo_cte_outra_uf_id } = req.body || {};
   if (!nome || !nome.trim()) return res.status(400).json({ error: 'Nome obrigatorio' });
   if (is_matriz) db.prepare('UPDATE unidades SET is_matriz = 0 WHERE id != ?').run(req.params.id);
-  db.prepare('UPDATE unidades SET nome = ?, uf = ?, is_matriz = ?, tipo_cte_padrao_id = ? WHERE id = ?')
-    .run(nome.trim().toUpperCase(), (uf || '').toUpperCase() || null, is_matriz ? 1 : 0, tipo_cte_padrao_id || null, req.params.id);
+  db.prepare('UPDATE unidades SET nome = ?, uf = ?, is_matriz = ?, tipo_cte_padrao_id = ?, tipo_cte_outra_uf_id = ? WHERE id = ?')
+    .run(
+      nome.trim().toUpperCase(),
+      (uf || '').toUpperCase() || null,
+      is_matriz ? 1 : 0,
+      tipo_cte_padrao_id || null,
+      tipo_cte_outra_uf_id || null,
+      req.params.id
+    );
   res.json({ message: 'Unidade atualizada!' });
 });
 

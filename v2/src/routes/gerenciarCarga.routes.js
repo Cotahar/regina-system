@@ -17,10 +17,14 @@ gerenciarCargaRouter.get('/api/cargas/:id/gerenciar', requireLogin, (req, res) =
 
   const entregas = db.prepare(`
     SELECT e.*, cl.razao_social as cliente_razao_social, cl.estado as cliente_estado,
-      cl.is_remetente as cliente_is_remetente, cl.padrao_forma_pagamento_id as cliente_forma_padrao_id,
-      cl.padrao_tipo_pagamento as cliente_tipo_padrao
+      cl.padrao_forma_pagamento_id as cliente_forma_padrao_id,
+      cl.padrao_tipo_pagamento as cliente_tipo_padrao,
+      rem.razao_social as remetente_razao_social, rem.estado as remetente_estado,
+      rem.padrao_forma_pagamento_id as remetente_forma_padrao_id,
+      rem.padrao_tipo_pagamento as remetente_tipo_padrao
     FROM entregas e
     LEFT JOIN clientes cl ON cl.id = e.cliente_id
+    LEFT JOIN clientes rem ON rem.id = e.remetente_id
     WHERE e.carga_id = ?
     ORDER BY e.id
   `).all(req.params.id);
@@ -46,6 +50,8 @@ gerenciarCargaRouter.get('/api/cargas/:id/gerenciar', requireLogin, (req, res) =
     },
     entregas: entregas.map((e) => ({
       id: e.id,
+      remetente_id: e.remetente_id,
+      remetente_nome: e.remetente_razao_social || 'N/A',
       cliente_nome: e.cliente_razao_social || 'N/A',
       nota_fiscal: e.nota_fiscal,
       peso_bruto: e.peso_bruto,
@@ -57,9 +63,16 @@ gerenciarCargaRouter.get('/api/cargas/:id/gerenciar', requireLogin, (req, res) =
       forma_pagamento_id: e.forma_pagamento_id,
       tipo_pagamento: e.tipo_pagamento,
       cliente_uf: e.cliente_estado,
-      cliente_is_remetente: !!e.cliente_is_remetente,
       cliente_forma_padrao_id: e.cliente_forma_padrao_id,
-      cliente_tipo_padrao: e.cliente_tipo_padrao
+      cliente_tipo_padrao: e.cliente_tipo_padrao,
+      remetente_uf: e.remetente_estado,
+      remetente_forma_padrao_id: e.remetente_forma_padrao_id,
+      remetente_tipo_padrao: e.remetente_tipo_padrao,
+      is_cortesia: !!e.is_cortesia,
+      grupo_id: e.grupo_id,
+      local_coleta: e.local_coleta,
+      valor_combinado: e.valor_combinado,
+      repasse_destinatario: e.repasse_destinatario
     }))
   });
 });
@@ -96,20 +109,25 @@ gerenciarCargaRouter.put('/api/cargas/:id/gerenciar', requireLogin, (req, res) =
   if (Array.isArray(data.entregas)) {
     const stmt = db.prepare(`
       UPDATE entregas SET nota_fiscal = ?, peso_bruto = ?, peso_cubado = ?, valor_frete = ?,
-        valor_tonelada = ?, unidade_id = ?, tipo_cte_id = ?, forma_pagamento_id = ?, tipo_pagamento = ?
+        valor_tonelada = ?, unidade_id = ?, tipo_cte_id = ?, forma_pagamento_id = ?, tipo_pagamento = ?,
+        is_cortesia = ?, valor_combinado = ?, repasse_destinatario = ?
       WHERE id = ? AND carga_id = ?
     `);
     for (const item of data.entregas) {
+      const isCortesia = !!item.is_cortesia;
       stmt.run(
         item.nota_fiscal || null,
         item.peso_bruto ?? null,
         item.peso_cubado ?? null,
-        item.valor_frete ?? null,
+        isCortesia ? 0 : (item.valor_frete ?? null),
         item.valor_tonelada ?? null,
         item.unidade_id || null,
         item.tipo_cte_id || null,
         item.forma_pagamento_id || null,
         item.tipo_pagamento || null,
+        isCortesia ? 1 : 0,
+        item.valor_combinado ?? null,
+        item.repasse_destinatario || null,
         item.id,
         req.params.id
       );

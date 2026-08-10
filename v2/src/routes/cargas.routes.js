@@ -180,7 +180,12 @@ cargasRouter.get('/api/cargas/:id', requireLogin, (req, res) => {
     valor_frete: e.valor_frete,
     peso_cubado: e.peso_cubado,
     nota_fiscal: e.nota_fiscal,
-    is_last_delivery: e.is_last_delivery
+    is_last_delivery: e.is_last_delivery,
+    is_cortesia: !!e.is_cortesia,
+    grupo_id: e.grupo_id,
+    local_coleta: e.local_coleta,
+    valor_combinado: e.valor_combinado,
+    repasse_destinatario: e.repasse_destinatario
   }));
 
   res.json({ detalhes_carga: detalhesCarga, entregas: entregasData });

@@ -2,6 +2,7 @@ import { apiGet, apiPost } from '../shared/api.js';
 import { escapeHtml } from '../shared/escape.js';
 import { formatarMoeda, formatarPeso, formatarData } from '../shared/format.js';
 import { criarModalDetalhesCarga } from '../shared/carga-modal.js';
+import { ouvirMudancas } from '../shared/live.js';
 
 const isAdmin = window.__SESSAO__?.permissao === 'admin';
 let cargas = [];
@@ -76,3 +77,4 @@ document.getElementById('form-nova-carga').addEventListener('submit', async (eve
 });
 
 carregar();
+ouvirMudancas(carregar);

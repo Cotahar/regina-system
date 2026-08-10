@@ -12,6 +12,12 @@ export function renderClientesPage() {
         <button type="submit" class="btn-secondary">Importar</button>
       </form>
       <p id="msg-import" class="mt-2 hidden text-sm"></p>
+
+      <details class="mt-3">
+        <summary class="cursor-pointer text-xs text-slate-400">ou colar linhas copiadas do Excel (mesma ordem de colunas, sem cabecalho)</summary>
+        <textarea id="colar-texto" class="input-field mt-2" rows="4" placeholder="CLI001	Ceramica Sul Ltda	48	999998888	Criciuma	SC	Observacao"></textarea>
+        <button type="button" id="btn-colar-importar" class="btn-secondary mt-2">Importar do texto colado</button>
+      </details>
     </div>
 
     <div class="card mt-4">
@@ -26,6 +32,7 @@ export function renderClientesPage() {
               <th class="pb-2">Telefone</th>
               <th class="pb-2">Entregas</th>
               <th class="pb-2">Remetente</th>
+              <th class="pb-2">Perfil</th>
               <th class="pb-2 text-right">Acoes</th>
             </tr>
           </thead>
@@ -80,6 +87,32 @@ export function renderClientesPage() {
           <input type="checkbox" id="cliente-remetente" class="h-4 w-4">
           Este cliente tambem pode ser remetente (origem de coleta)
         </label>
+
+        <div class="mb-3">
+          <label class="mb-1 block text-xs text-slate-400">Contato adicional (se houver mais de um)</label>
+          <input type="text" id="cliente-contato-extra" class="input-field" placeholder="Nome / telefone do segundo contato">
+        </div>
+
+        <div class="mb-4">
+          <p class="mb-2 text-xs text-slate-400">Perfil de atendimento (informacoes para quem for buscar/entregar)</p>
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" id="cliente-autodescarga" class="h-4 w-4"> Faz autodescarga
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" id="cliente-ajudantes" class="h-4 w-4"> Precisa de ajudantes (chapas)
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" id="cliente-descarga-direto" class="h-4 w-4"> Descarga paga direto ao recebimento
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" id="cliente-precisa-agendamento" class="h-4 w-4"> Precisa agendar entrega
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" id="cliente-representante" class="h-4 w-4"> Resolver com representante
+            </label>
+          </div>
+        </div>
 
         <div class="mb-4 grid grid-cols-2 gap-3">
           <div>

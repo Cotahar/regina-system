@@ -2,6 +2,7 @@ import { apiGet } from '../shared/api.js';
 import { escapeHtml } from '../shared/escape.js';
 import { formatarMoeda, formatarPeso, formatarData } from '../shared/format.js';
 import { criarModalDetalhesCarga } from '../shared/carga-modal.js';
+import { ouvirMudancas } from '../shared/live.js';
 
 const isAdmin = window.__SESSAO__?.permissao === 'admin';
 const modalDetalhes = criarModalDetalhesCarga({ isAdmin, onMudanca: () => buscar(paginaAtualGlobal) });
@@ -98,3 +99,4 @@ document.getElementById('btn-limpar').addEventListener('click', () => {
 
 carregarClientesFiltro();
 buscar(1);
+ouvirMudancas(() => buscar(paginaAtualGlobal));

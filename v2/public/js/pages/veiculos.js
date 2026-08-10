@@ -1,6 +1,7 @@
 import { apiGet, apiPost, apiPut, apiDelete } from '../shared/api.js';
 import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
 import { escapeHtml } from '../shared/escape.js';
+import { configurarColarImport } from '../shared/colar-import.js';
 
 let veiculos = [];
 
@@ -104,6 +105,14 @@ document.getElementById('form-import').addEventListener('submit', async (event) 
 filtro.addEventListener('input', () => {
   const termo = filtro.value.trim().toLowerCase();
   renderizar(veiculos.filter((v) => (v.placa || '').toLowerCase().includes(termo)));
+});
+
+configurarColarImport({
+  textareaId: 'colar-texto',
+  botaoId: 'btn-colar-importar',
+  msgId: 'msg-import',
+  url: '/api/veiculos/import',
+  onSucesso: carregar
 });
 
 carregar();

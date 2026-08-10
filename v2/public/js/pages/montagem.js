@@ -2,6 +2,7 @@ import { apiGet, apiPost, apiPut, apiDelete } from '../shared/api.js';
 import { escapeHtml } from '../shared/escape.js';
 import { formatarMoeda, formatarPeso, parseDecimal } from '../shared/format.js';
 import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
+import { ouvirMudancas } from '../shared/live.js';
 
 let clientes = [];
 let poolDisponiveis = [];
@@ -42,13 +43,16 @@ function renderizarTabela() {
     return texto.includes(termo);
   });
 
-  tabela.innerHTML = linhas.map((e) => `
-    <tr class="border-t border-painel-border" data-id="${e.id}">
+  tabela.innerHTML = linhas.map((e) => {
+    const agrupada = !!e.grupo_id;
+    const classeGrupo = agrupada ? 'bg-destaque/5 border-l-2 border-l-destaque' : '';
+    return `
+    <tr class="border-t border-painel-border ${classeGrupo}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
       <td class="py-1"><input type="checkbox" class="chk-linha" ${selecionados.has(e.id) ? 'checked' : ''}></td>
-      <td class="py-1">${escapeHtml(e.remetente_nome)}</td>
+      <td class="py-1">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-destaque/20 px-1 text-[10px] text-destaque">grupo</span>' : ''}</td>
       <td class="py-1">${escapeHtml(e.destinatario_nome)}</td>
-      <td class="py-1">${escapeHtml(e.cidade_entrega || '')}-${escapeHtml(e.estado_entrega || '')}</td>
-      <td class="py-1">${escapeHtml(e.nota_fiscal || '')}</td>
+      <td class="py-1">${escapeHtml(e.cidade_entrega || '')}-${escapeHtml(e.estado_entrega || '')}${e.local_coleta ? `<br><span class="text-[10px] text-slate-500">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
+      <td class="py-1">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-500/20 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
       <td class="py-1">${formatarPeso(e.peso_bruto)}</td>
       <td class="py-1">${formatarPeso(e.peso_cubado)}</td>
       <td class="py-1">${formatarMoeda(e.valor_frete)}</td>
@@ -57,7 +61,8 @@ function renderizarTabela() {
         ${e.carga_id ? '' : '<button type="button" class="btn-danger btn-excluir px-2 py-0.5">X</button>'}
       </td>
     </tr>
-  `).join('') || '<tr><td colspan="9" class="py-3 text-center text-slate-500">Nenhuma entrega disponivel.</td></tr>';
+  `;
+  }).join('') || '<tr><td colspan="9" class="py-3 text-center text-slate-500">Nenhuma entrega disponivel.</td></tr>';
 
   tabela.querySelectorAll('tr[data-id]').forEach((tr) => {
     const id = Number(tr.dataset.id);
@@ -138,7 +143,10 @@ async function abrirRascunho(id) {
         peso_bruto: e.peso_bruto,
         peso_cubado: e.peso_cubado,
         valor_frete: e.valor_frete,
-        remetente_id: e.remetente_id
+        remetente_id: e.remetente_id,
+        is_cortesia: e.is_cortesia,
+        grupo_id: e.grupo_id,
+        local_coleta: e.local_coleta
       }))
     };
     origemInput.value = draftAtual.origem;
@@ -202,6 +210,8 @@ function abrirEdicao(id) {
   document.getElementById('edit-cubado').value = e.peso_cubado ?? '';
   document.getElementById('edit-frete').value = e.valor_frete ?? '';
   document.getElementById('edit-nf').value = e.nota_fiscal || '';
+  document.getElementById('edit-local-coleta').value = e.local_coleta || '';
+  document.getElementById('edit-cortesia').checked = !!e.is_cortesia;
   document.getElementById('edit-msg').classList.add('hidden');
   abrirModal(document.getElementById('modal-editar'));
 }
@@ -218,7 +228,9 @@ document.getElementById('form-editar').addEventListener('submit', async (event) 
       peso_bruto: parseDecimal(document.getElementById('edit-peso').value),
       peso_cubado: parseDecimal(document.getElementById('edit-cubado').value),
       valor_frete: parseDecimal(document.getElementById('edit-frete').value),
-      nota_fiscal: document.getElementById('edit-nf').value || null
+      nota_fiscal: document.getElementById('edit-nf').value || null,
+      local_coleta: document.getElementById('edit-local-coleta').value.trim() || null,
+      is_cortesia: document.getElementById('edit-cortesia').checked
     });
     fecharModal(document.getElementById('modal-editar'));
     if (draftAtual) await abrirRascunho(draftAtual.id);
@@ -243,7 +255,9 @@ document.getElementById('form-nova-entrega').addEventListener('submit', async (e
       peso_bruto: parseDecimal(document.getElementById('nova-peso').value),
       peso_cubado: parseDecimal(document.getElementById('nova-cubado').value),
       valor_frete: parseDecimal(document.getElementById('nova-frete').value),
-      nota_fiscal: document.getElementById('nova-nf').value || null
+      nota_fiscal: document.getElementById('nova-nf').value || null,
+      local_coleta: document.getElementById('nova-local-coleta').value.trim() || null,
+      is_cortesia: document.getElementById('nova-cortesia').checked
     });
     document.getElementById('form-nova-entrega').reset();
     await carregarPool();
@@ -308,9 +322,14 @@ document.getElementById('form-lote-remetente').addEventListener('submit', async 
 document.getElementById('btn-agrupar').addEventListener('click', async () => {
   if (selecionados.size < 2) return alert('Selecione pelo menos 2 entregas para agrupar.');
   const linhas = linhasCombinadas().filter((e) => selecionados.has(e.id));
-  const clienteIds = new Set(linhas.map((e) => e.cliente_id ?? e.destinatario_nome));
-  if (clienteIds.size > 1) return alert('So e possivel agrupar entregas do mesmo destinatario.');
-  if (!confirm(`Agrupar ${selecionados.size} entregas em uma so (somando pesos e fretes)?`)) return;
+  const remetenteIds = new Set(linhas.map((e) => e.remetente_id));
+  const clienteIds = new Set(linhas.map((e) => e.cliente_id));
+  if (remetenteIds.size > 1 || clienteIds.size > 1) {
+    return alert('So e possivel agrupar entregas com o mesmo remetente E o mesmo destinatario.');
+  }
+  const cortesias = new Set(linhas.map((e) => !!e.is_cortesia));
+  if (cortesias.size > 1) return alert('Nao e possivel agrupar notas Cortesia com notas normais.');
+  if (!confirm(`Agrupar ${selecionados.size} entregas?`)) return;
 
   try {
     await apiPost('/api/entregas/agrupar', { entrega_ids: [...selecionados] });
@@ -322,4 +341,34 @@ document.getElementById('btn-agrupar').addEventListener('click', async () => {
   }
 });
 
+document.getElementById('btn-desagrupar').addEventListener('click', async () => {
+  const linhas = linhasCombinadas().filter((e) => selecionados.has(e.id));
+  const grupos = new Set(linhas.map((e) => e.grupo_id).filter(Boolean));
+  if (!grupos.size) return alert('Selecione entregas que estejam agrupadas.');
+  try {
+    for (const grupoId of grupos) {
+      await apiPost('/api/entregas/desagrupar', { grupo_id: grupoId });
+    }
+    selecionados.clear();
+    if (draftAtual) await abrirRascunho(draftAtual.id);
+    await carregarPool();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
+document.getElementById('btn-excluir-selecionadas').addEventListener('click', async () => {
+  if (!selecionados.size) return alert('Nenhuma entrega selecionada.');
+  if (!confirm(`Excluir/devolver ${selecionados.size} entrega(s) selecionada(s)?`)) return;
+  try {
+    await apiDelete('/api/entregas/em-massa', { entrega_ids: [...selecionados] });
+    selecionados.clear();
+    if (draftAtual) await abrirRascunho(draftAtual.id);
+    await carregarPool();
+  } catch (err) {
+    alert(err.message);
+  }
+});
+
 carregarPool();
+ouvirMudancas(carregarPool);

@@ -54,21 +54,86 @@ export function renderGerenciarCargaPage() {
     </div>
 
     <div class="card mt-4">
+      <div class="mb-3 flex flex-wrap items-end gap-2">
+        <button type="button" id="btn-agrupar" class="btn-secondary px-2 py-1 text-xs">Agrupar selecionadas</button>
+        <button type="button" id="btn-desagrupar" class="btn-secondary px-2 py-1 text-xs">Desagrupar selecionadas</button>
+        <button type="button" id="btn-excluir-selecionadas" class="btn-danger px-2 py-1 text-xs">Excluir selecionadas</button>
+        <span class="mx-1 h-6 border-l border-painel-border"></span>
+        <select id="bulk-unidade" class="input-field w-40"><option value="">Unidade (massa)</option></select>
+        <select id="bulk-tipo-cte" class="input-field w-40"><option value="">Tipo CT-e (massa)</option></select>
+        <select id="bulk-forma-pgto" class="input-field w-40"><option value="">Forma Pgto (massa)</option></select>
+        <select id="bulk-tipo-pgto" class="input-field w-36">
+          <option value="">Tipo Pgto (massa)</option>
+          <option value="Boleto">Boleto</option>
+          <option value="Transferencia">Transferencia</option>
+        </select>
+        <button type="button" id="btn-aplicar-massa" class="btn-primary px-2 py-1 text-xs">Aplicar as selecionadas</button>
+      </div>
+
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs">
           <thead class="text-slate-400">
             <tr>
-              <th class="pb-2">Cliente</th><th class="pb-2">NF</th><th class="pb-2">Unidade</th>
-              <th class="pb-2">Tipo CT-e</th><th class="pb-2">Peso</th><th class="pb-2">Cubado</th>
-              <th class="pb-2">R$/Ton</th><th class="pb-2">Frete</th><th class="pb-2">Forma Pgto</th><th class="pb-2">Tipo Pgto</th>
+              <th class="pb-2"><input type="checkbox" id="ger-chk-todas"></th>
+              <th class="pb-2">Remetente</th>
+              <th class="pb-2">Cliente</th>
+              <th class="pb-2">NF</th>
+              <th class="pb-2">Unidade</th>
+              <th class="pb-2">Tipo CT-e</th>
+              <th class="pb-2">Peso</th>
+              <th class="pb-2">Cubado</th>
+              <th class="pb-2">R$/Ton</th>
+              <th class="pb-2">Frete</th>
+              <th class="pb-2">Forma Pgto</th>
+              <th class="pb-2">Tipo Pgto</th>
+              <th class="pb-2">Cortesia</th>
+              <th class="pb-2 text-right">Acoes</th>
             </tr>
           </thead>
           <tbody id="ger-tabela"></tbody>
+          <tfoot class="border-t border-painel-border font-semibold text-slate-300">
+            <tr>
+              <td colspan="6" class="pt-2">Total geral:</td>
+              <td class="pt-2" id="total-geral-peso">0,00 kg</td>
+              <td class="pt-2" id="total-geral-cubado">0,00 kg</td>
+              <td class="pt-2"></td>
+              <td class="pt-2" id="total-geral-frete">R$ 0,00</td>
+              <td colspan="3" class="pt-2"></td>
+            </tr>
+            <tr>
+              <td colspan="6" class="pt-1">Total selecionadas:</td>
+              <td class="pt-1" id="total-sel-peso">0,00 kg</td>
+              <td class="pt-1" id="total-sel-cubado">0,00 kg</td>
+              <td class="pt-1"></td>
+              <td class="pt-1" id="total-sel-frete">R$ 0,00</td>
+              <td colspan="3" class="pt-1"></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
 
     <p id="ger-msg" class="mt-3 hidden text-sm"></p>
+
+    <div id="modal-repasse" class="fixed inset-0 z-20 hidden items-center justify-center bg-black/60">
+      <form id="form-repasse" class="card w-full max-w-sm">
+        <h3 class="mb-3 text-base font-semibold">Repasse / comissao</h3>
+        <input type="hidden" id="repasse-entrega-id">
+        <div class="mb-3">
+          <label class="mb-1 block text-xs text-slate-400">Valor combinado (o que fica para a empresa)</label>
+          <input type="text" id="repasse-valor-combinado" class="input-field" placeholder="Ex: 750,00 por ton, ou valor cheio">
+        </div>
+        <div class="mb-3">
+          <label class="mb-1 block text-xs text-slate-400">Repasse para (nome do representante/parceiro)</label>
+          <input type="text" id="repasse-destinatario" class="input-field">
+        </div>
+        <p class="mb-3 text-xs text-slate-500">A diferenca entre o valor do frete cobrado no CT-e e o valor combinado e o que deve ser repassado.</p>
+        <div class="flex justify-end gap-2">
+          <button type="button" id="btn-cancelar-repasse" class="btn-secondary">Cancelar</button>
+          <button type="submit" class="btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
 
     <datalist id="lista-motoristas"></datalist>
     <datalist id="lista-veiculos"></datalist>
