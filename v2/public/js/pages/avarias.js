@@ -2,6 +2,7 @@ import { apiGet, apiPost, apiPut, apiDelete } from '../shared/api.js';
 import { escapeHtml } from '../shared/escape.js';
 import { formatarMoeda } from '../shared/format.js';
 import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
+import { criarCombobox } from '../shared/combobox.js';
 
 const isAdmin = window.__SESSAO__?.permissao === 'admin';
 const params = new URLSearchParams(window.location.search);
@@ -24,18 +25,10 @@ async function carregarFiltros() {
   ]);
   document.getElementById('f-marca').innerHTML = '<option value="">Marca (todas)</option>' +
     marcas.map((m) => `<option value="${m.id}">${escapeHtml(m.nome)}</option>`).join('');
-  document.getElementById('lista-clientes-av').innerHTML =
-    clientes.map((c) => `<option value="${escapeHtml(c.text)}">`).join('');
-  document.getElementById('lista-motoristas-av').innerHTML =
-    motoristas.map((m) => `<option value="${escapeHtml(m.text)}">`).join('');
 }
 
-function ligarBuscaComId(inputId, hiddenId, itens) {
-  document.getElementById(inputId).addEventListener('input', (e) => {
-    const item = itens.find((i) => i.text === e.target.value);
-    document.getElementById(hiddenId).value = item ? item.id : '';
-  });
-}
+criarCombobox({ input: document.getElementById('f-cliente-input'), hidden: document.getElementById('f-cliente-id'), getItens: () => clientes });
+criarCombobox({ input: document.getElementById('f-motorista-input'), hidden: document.getElementById('f-motorista-id'), getItens: () => motoristas });
 
 function montarQueryFiltros() {
   const p = new URLSearchParams();
@@ -220,9 +213,6 @@ document.getElementById('form-registro')?.addEventListener('submit', async (even
 if (cargaIdRegistro) {
   iniciarRegistro();
 } else {
-  carregarFiltros().then(() => {
-    ligarBuscaComId('f-cliente-input', 'f-cliente-id', clientes);
-    ligarBuscaComId('f-motorista-input', 'f-motorista-id', motoristas);
-  });
+  carregarFiltros();
   carregarLista();
 }

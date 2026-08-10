@@ -16,7 +16,7 @@ export function renderConsultaPage() {
       </select>
       <input type="text" id="f-motorista" class="input-field" placeholder="Motorista">
       <input type="text" id="f-placa" class="input-field" placeholder="Placa">
-      <input list="lista-clientes-filtro" id="f-cliente-input" class="input-field" placeholder="Cliente...">
+      <div class="relative"><input id="f-cliente-input" class="input-field" placeholder="Cliente..."></div>
       <input type="hidden" id="f-cliente-id">
       <div>
         <label class="mb-1 block text-xs text-slate-400">Carregamento de</label>
@@ -39,7 +39,6 @@ export function renderConsultaPage() {
         <button type="button" id="btn-limpar" class="btn-secondary">Limpar</button>
       </div>
     </form>
-    <datalist id="lista-clientes-filtro"></datalist>
 
     <div class="card mt-4">
       <div class="overflow-x-auto">

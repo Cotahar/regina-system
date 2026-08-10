@@ -7,9 +7,9 @@ export function renderMontagemPage() {
         <div class="card">
           <h2 class="mb-3 text-sm font-semibold text-slate-300">Nova entrega disponivel</h2>
           <form id="form-nova-entrega" class="space-y-2">
-            <input list="lista-clientes" id="nova-remetente-input" class="input-field" placeholder="Remetente...">
+            <div class="relative"><input id="nova-remetente-input" class="input-field" placeholder="Remetente..."></div>
             <input type="hidden" id="nova-remetente-id">
-            <input list="lista-clientes" id="nova-cliente-input" class="input-field" placeholder="Destinatario...">
+            <div class="relative"><input id="nova-cliente-input" class="input-field" placeholder="Destinatario..."></div>
             <input type="hidden" id="nova-cliente-id">
             <input type="text" id="nova-local-coleta" class="input-field" placeholder="Local de coleta (se diferente do remetente)">
             <div class="grid grid-cols-2 gap-2">
@@ -56,7 +56,7 @@ export function renderMontagemPage() {
           </div>
 
           <form id="form-lote-remetente" class="mb-3 hidden flex-wrap items-center gap-2 rounded-md border border-painel-border p-3">
-            <input list="lista-clientes" id="lote-remetente-input" class="input-field max-w-xs" placeholder="Novo remetente...">
+            <div class="relative w-full max-w-xs"><input id="lote-remetente-input" class="input-field" placeholder="Novo remetente..."></div>
             <input type="hidden" id="lote-remetente-id">
             <button type="submit" class="btn-primary px-3 py-1.5 text-xs">Aplicar</button>
           </form>
@@ -96,9 +96,9 @@ export function renderMontagemPage() {
       <form id="form-editar" class="card w-full max-w-md">
         <h3 class="mb-3 text-base font-semibold">Editar entrega</h3>
         <input type="hidden" id="edit-id">
-        <div class="mb-2">
+        <div class="relative mb-2">
           <label class="mb-1 block text-xs text-slate-400">Remetente</label>
-          <input list="lista-clientes" id="edit-remetente-input" class="input-field">
+          <input id="edit-remetente-input" class="input-field">
           <input type="hidden" id="edit-remetente-id">
         </div>
         <div class="mb-2 grid grid-cols-2 gap-2">
@@ -127,7 +127,5 @@ export function renderMontagemPage() {
         </div>
       </form>
     </div>
-
-    <datalist id="lista-clientes"></datalist>
   `;
 }

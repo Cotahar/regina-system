@@ -2,6 +2,7 @@ import { apiGet, apiPost, apiPut } from '../shared/api.js';
 import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
 import { escapeHtml } from '../shared/escape.js';
 import { configurarColarImport } from '../shared/colar-import.js';
+import { criarPaginacao } from '../shared/paginacao.js';
 
 let clientes = [];
 let formasPagamento = [];
@@ -12,6 +13,11 @@ const modal = document.getElementById('modal-cliente');
 const form = document.getElementById('form-cliente');
 const msgModal = document.getElementById('msg-modal');
 const selectForma = document.getElementById('cliente-forma-pagamento');
+
+const paginacao = criarPaginacao({
+  container: document.getElementById('paginacao-clientes'),
+  renderizarPagina: renderizarLinhas
+});
 
 async function carregar() {
   [clientes, formasPagamento] = await Promise.all([
@@ -41,6 +47,10 @@ function badgesPerfil(c) {
 }
 
 function renderizar(lista) {
+  paginacao.definirItens(lista);
+}
+
+function renderizarLinhas(lista) {
   tabela.innerHTML = lista.map((c) => `
     <tr class="border-t border-painel-border" data-id="${c.id}">
       <td class="py-2">${escapeHtml(c.codigo_cliente)}</td>

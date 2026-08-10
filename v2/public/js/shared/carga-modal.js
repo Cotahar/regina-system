@@ -2,6 +2,7 @@ import { apiGet, apiPost, apiPut, apiDelete } from './api.js';
 import { escapeHtml } from './escape.js';
 import { formatarMoeda, formatarPeso, formatarDataParaInput, parseDecimal } from './format.js';
 import { abrirModal, fecharModal, exibirMensagem } from './ui.js';
+import { criarCombobox } from './combobox.js';
 
 const STATUS_CORES = {
   Pendente: 'bg-slate-500/30 text-slate-200',
@@ -26,34 +27,21 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
   let entregasAtuais = [];
   const selecionadas = new Set();
 
-  function preencherDatalist(id, itens) {
-    document.getElementById(id).innerHTML = itens.map((i) => `<option data-id="${i.id}" value="${escapeHtml(i.text)}">`).join('');
-  }
-
-  function ligarBuscaComId(inputId, hiddenId, getItens) {
-    const input = document.getElementById(inputId);
-    const hidden = document.getElementById(hiddenId);
-    input.addEventListener('input', () => {
-      const item = getItens().find((i) => i.text === input.value);
-      hidden.value = item ? item.id : '';
-    });
-  }
-
   async function carregarListasApoio() {
     [motoristas, veiculos, clientes] = await Promise.all([
       apiGet('/api/motoristas'), apiGet('/api/veiculos'), apiGet('/api/clientes')
     ]);
-    preencherDatalist('lista-motoristas', motoristas);
-    preencherDatalist('lista-veiculos', veiculos);
-    preencherDatalist('lista-clientes', clientes);
   }
 
-  ligarBuscaComId('det-motorista-input', 'det-motorista-id', () => motoristas);
-  ligarBuscaComId('det-veiculo-input', 'det-veiculo-id', () => veiculos);
-  ligarBuscaComId('add-remetente-input', 'add-remetente-id', () => clientes);
-  ligarBuscaComId('add-cliente-input', 'add-cliente-id', () => clientes);
-  ligarBuscaComId('edit-remetente-input', 'edit-remetente-id', () => clientes);
-  ligarBuscaComId('lote-remetente-input', 'lote-remetente-id', () => clientes);
+  function combobox(inputId, hiddenId, getItens) {
+    criarCombobox({ input: document.getElementById(inputId), hidden: document.getElementById(hiddenId), getItens });
+  }
+  combobox('det-motorista-input', 'det-motorista-id', () => motoristas);
+  combobox('det-veiculo-input', 'det-veiculo-id', () => veiculos);
+  combobox('add-remetente-input', 'add-remetente-id', () => clientes);
+  combobox('add-cliente-input', 'add-cliente-id', () => clientes);
+  combobox('edit-remetente-input', 'edit-remetente-id', () => clientes);
+  combobox('lote-remetente-input', 'lote-remetente-id', () => clientes);
 
   function mostrarMensagem(texto, tipo = 'erro') {
     exibirMensagem(msg, texto, tipo);

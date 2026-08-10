@@ -39,6 +39,7 @@ export function renderClientesPage() {
           <tbody id="tabela-clientes"></tbody>
         </table>
       </div>
+      <div id="paginacao-clientes" class="mt-3 flex flex-wrap items-center justify-center gap-3"></div>
     </div>
 
     <div id="modal-cliente" class="fixed inset-0 z-20 hidden items-center justify-center overflow-y-auto bg-black/60 py-8">

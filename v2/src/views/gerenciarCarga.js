@@ -9,14 +9,14 @@ export function renderGerenciarCargaPage() {
     </div>
 
     <div class="card mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <div>
+      <div class="relative">
         <label class="mb-1 block text-xs text-slate-400">Motorista</label>
-        <input list="lista-motoristas" id="ger-motorista-input" class="input-field">
+        <input id="ger-motorista-input" class="input-field">
         <input type="hidden" id="ger-motorista-id">
       </div>
-      <div>
+      <div class="relative">
         <label class="mb-1 block text-xs text-slate-400">Veiculo</label>
-        <input list="lista-veiculos" id="ger-veiculo-input" class="input-field">
+        <input id="ger-veiculo-input" class="input-field">
         <input type="hidden" id="ger-veiculo-id">
       </div>
       <div>
@@ -134,8 +134,5 @@ export function renderGerenciarCargaPage() {
         </div>
       </form>
     </div>
-
-    <datalist id="lista-motoristas"></datalist>
-    <datalist id="lista-veiculos"></datalist>
   `;
 }

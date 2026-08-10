@@ -12,16 +12,14 @@ export function renderAvariasPage() {
           <option value="Finalizada">Finalizada</option>
         </select>
         <select id="f-marca" class="input-field"><option value="">Marca (todas)</option></select>
-        <input list="lista-clientes-av" id="f-cliente-input" class="input-field" placeholder="Cliente...">
+        <div class="relative"><input id="f-cliente-input" class="input-field" placeholder="Cliente..."></div>
         <input type="hidden" id="f-cliente-id">
-        <input list="lista-motoristas-av" id="f-motorista-input" class="input-field" placeholder="Motorista...">
+        <div class="relative"><input id="f-motorista-input" class="input-field" placeholder="Motorista..."></div>
         <input type="hidden" id="f-motorista-id">
         <input type="date" id="f-data-inicio" class="input-field">
         <input type="date" id="f-data-fim" class="input-field">
         <button type="submit" class="btn-primary">Buscar</button>
       </form>
-      <datalist id="lista-clientes-av"></datalist>
-      <datalist id="lista-motoristas-av"></datalist>
 
       <div id="lista-avarias" class="mt-4 space-y-3"></div>
     </div>

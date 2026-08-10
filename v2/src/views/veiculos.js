@@ -30,6 +30,7 @@ export function renderVeiculosPage() {
           <tbody id="tabela-veiculos"></tbody>
         </table>
       </div>
+      <div id="paginacao-veiculos" class="mt-3 flex flex-wrap items-center justify-center gap-3"></div>
     </div>
 
     <div id="modal-veiculo" class="fixed inset-0 z-20 hidden items-center justify-center bg-black/60">

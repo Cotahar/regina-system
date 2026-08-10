@@ -3,6 +3,7 @@ import { escapeHtml } from '../shared/escape.js';
 import { formatarMoeda, formatarPeso, formatarData } from '../shared/format.js';
 import { criarModalDetalhesCarga } from '../shared/carga-modal.js';
 import { ouvirMudancas } from '../shared/live.js';
+import { criarCombobox } from '../shared/combobox.js';
 
 const isAdmin = window.__SESSAO__?.permissao === 'admin';
 const modalDetalhes = criarModalDetalhesCarga({ isAdmin, onMudanca: () => buscar(paginaAtualGlobal) });
@@ -12,14 +13,9 @@ let paginaAtualGlobal = 1;
 
 async function carregarClientesFiltro() {
   clientes = await apiGet('/api/clientes');
-  document.getElementById('lista-clientes-filtro').innerHTML =
-    clientes.map((c) => `<option data-id="${c.id}" value="${escapeHtml(c.text)}">`).join('');
 }
 
-document.getElementById('f-cliente-input').addEventListener('input', (e) => {
-  const item = clientes.find((c) => c.text === e.target.value);
-  document.getElementById('f-cliente-id').value = item ? item.id : '';
-});
+criarCombobox({ input: document.getElementById('f-cliente-input'), hidden: document.getElementById('f-cliente-id'), getItens: () => clientes });
 
 function montarQueryString(pagina) {
   const params = new URLSearchParams();

@@ -3,6 +3,7 @@ import { escapeHtml } from '../shared/escape.js';
 import { formatarMoeda, formatarPeso, parseDecimal } from '../shared/format.js';
 import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
 import { ouvirMudancas } from '../shared/live.js';
+import { criarCombobox } from '../shared/combobox.js';
 
 let clientes = [];
 let poolDisponiveis = [];
@@ -14,21 +15,14 @@ const tabela = document.getElementById('tabela-entregas');
 const origemInput = document.getElementById('origem-rascunho');
 const filtro = document.getElementById('filtro-busca');
 
-function preencherDatalistClientes() {
-  document.getElementById('lista-clientes').innerHTML =
-    clientes.map((c) => `<option data-id="${c.id}" value="${escapeHtml(c.text)}">`).join('');
-}
-
-function ligarBuscaComId(inputId, hiddenId) {
-  const input = document.getElementById(inputId);
-  const hidden = document.getElementById(hiddenId);
-  input.addEventListener('input', () => {
-    const item = clientes.find((c) => c.text === input.value);
-    hidden.value = item ? item.id : '';
+function comboboxCliente(prefixo) {
+  criarCombobox({
+    input: document.getElementById(`${prefixo}-input`),
+    hidden: document.getElementById(`${prefixo}-id`),
+    getItens: () => clientes
   });
 }
-['nova', 'edit', 'lote'].forEach((prefixo) => ligarBuscaComId(`${prefixo}-remetente-input`, `${prefixo}-remetente-id`));
-ligarBuscaComId('nova-cliente-input', 'nova-cliente-id');
+['nova-remetente', 'edit-remetente', 'lote-remetente', 'nova-cliente'].forEach(comboboxCliente);
 
 function linhasCombinadas() {
   const doDraft = draftAtual ? draftAtual.entregas : [];
@@ -93,7 +87,6 @@ async function carregarPool() {
     apiGet('/api/entregas/disponiveis'),
     apiGet('/api/cargas/rascunhos')
   ]);
-  preencherDatalistClientes();
   renderizarRascunhos();
   renderizarTabela();
 }

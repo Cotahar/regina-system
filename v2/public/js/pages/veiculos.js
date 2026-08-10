@@ -2,6 +2,7 @@ import { apiGet, apiPost, apiPut, apiDelete } from '../shared/api.js';
 import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
 import { escapeHtml } from '../shared/escape.js';
 import { configurarColarImport } from '../shared/colar-import.js';
+import { criarPaginacao } from '../shared/paginacao.js';
 
 let veiculos = [];
 
@@ -11,12 +12,21 @@ const modal = document.getElementById('modal-veiculo');
 const form = document.getElementById('form-veiculo');
 const msgModal = document.getElementById('msg-modal');
 
+const paginacao = criarPaginacao({
+  container: document.getElementById('paginacao-veiculos'),
+  renderizarPagina: renderizarLinhas
+});
+
 async function carregar() {
   veiculos = await apiGet('/api/veiculos');
   renderizar(veiculos);
 }
 
 function renderizar(lista) {
+  paginacao.definirItens(lista);
+}
+
+function renderizarLinhas(lista) {
   tabela.innerHTML = lista.map((v) => `
     <tr class="border-t border-painel-border" data-id="${v.id}">
       <td class="py-2">${escapeHtml(v.placa)}</td>

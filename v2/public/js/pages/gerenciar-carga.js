@@ -2,6 +2,7 @@ import { apiGet, apiPut, apiPost, apiDelete } from '../shared/api.js';
 import { escapeHtml } from '../shared/escape.js';
 import { formatarMoeda, formatarPeso, parseDecimal } from '../shared/format.js';
 import { exibirMensagem } from '../shared/ui.js';
+import { criarCombobox } from '../shared/combobox.js';
 
 const cargaId = new URLSearchParams(window.location.search).get('carga_id');
 const msg = document.getElementById('ger-msg');
@@ -19,18 +20,8 @@ if (!cargaId) {
   throw new Error('carga_id ausente');
 }
 
-function ligarBuscaComId(inputId, hiddenId, itens) {
-  const input = document.getElementById(inputId);
-  const hidden = document.getElementById(hiddenId);
-  input.addEventListener('input', () => {
-    const item = itens.find((i) => i.text === input.value);
-    hidden.value = item ? item.id : '';
-  });
-}
-
-function preencherDatalist(id, itens) {
-  document.getElementById(id).innerHTML = itens.map((i) => `<option value="${escapeHtml(i.text)}">`).join('');
-}
+criarCombobox({ input: document.getElementById('ger-motorista-input'), hidden: document.getElementById('ger-motorista-id'), getItens: () => motoristas });
+criarCombobox({ input: document.getElementById('ger-veiculo-input'), hidden: document.getElementById('ger-veiculo-id'), getItens: () => veiculos });
 
 // --- PREENCHIMENTO AUTOMATICO (baseado no REMETENTE + cadastro de Unidades) ---
 function autoUnidadeTipoCte(entrega) {
@@ -167,10 +158,6 @@ async function carregar() {
     apiGet('/api/motoristas'),
     apiGet('/api/veiculos')
   ]);
-  preencherDatalist('lista-motoristas', motoristas);
-  preencherDatalist('lista-veiculos', veiculos);
-  ligarBuscaComId('ger-motorista-input', 'ger-motorista-id', motoristas);
-  ligarBuscaComId('ger-veiculo-input', 'ger-veiculo-id', veiculos);
 
   const selectsMassa = [
     ['bulk-unidade', unidades, 'Unidade (massa)'],

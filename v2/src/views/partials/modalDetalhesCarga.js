@@ -11,14 +11,14 @@ export function renderModalDetalhesCarga() {
       </div>
 
       <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
+        <div class="relative">
           <label class="mb-1 block text-xs text-slate-400">Motorista</label>
-          <input list="lista-motoristas" id="det-motorista-input" class="input-field" placeholder="Buscar motorista...">
+          <input id="det-motorista-input" class="input-field" placeholder="Buscar motorista...">
           <input type="hidden" id="det-motorista-id">
         </div>
-        <div>
+        <div class="relative">
           <label class="mb-1 block text-xs text-slate-400">Veiculo</label>
-          <input list="lista-veiculos" id="det-veiculo-input" class="input-field" placeholder="Buscar placa...">
+          <input id="det-veiculo-input" class="input-field" placeholder="Buscar placa...">
           <input type="hidden" id="det-veiculo-id">
         </div>
         <div>
@@ -63,15 +63,15 @@ export function renderModalDetalhesCarga() {
 
         <form id="form-lote-remetente" class="mb-3 hidden flex-wrap items-center gap-2 rounded-md border border-painel-border p-3">
           <span class="text-xs text-slate-400">Novo remetente para as selecionadas:</span>
-          <input list="lista-clientes" id="lote-remetente-input" class="input-field max-w-xs" placeholder="Buscar cliente...">
+          <div class="relative max-w-xs flex-1"><input id="lote-remetente-input" class="input-field" placeholder="Buscar cliente..."></div>
           <input type="hidden" id="lote-remetente-id">
           <button type="submit" class="btn-primary px-3 py-1.5 text-xs">Aplicar</button>
         </form>
 
         <form id="form-add-entrega" class="mb-3 hidden grid grid-cols-2 gap-2 rounded-md border border-painel-border p-3 sm:grid-cols-6">
-          <input list="lista-clientes" id="add-remetente-input" class="input-field" placeholder="Remetente...">
+          <div class="relative"><input id="add-remetente-input" class="input-field" placeholder="Remetente..."></div>
           <input type="hidden" id="add-remetente-id">
-          <input list="lista-clientes" id="add-cliente-input" class="input-field" placeholder="Destinatario...">
+          <div class="relative"><input id="add-cliente-input" class="input-field" placeholder="Destinatario..."></div>
           <input type="hidden" id="add-cliente-id">
           <input type="text" id="add-local-coleta" class="input-field" placeholder="Local de coleta (opcional)">
           <input type="text" id="add-peso" class="input-field" placeholder="Peso bruto (kg)">
@@ -107,9 +107,9 @@ export function renderModalDetalhesCarga() {
     <form id="form-editar-entrega" class="card w-full max-w-md">
       <h3 class="mb-3 text-base font-semibold">Editar entrega</h3>
       <input type="hidden" id="edit-entrega-id">
-      <div class="mb-2">
+      <div class="relative mb-2">
         <label class="mb-1 block text-xs text-slate-400">Remetente</label>
-        <input list="lista-clientes" id="edit-remetente-input" class="input-field">
+        <input id="edit-remetente-input" class="input-field">
         <input type="hidden" id="edit-remetente-id">
       </div>
       <div class="mb-2 grid grid-cols-2 gap-2">
@@ -157,8 +157,5 @@ export function renderModalDetalhesCarga() {
     </form>
   </div>
 
-  <datalist id="lista-motoristas"></datalist>
-  <datalist id="lista-veiculos"></datalist>
-  <datalist id="lista-clientes"></datalist>
   `;
 }

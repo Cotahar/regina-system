@@ -30,6 +30,7 @@ export function renderMotoristasPage() {
           <tbody id="tabela-motoristas"></tbody>
         </table>
       </div>
+      <div id="paginacao-motoristas" class="mt-3 flex flex-wrap items-center justify-center gap-3"></div>
     </div>
 
     <div id="modal-motorista" class="fixed inset-0 z-20 hidden items-center justify-center bg-black/60">
