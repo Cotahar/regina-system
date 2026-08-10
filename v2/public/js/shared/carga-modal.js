@@ -27,6 +27,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
   let cargaAtual = null;
   let entregasAtuais = [];
   const selecionadas = new Set();
+  const gruposExpandidos = new Set();
 
   async function carregarListasApoio() {
     [motoristas, veiculos, clientes] = await Promise.all([
@@ -54,6 +55,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       cargaAtual = data.detalhes_carga;
       entregasAtuais = data.entregas;
       selecionadas.clear();
+      gruposExpandidos.clear();
       if (!motoristas.length) await carregarListasApoio();
       renderizarCabecalho();
       renderizarAcoes();
@@ -243,12 +245,25 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     }
   }
 
-  function renderizarTabelaEntregas() {
-    tabelaEntregas.innerHTML = entregasAtuais.map((e) => {
-      const agrupada = !!e.grupo_id;
-      const classeGrupo = agrupada ? 'bg-destaque/5 border-l-2 border-l-destaque' : '';
-      return `
-      <tr class="border-t border-painel-border ${classeGrupo}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
+  // Agrupa so para exibicao (mesmo destinatario + mesma cidade/UF) - nao tem
+  // relacao com o agrupamento de faturamento (grupo_id). Ajuda a nao repetir
+  // N linhas identicas quando uma carga tem varias notas pro mesmo lugar.
+  function agruparParaExibicao(entregas) {
+    const mapa = new Map();
+    const ordem = [];
+    for (const e of entregas) {
+      const chave = `${e.cliente_id}|${(e.cidade || '').trim().toUpperCase()}|${(e.estado || '').trim().toUpperCase()}`;
+      if (!mapa.has(chave)) { mapa.set(chave, []); ordem.push(chave); }
+      mapa.get(chave).push(e);
+    }
+    return ordem.map((chave) => ({ chave, itens: mapa.get(chave) }));
+  }
+
+  function linhaEntrega(e, indentada) {
+    const agrupada = !!e.grupo_id;
+    const classeGrupo = agrupada ? 'bg-destaque/5 border-l-2 border-l-destaque' : '';
+    return `
+      <tr class="border-t border-painel-border ${classeGrupo} ${indentada ? 'bg-painel-bg/20' : ''}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
         <td class="py-1"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
         <td class="py-1 text-center"><input type="radio" name="ultima-entrega" class="radio-ultima" ${e.is_last_delivery ? 'checked' : ''}></td>
         <td class="py-1">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-destaque/20 px-1 text-[10px] text-destaque">grupo</span>' : ''}</td>
@@ -263,6 +278,43 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
         </td>
       </tr>
     `;
+  }
+
+  function linhaResumoGrupo(chave, itens, expandido) {
+    const remetentes = new Set(itens.map((e) => e.remetente_nome));
+    const remetenteTexto = remetentes.size === 1 ? escapeHtml([...remetentes][0]) : '<span class="italic text-slate-500">Varios</span>';
+    const primeiro = itens[0];
+    const pesoTotal = itens.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
+    const freteTotal = itens.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
+    const todosSelecionados = itens.every((e) => selecionadas.has(e.id));
+    return `
+      <tr class="border-t border-painel-border bg-painel-card/60" data-grupo-visual="${escapeHtml(chave)}">
+        <td class="py-1.5"><input type="checkbox" class="chk-grupo-visual" data-chave="${escapeHtml(chave)}" ${todosSelecionados ? 'checked' : ''}></td>
+        <td class="py-1.5"></td>
+        <td class="py-1.5">${remetenteTexto}</td>
+        <td class="py-1.5">
+          <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-medium text-slate-100 hover:text-destaque" data-chave="${escapeHtml(chave)}">
+            <svg viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3 shrink-0 transition-transform ${expandido ? 'rotate-90' : ''}"><path d="M7 4l7 6-7 6V4z"/></svg>
+            ${escapeHtml(primeiro.razao_social)}
+          </button>
+          <span class="ml-1 rounded-full bg-painel-border px-1.5 py-0.5 text-[10px] text-slate-300">${itens.length} notas</span>
+        </td>
+        <td class="py-1.5">${escapeHtml(primeiro.cidade)}-${escapeHtml(primeiro.estado)}</td>
+        <td class="py-1.5 text-slate-500">-</td>
+        <td class="py-1.5 font-medium">${formatarPeso(pesoTotal)}</td>
+        <td class="py-1.5 font-medium">${formatarMoeda(freteTotal)}</td>
+        <td class="py-1.5"></td>
+      </tr>
+    `;
+  }
+
+  function renderizarTabelaEntregas() {
+    const grupos = agruparParaExibicao(entregasAtuais);
+
+    tabelaEntregas.innerHTML = grupos.map(({ chave, itens }) => {
+      if (itens.length === 1) return linhaEntrega(itens[0], false);
+      const expandido = gruposExpandidos.has(chave);
+      return linhaResumoGrupo(chave, itens, expandido) + (expandido ? itens.map((e) => linhaEntrega(e, true)).join('') : '');
     }).join('') || '<tr><td colspan="9" class="py-3 text-center text-slate-500">Nenhuma entrega nesta carga.</td></tr>';
 
     tabelaEntregas.querySelectorAll('tr[data-id]').forEach((tr) => {
@@ -295,7 +347,30 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       });
     });
 
-    document.getElementById('chk-todas').checked = false;
+    tabelaEntregas.querySelectorAll('.btn-expandir-grupo').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const chave = btn.dataset.chave;
+        if (gruposExpandidos.has(chave)) gruposExpandidos.delete(chave); else gruposExpandidos.add(chave);
+        renderizarTabelaEntregas();
+      });
+    });
+
+    tabelaEntregas.querySelectorAll('.chk-grupo-visual').forEach((chk) => {
+      chk.addEventListener('change', (e) => {
+        const grupo = grupos.find((g) => g.chave === chk.dataset.chave);
+        if (!grupo) return;
+        for (const item of grupo.itens) {
+          if (e.target.checked) selecionadas.add(item.id); else selecionadas.delete(item.id);
+        }
+        document.getElementById('btn-lote-remetente').classList.toggle('hidden', selecionadas.size < 2);
+        document.getElementById('btn-agrupar-entregas').classList.toggle('hidden', selecionadas.size < 2);
+        document.getElementById('btn-desagrupar-entregas').classList.toggle('hidden', selecionadas.size < 1);
+        document.getElementById('btn-excluir-entregas-selecionadas').classList.toggle('hidden', selecionadas.size < 1);
+        renderizarTabelaEntregas();
+      });
+    });
+
+    document.getElementById('chk-todas').checked = entregasAtuais.length > 0 && selecionadas.size === entregasAtuais.length;
   }
 
   function abrirEdicaoEntrega(id) {
@@ -320,10 +395,17 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
   document.getElementById('btn-cancelar-edicao').addEventListener('click', () => fecharModal(modalEditar));
 
   document.getElementById('chk-todas').addEventListener('change', (e) => {
-    tabelaEntregas.querySelectorAll('.chk-linha').forEach((chk) => {
-      chk.checked = e.target.checked;
-      chk.dispatchEvent(new Event('change'));
-    });
+    // Opera direto sobre a lista completa (nao so as linhas visiveis no DOM)
+    // porque entregas dentro de um grupo visual recolhido nao tem checkbox
+    // proprio na tela ate serem expandidas.
+    for (const entrega of entregasAtuais) {
+      if (e.target.checked) selecionadas.add(entrega.id); else selecionadas.delete(entrega.id);
+    }
+    document.getElementById('btn-lote-remetente').classList.toggle('hidden', selecionadas.size < 2);
+    document.getElementById('btn-agrupar-entregas').classList.toggle('hidden', selecionadas.size < 2);
+    document.getElementById('btn-desagrupar-entregas').classList.toggle('hidden', selecionadas.size < 1);
+    document.getElementById('btn-excluir-entregas-selecionadas').classList.toggle('hidden', selecionadas.size < 1);
+    renderizarTabelaEntregas();
   });
 
   document.getElementById('btn-add-entrega').addEventListener('click', () => {
