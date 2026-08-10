@@ -92,6 +92,13 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     document.getElementById('det-data-finalizacao').value = formatarDataParaInput(c.data_finalizacao);
     document.getElementById('det-frete-pago').value = c.frete_pago ?? '';
     document.getElementById('det-observacoes').value = c.observacoes || '';
+
+    // So mostra o campo de data quando a carga ja chegou naquele estagio -
+    // datas futuras/nao aplicaveis so confundem quem esta olhando.
+    const mostrarCarregamento = ['Agendada', 'Em Trânsito', 'Finalizada'].includes(c.status);
+    const mostrarFinalizacao = ['Em Trânsito', 'Finalizada'].includes(c.status);
+    document.querySelectorAll('[data-estagio="carregamento"]').forEach((el) => el.classList.toggle('hidden', !mostrarCarregamento));
+    document.querySelectorAll('[data-estagio="finalizacao"]').forEach((el) => el.classList.toggle('hidden', !mostrarFinalizacao));
   }
 
   function coletarCamposEditaveis() {

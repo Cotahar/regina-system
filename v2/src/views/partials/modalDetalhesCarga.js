@@ -10,44 +10,48 @@ export function renderModalDetalhesCarga() {
         <button type="button" id="btn-fechar-detalhes" class="text-slate-400 hover:text-slate-100">&#10005;</button>
       </div>
 
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="relative">
-          <label class="mb-1 block text-xs text-slate-400">Motorista</label>
-          <input id="det-motorista-input" class="input-field" placeholder="Buscar motorista...">
-          <input type="hidden" id="det-motorista-id">
+      <div class="rounded-lg border border-painel-border bg-painel-bg/40 p-4">
+        <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Dados da carga</h3>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="relative">
+            <label class="mb-1 block text-xs text-slate-400">Motorista</label>
+            <input id="det-motorista-input" class="input-field" placeholder="Buscar motorista...">
+            <input type="hidden" id="det-motorista-id">
+          </div>
+          <div class="relative">
+            <label class="mb-1 block text-xs text-slate-400">Veiculo</label>
+            <input id="det-veiculo-input" class="input-field" placeholder="Buscar placa...">
+            <input type="hidden" id="det-veiculo-id">
+          </div>
+          <div>
+            <label class="mb-1 block text-xs text-slate-400">Data agendamento</label>
+            <input type="date" id="det-data-agendamento" class="input-field">
+          </div>
+          <div>
+            <label class="mb-1 block text-xs text-slate-400">Frete pago (R$)</label>
+            <input type="text" id="det-frete-pago" class="input-field">
+          </div>
+          <div data-estagio="carregamento">
+            <label class="mb-1 block text-xs text-slate-400">Data carregamento</label>
+            <input type="date" id="det-data-carregamento" class="input-field">
+          </div>
+          <div data-estagio="carregamento">
+            <label class="mb-1 block text-xs text-slate-400">Previsao de entrega</label>
+            <input type="date" id="det-previsao-entrega" class="input-field">
+          </div>
+          <div data-estagio="finalizacao">
+            <label class="mb-1 block text-xs text-slate-400">Data finalizacao</label>
+            <input type="date" id="det-data-finalizacao" class="input-field">
+          </div>
         </div>
-        <div class="relative">
-          <label class="mb-1 block text-xs text-slate-400">Veiculo</label>
-          <input id="det-veiculo-input" class="input-field" placeholder="Buscar placa...">
-          <input type="hidden" id="det-veiculo-id">
-        </div>
-        <div>
-          <label class="mb-1 block text-xs text-slate-400">Data agendamento</label>
-          <input type="date" id="det-data-agendamento" class="input-field">
-        </div>
-        <div>
-          <label class="mb-1 block text-xs text-slate-400">Data carregamento</label>
-          <input type="date" id="det-data-carregamento" class="input-field">
-        </div>
-        <div>
-          <label class="mb-1 block text-xs text-slate-400">Previsao de entrega</label>
-          <input type="date" id="det-previsao-entrega" class="input-field">
-        </div>
-        <div>
-          <label class="mb-1 block text-xs text-slate-400">Data finalizacao</label>
-          <input type="date" id="det-data-finalizacao" class="input-field">
-        </div>
-        <div>
-          <label class="mb-1 block text-xs text-slate-400">Frete pago (R$)</label>
-          <input type="text" id="det-frete-pago" class="input-field">
-        </div>
-        <div class="sm:col-span-2 lg:col-span-1">
-          <label class="mb-1 block text-xs text-slate-400">Observacoes</label>
-          <input type="text" id="det-observacoes" class="input-field">
+
+        <div class="mt-3">
+          <label class="mb-1 block text-xs font-semibold text-slate-300">Observacoes</label>
+          <textarea id="det-observacoes" class="input-field" rows="3" placeholder="Informacoes sobre a carga, combinados, avisos..."></textarea>
         </div>
       </div>
 
-      <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-painel-border pt-3">
+      <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-painel-border bg-painel-bg/40 p-3">
         <div class="flex flex-wrap gap-2" id="det-acoes-fluxo"></div>
         <div class="h-6 w-px bg-painel-border max-sm:hidden"></div>
         <div class="flex flex-wrap gap-2" id="det-acoes-ferramentas"></div>
@@ -56,7 +60,7 @@ export function renderModalDetalhesCarga() {
 
       <div class="mt-5">
         <div class="mb-2 flex items-center justify-between">
-          <h3 class="text-sm font-semibold text-slate-300">Entregas</h3>
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-400">Entregas</h3>
           <div class="flex flex-wrap gap-2">
             <button type="button" id="btn-agrupar-entregas" class="btn-secondary hidden btn-sm">Agrupar selecionadas</button>
             <button type="button" id="btn-desagrupar-entregas" class="btn-secondary hidden btn-sm">Desagrupar selecionadas</button>
