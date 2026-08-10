@@ -66,9 +66,9 @@ function renderizarLista() {
       ${a.status === 'Enviado' || a.status === 'Finalizada' ? `<p class="mt-2 text-xs text-slate-400"><strong>Envio:</strong> ${escapeHtml(a.registro_envio)}</p>` : ''}
       ${a.status === 'Finalizada' ? `<p class="mt-1 text-xs text-slate-400"><strong>Retorno:</strong> ${escapeHtml(a.retorno_fabrica)} ${a.valor_cobranca ? `(Cobranca: ${formatarMoeda(a.valor_cobranca)})` : ''}</p>` : ''}
       <div class="mt-3 flex gap-2">
-        ${a.status === 'Pendente' ? '<button type="button" class="btn-secondary btn-registrar-envio px-2 py-1 text-xs">Registrar Envio</button>' : ''}
-        ${a.status === 'Enviado' ? '<button type="button" class="btn-secondary btn-finalizar px-2 py-1 text-xs">Finalizar</button>' : ''}
-        ${isAdmin ? '<button type="button" class="btn-danger btn-excluir px-2 py-1 text-xs">Excluir</button>' : ''}
+        ${a.status === 'Pendente' ? '<button type="button" class="btn-secondary btn-registrar-envio btn-sm">Registrar Envio</button>' : ''}
+        ${a.status === 'Enviado' ? '<button type="button" class="btn-secondary btn-finalizar btn-sm">Finalizar</button>' : ''}
+        ${isAdmin ? '<button type="button" class="btn-danger btn-excluir btn-sm">Excluir</button>' : ''}
       </div>
     </div>
   `).join('') || '<p class="text-center text-sm text-slate-500">Nenhuma avaria encontrada.</p>';

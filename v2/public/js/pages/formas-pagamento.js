@@ -10,7 +10,7 @@ async function carregar() {
   lista.innerHTML = formas.map((f) => `
     <li class="flex items-center justify-between py-2" data-id="${f.id}">
       <span>${escapeHtml(f.descricao)}</span>
-      <button class="btn-danger btn-excluir px-2 py-1 text-xs">Excluir</button>
+      <button class="btn-danger btn-excluir btn-sm">Excluir</button>
     </li>
   `).join('') || '<li class="py-4 text-center text-slate-500">Nenhuma forma de pagamento cadastrada.</li>';
 

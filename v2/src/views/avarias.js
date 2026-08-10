@@ -50,7 +50,7 @@ export function renderAvariasPage() {
         <div>
           <label class="mb-1 block text-xs text-slate-400">Itens avariados</label>
           <div id="reg-itens" class="space-y-2"></div>
-          <button type="button" id="btn-add-item" class="btn-secondary mt-2 px-2 py-1 text-xs">+ Item</button>
+          <button type="button" id="btn-add-item" class="btn-secondary mt-2 btn-sm">+ Item</button>
         </div>
 
         <div>

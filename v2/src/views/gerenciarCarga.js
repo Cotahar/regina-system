@@ -4,7 +4,7 @@ export function renderGerenciarCargaPage() {
       <h1 class="text-xl font-semibold">Gerenciar / Faturamento - <span id="ger-codigo"></span></h1>
       <div class="flex gap-2">
         <button type="button" id="btn-imprimir" class="btn-secondary">Imprimir Relatorio</button>
-        <button type="button" id="btn-salvar" class="btn-primary">Salvar</button>
+        <button type="button" id="btn-salvar" class="btn-success">Salvar</button>
       </div>
     </div>
 
@@ -55,9 +55,9 @@ export function renderGerenciarCargaPage() {
 
     <div class="card mt-4">
       <div class="mb-3 flex flex-wrap items-end gap-2">
-        <button type="button" id="btn-agrupar" class="btn-secondary px-2 py-1 text-xs">Agrupar selecionadas</button>
-        <button type="button" id="btn-desagrupar" class="btn-secondary px-2 py-1 text-xs">Desagrupar selecionadas</button>
-        <button type="button" id="btn-excluir-selecionadas" class="btn-danger px-2 py-1 text-xs">Excluir selecionadas</button>
+        <button type="button" id="btn-agrupar" class="btn-secondary btn-sm">Agrupar selecionadas</button>
+        <button type="button" id="btn-desagrupar" class="btn-secondary btn-sm">Desagrupar selecionadas</button>
+        <button type="button" id="btn-excluir-selecionadas" class="btn-danger btn-sm">Excluir selecionadas</button>
         <span class="mx-1 h-6 border-l border-painel-border"></span>
         <select id="bulk-unidade" class="input-field w-40"><option value="">Unidade (massa)</option></select>
         <select id="bulk-tipo-cte" class="input-field w-40"><option value="">Tipo CT-e (massa)</option></select>
@@ -67,7 +67,7 @@ export function renderGerenciarCargaPage() {
           <option value="Boleto">Boleto</option>
           <option value="Transferencia">Transferencia</option>
         </select>
-        <button type="button" id="btn-aplicar-massa" class="btn-primary px-2 py-1 text-xs">Aplicar as selecionadas</button>
+        <button type="button" id="btn-aplicar-massa" class="btn-success btn-sm">Aplicar as selecionadas</button>
       </div>
 
       <div class="overflow-x-auto">
@@ -130,7 +130,7 @@ export function renderGerenciarCargaPage() {
         <p class="mb-3 text-xs text-slate-500">A diferenca entre o valor do frete cobrado no CT-e e o valor combinado e o que deve ser repassado.</p>
         <div class="flex justify-end gap-2">
           <button type="button" id="btn-cancelar-repasse" class="btn-secondary">Cancelar</button>
-          <button type="submit" class="btn-primary">Salvar</button>
+          <button type="submit" class="btn-success">Salvar</button>
         </div>
       </form>
     </div>

@@ -61,7 +61,7 @@ function renderizarLinhas(lista) {
       <td class="py-2">${c.is_remetente ? '<span class="rounded bg-destaque/20 px-2 py-0.5 text-xs text-destaque">Sim</span>' : ''}</td>
       <td class="py-2">${badgesPerfil(c)}</td>
       <td class="py-2 text-right">
-        <button class="btn-secondary btn-editar px-2 py-1 text-xs">Editar</button>
+        <button class="btn-secondary btn-editar btn-sm">Editar</button>
       </td>
     </tr>
   `).join('') || '<tr><td colspan="8" class="py-4 text-center text-slate-500">Nenhum cliente cadastrado.</td></tr>';

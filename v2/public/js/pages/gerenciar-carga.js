@@ -76,7 +76,7 @@ function linhaTabela(e) {
         </select>
       </td>
       <td class="py-1 pr-2 text-center"><input type="checkbox" class="campo-cortesia" ${e.is_cortesia ? 'checked' : ''}></td>
-      <td class="py-1 text-right"><button type="button" class="btn-secondary btn-repasse px-2 py-0.5 text-[11px]">Repasse</button></td>
+      <td class="py-1 text-right"><button type="button" class="btn-secondary btn-repasse btn-sm">Repasse</button></td>
     </tr>
   `;
 }

@@ -28,7 +28,7 @@ export function renderMarcasPage({ isAdmin }) {
         <p id="msg-modal" class="mb-3 hidden text-sm"></p>
         <div class="flex justify-end gap-2">
           <button type="button" id="btn-cancelar" class="btn-secondary">Cancelar</button>
-          <button type="submit" class="btn-primary">Salvar</button>
+          <button type="submit" class="btn-success">Salvar</button>
         </div>
       </form>
     </div>` : ''}

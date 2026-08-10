@@ -21,7 +21,7 @@ export function renderUsuariosPage() {
             <option value="admin">Admin</option>
           </select>
         </div>
-        <button type="submit" class="btn-primary">Salvar</button>
+        <button type="submit" class="btn-success">Salvar</button>
         <button type="button" id="btn-cancelar-edicao" class="btn-secondary hidden">Cancelar edicao</button>
       </form>
       <p id="msg-usuario" class="mt-2 hidden text-sm"></p>
@@ -42,7 +42,7 @@ export function renderUsuariosPage() {
         <select id="unidade-tipo-cte" class="input-field"><option value="">Tipo CT-e padrao</option></select>
         <select id="unidade-tipo-cte-outra-uf" class="input-field"><option value="">Tipo CT-e (outra UF)</option></select>
         <label class="flex items-center gap-1 text-sm text-slate-300"><input type="checkbox" id="unidade-matriz"> Matriz</label>
-        <button type="submit" class="btn-primary">Salvar</button>
+        <button type="submit" class="btn-success">Salvar</button>
       </form>
       <p id="msg-unidade" class="mt-2 hidden text-sm"></p>
       <table class="mt-4 w-full text-left text-sm">

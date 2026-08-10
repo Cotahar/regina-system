@@ -51,8 +51,8 @@ function renderizarTabela() {
       <td class="py-1">${formatarPeso(e.peso_cubado)}</td>
       <td class="py-1">${formatarMoeda(e.valor_frete)}</td>
       <td class="py-1 text-right">
-        <button type="button" class="btn-secondary btn-editar px-2 py-0.5">Editar</button>
-        ${e.carga_id ? '' : '<button type="button" class="btn-danger btn-excluir px-2 py-0.5">X</button>'}
+        <button type="button" class="btn-secondary btn-editar btn-sm">Editar</button>
+        ${e.carga_id ? '' : '<button type="button" class="btn-danger btn-excluir btn-sm">X</button>'}
       </td>
     </tr>
   `;
@@ -100,9 +100,9 @@ function renderizarRascunhos() {
         <p class="text-xs text-slate-400">${escapeHtml(r.origem)} - ${r.num_entregas} entrega(s)</p>
       </div>
       <div class="flex gap-1">
-        <button type="button" class="btn-secondary btn-abrir px-2 py-1 text-xs">Abrir</button>
-        <button type="button" class="btn-primary btn-confirmar px-2 py-1 text-xs">Confirmar</button>
-        <button type="button" class="btn-danger btn-excluir px-2 py-1 text-xs">X</button>
+        <button type="button" class="btn-secondary btn-abrir btn-sm">Abrir</button>
+        <button type="button" class="btn-primary btn-confirmar btn-sm">Confirmar</button>
+        <button type="button" class="btn-danger btn-excluir btn-sm">X</button>
       </div>
     </div>
   `).join('') || '<p class="text-xs text-slate-500">Nenhum rascunho salvo.</p>';

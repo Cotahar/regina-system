@@ -43,22 +43,22 @@ export function renderMontagemPage() {
             </div>
             <div class="flex gap-2">
               <button type="button" id="btn-novo-rascunho" class="btn-secondary">Novo rascunho</button>
-              <button type="button" id="btn-salvar-rascunho" class="btn-primary">Salvar Rascunho</button>
+              <button type="button" id="btn-salvar-rascunho" class="btn-success">Salvar Rascunho</button>
             </div>
           </div>
 
           <div class="mb-3 flex flex-wrap gap-2">
             <input type="text" id="filtro-busca" class="input-field max-w-xs" placeholder="Buscar na lista...">
-            <button type="button" id="btn-agrupar" class="btn-secondary px-3 py-1.5 text-xs">Agrupar selecionadas</button>
-            <button type="button" id="btn-desagrupar" class="btn-secondary px-3 py-1.5 text-xs">Desagrupar selecionadas</button>
-            <button type="button" id="btn-excluir-selecionadas" class="btn-danger px-3 py-1.5 text-xs">Excluir selecionadas</button>
-            <button type="button" id="btn-lote-remetente" class="btn-secondary px-3 py-1.5 text-xs">Alterar remetente selecionadas</button>
+            <button type="button" id="btn-agrupar" class="btn-secondary btn-sm">Agrupar selecionadas</button>
+            <button type="button" id="btn-desagrupar" class="btn-secondary btn-sm">Desagrupar selecionadas</button>
+            <button type="button" id="btn-excluir-selecionadas" class="btn-danger btn-sm">Excluir selecionadas</button>
+            <button type="button" id="btn-lote-remetente" class="btn-secondary btn-sm">Alterar remetente selecionadas</button>
           </div>
 
           <form id="form-lote-remetente" class="mb-3 hidden flex-wrap items-center gap-2 rounded-md border border-painel-border p-3">
             <div class="relative w-full max-w-xs"><input id="lote-remetente-input" class="input-field" placeholder="Novo remetente..."></div>
             <input type="hidden" id="lote-remetente-id">
-            <button type="submit" class="btn-primary px-3 py-1.5 text-xs">Aplicar</button>
+            <button type="submit" class="btn-success btn-sm">Aplicar</button>
           </form>
 
           <div class="overflow-x-auto">
@@ -123,7 +123,7 @@ export function renderMontagemPage() {
         <p id="edit-msg" class="mb-2 hidden text-sm"></p>
         <div class="flex justify-end gap-2">
           <button type="button" id="btn-cancelar-edicao" class="btn-secondary">Cancelar</button>
-          <button type="submit" class="btn-primary">Salvar</button>
+          <button type="submit" class="btn-success">Salvar</button>
         </div>
       </form>
     </div>

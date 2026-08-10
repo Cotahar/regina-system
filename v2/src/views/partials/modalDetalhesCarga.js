@@ -58,11 +58,11 @@ export function renderModalDetalhesCarga() {
         <div class="mb-2 flex items-center justify-between">
           <h3 class="text-sm font-semibold text-slate-300">Entregas</h3>
           <div class="flex flex-wrap gap-2">
-            <button type="button" id="btn-agrupar-entregas" class="btn-secondary hidden px-2 py-1 text-xs">Agrupar selecionadas</button>
-            <button type="button" id="btn-desagrupar-entregas" class="btn-secondary hidden px-2 py-1 text-xs">Desagrupar selecionadas</button>
-            <button type="button" id="btn-excluir-entregas-selecionadas" class="btn-danger hidden px-2 py-1 text-xs">Excluir selecionadas</button>
-            <button type="button" id="btn-lote-remetente" class="btn-secondary hidden px-2 py-1 text-xs">Alterar remetente selecionadas</button>
-            <button type="button" id="btn-add-entrega" class="btn-secondary px-2 py-1 text-xs">+ Coleta rapida</button>
+            <button type="button" id="btn-agrupar-entregas" class="btn-secondary hidden btn-sm">Agrupar selecionadas</button>
+            <button type="button" id="btn-desagrupar-entregas" class="btn-secondary hidden btn-sm">Desagrupar selecionadas</button>
+            <button type="button" id="btn-excluir-entregas-selecionadas" class="btn-danger hidden btn-sm">Excluir selecionadas</button>
+            <button type="button" id="btn-lote-remetente" class="btn-secondary hidden btn-sm">Alterar remetente selecionadas</button>
+            <button type="button" id="btn-add-entrega" class="btn-secondary btn-sm">+ Coleta rapida</button>
           </div>
         </div>
 
@@ -70,7 +70,7 @@ export function renderModalDetalhesCarga() {
           <span class="text-xs text-slate-400">Novo remetente para as selecionadas:</span>
           <div class="relative max-w-xs flex-1"><input id="lote-remetente-input" class="input-field" placeholder="Buscar cliente..."></div>
           <input type="hidden" id="lote-remetente-id">
-          <button type="submit" class="btn-primary px-3 py-1.5 text-xs">Aplicar</button>
+          <button type="submit" class="btn-success btn-sm">Aplicar</button>
         </form>
 
         <form id="form-add-entrega" class="mb-3 hidden grid grid-cols-2 gap-2 rounded-md border border-painel-border p-3 sm:grid-cols-6">
@@ -157,7 +157,7 @@ export function renderModalDetalhesCarga() {
       <p id="edit-msg" class="mb-2 hidden text-sm"></p>
       <div class="flex justify-end gap-2">
         <button type="button" id="btn-cancelar-edicao" class="btn-secondary">Cancelar</button>
-        <button type="submit" class="btn-primary">Salvar</button>
+        <button type="submit" class="btn-success">Salvar</button>
       </div>
     </form>
   </div>

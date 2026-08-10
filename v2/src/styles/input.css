@@ -15,6 +15,12 @@
   .btn-danger {
     @apply btn bg-red-600 text-white hover:bg-red-500;
   }
+  .btn-success {
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-500;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
   .card {
     @apply rounded-lg border border-painel-border bg-painel-card p-4 shadow-sm;
   }

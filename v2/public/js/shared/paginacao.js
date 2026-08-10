@@ -21,9 +21,9 @@ export function criarPaginacao({ container, porPagina = 50, renderizarPagina }) 
     }
 
     container.innerHTML = `
-      <button type="button" class="btn-secondary px-2 py-1 text-xs" id="pg-anterior" ${paginaAtual === 1 ? 'disabled' : ''}>&larr; Anterior</button>
+      <button type="button" class="btn-secondary btn-sm" id="pg-anterior" ${paginaAtual === 1 ? 'disabled' : ''}>&larr; Anterior</button>
       <span class="text-xs text-slate-400">Pagina ${paginaAtual} de ${total} (${itens.length} registros)</span>
-      <button type="button" class="btn-secondary px-2 py-1 text-xs" id="pg-proxima" ${paginaAtual === total ? 'disabled' : ''}>Proxima &rarr;</button>
+      <button type="button" class="btn-secondary btn-sm" id="pg-proxima" ${paginaAtual === total ? 'disabled' : ''}>Proxima &rarr;</button>
     `;
     container.querySelector('#pg-anterior')?.addEventListener('click', () => { paginaAtual--; renderizar(); });
     container.querySelector('#pg-proxima')?.addEventListener('click', () => { paginaAtual++; renderizar(); });

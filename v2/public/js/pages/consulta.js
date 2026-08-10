@@ -74,9 +74,9 @@ function renderizarPaginacao(paginaAtual, totalPaginas, totalResultados) {
     return;
   }
   container.innerHTML = `
-    <button type="button" id="btn-anterior" class="btn-secondary px-2 py-1 text-xs" ${paginaAtual <= 1 ? 'disabled' : ''}>&larr; Anterior</button>
+    <button type="button" id="btn-anterior" class="btn-secondary btn-sm" ${paginaAtual <= 1 ? 'disabled' : ''}>&larr; Anterior</button>
     <span class="text-xs text-slate-400">Pagina ${paginaAtual} de ${totalPaginas} (${totalResultados} resultado(s))</span>
-    <button type="button" id="btn-proxima" class="btn-secondary px-2 py-1 text-xs" ${paginaAtual >= totalPaginas ? 'disabled' : ''}>Proxima &rarr;</button>
+    <button type="button" id="btn-proxima" class="btn-secondary btn-sm" ${paginaAtual >= totalPaginas ? 'disabled' : ''}>Proxima &rarr;</button>
   `;
   document.getElementById('btn-anterior')?.addEventListener('click', () => buscar(paginaAtual - 1));
   document.getElementById('btn-proxima')?.addEventListener('click', () => buscar(paginaAtual + 1));

@@ -16,8 +16,8 @@ async function carregarUsuarios() {
       <td class="py-2">${escapeHtml(u.permissao)}</td>
       <td class="py-2 text-right">
         ${u.id !== 1 ? `
-          <button class="btn-secondary btn-editar px-2 py-1 text-xs">Editar</button>
-          <button class="btn-danger btn-excluir px-2 py-1 text-xs">Excluir</button>
+          <button class="btn-secondary btn-editar btn-sm">Editar</button>
+          <button class="btn-danger btn-excluir btn-sm">Excluir</button>
         ` : '<span class="text-xs text-slate-500">admin principal</span>'}
       </td>
     </tr>
@@ -95,8 +95,8 @@ async function carregarUnidades() {
       <td class="py-2">${u.is_matriz ? 'Sim' : ''}</td>
       <td class="py-2">${escapeHtml(tiposCte.find((t) => t.id === u.tipo_cte_outra_uf_id)?.descricao || '')}</td>
       <td class="py-2 text-right">
-        <button class="btn-secondary btn-editar px-2 py-1 text-xs">Editar</button>
-        <button class="btn-danger btn-excluir px-2 py-1 text-xs">Excluir</button>
+        <button class="btn-secondary btn-editar btn-sm">Editar</button>
+        <button class="btn-danger btn-excluir btn-sm">Excluir</button>
       </td>
     </tr>
   `).join('');
@@ -155,7 +155,7 @@ async function carregarTiposCte() {
   lista.innerHTML = tiposCte.map((t) => `
     <li class="flex items-center justify-between py-2" data-id="${t.id}">
       <span>${escapeHtml(t.descricao)}</span>
-      <button class="btn-danger btn-excluir px-2 py-1 text-xs">Excluir</button>
+      <button class="btn-danger btn-excluir btn-sm">Excluir</button>
     </li>
   `).join('') || '<li class="py-3 text-center text-slate-500">Nenhum tipo cadastrado.</li>';
 

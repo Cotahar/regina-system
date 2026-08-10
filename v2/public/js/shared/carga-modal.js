@@ -136,7 +136,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     perigo.innerHTML = '';
     const c = cargaAtual;
 
-    fluxo.appendChild(botao('Salvar Alteracoes', 'btn-secondary', async () => {
+    fluxo.appendChild(botao('Salvar Alteracoes', 'btn-success', async () => {
       await atualizarStatus(coletarCamposEditaveis(), 'Alteracoes salvas!');
     }, icones.salvar));
 
@@ -251,8 +251,8 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
         <td class="py-1">${formatarPeso(e.peso_bruto)}</td>
         <td class="py-1">${formatarMoeda(e.valor_frete)}</td>
         <td class="py-1 text-right">
-          <button type="button" class="btn-secondary btn-editar-entrega px-2 py-0.5">Editar</button>
-          <button type="button" class="btn-danger btn-excluir-entrega px-2 py-0.5">X</button>
+          <button type="button" class="btn-secondary btn-editar-entrega btn-sm">Editar</button>
+          <button type="button" class="btn-danger btn-excluir-entrega btn-sm">X</button>
         </td>
       </tr>
     `;

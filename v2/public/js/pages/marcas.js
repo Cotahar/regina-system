@@ -19,8 +19,8 @@ function renderizar() {
     <tr class="border-t border-painel-border" data-id="${m.id}">
       <td class="py-2">${escapeHtml(m.nome)}</td>
       ${isAdmin ? `<td class="py-2 text-right">
-        <button class="btn-secondary btn-editar px-2 py-1 text-xs">Editar</button>
-        <button class="btn-danger btn-excluir px-2 py-1 text-xs">Excluir</button>
+        <button class="btn-secondary btn-editar btn-sm">Editar</button>
+        <button class="btn-danger btn-excluir btn-sm">Excluir</button>
       </td>` : ''}
     </tr>
   `).join('') || '<tr><td colspan="2" class="py-4 text-center text-slate-500">Nenhuma marca cadastrada.</td></tr>';
