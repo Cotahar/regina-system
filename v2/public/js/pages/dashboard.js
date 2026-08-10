@@ -42,6 +42,9 @@ function renderizarColunas() {
     container.innerHTML = itens.map(renderizarCard).join('') ||
       '<p class="py-3 text-center text-xs text-slate-500">Nenhuma carga.</p>';
 
+    const contador = document.querySelector(`[data-contador="${status}"]`);
+    if (contador) contador.textContent = itens.length;
+
     container.querySelectorAll('[data-id]').forEach((card) => {
       card.addEventListener('click', () => modalDetalhes.abrir(Number(card.dataset.id)));
     });
