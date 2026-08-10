@@ -153,7 +153,12 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
         if (!campos.motorista_id || !campos.veiculo_id || !campos.data_agendamento) {
           return mostrarMensagem('Motorista, veiculo e data de agendamento sao obrigatorios.', 'erro');
         }
-        await atualizarStatus({ ...campos, status: 'Agendada' }, 'Carga agendada!');
+        await atualizarStatus({
+          motorista_id: campos.motorista_id,
+          veiculo_id: campos.veiculo_id,
+          data_agendamento: campos.data_agendamento,
+          status: 'Agendada'
+        }, 'Carga agendada!');
       }));
     }
 
@@ -161,7 +166,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       container.appendChild(botao('Iniciar Transito', 'btn-primary', async () => {
         const campos = coletarCamposEditaveis();
         if (!campos.data_carregamento) return mostrarMensagem('Informe a data de carregamento.', 'erro');
-        await atualizarStatus({ ...campos, status: 'Em Trânsito' }, 'Carga em transito!');
+        await atualizarStatus({ data_carregamento: campos.data_carregamento, status: 'Em Trânsito' }, 'Carga em transito!');
       }));
       container.appendChild(botao('Cancelar Agendamento', 'btn-secondary', async () => {
         await atualizarStatus({ status: 'Pendente' }, 'Agendamento cancelado.');
@@ -179,7 +184,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
         } catch (err) {
           return mostrarMensagem(err.message, 'erro');
         }
-        await atualizarStatus({ ...campos, status: 'Finalizada' }, 'Carga finalizada!');
+        await atualizarStatus({ data_finalizacao: campos.data_finalizacao, status: 'Finalizada' }, 'Carga finalizada!');
       }));
       if (isAdmin) {
         container.appendChild(botao('Regredir p/ Agendada', 'btn-secondary', async () => {
