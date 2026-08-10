@@ -1,6 +1,7 @@
 import { apiGet, apiPost, apiPut, apiDelete } from '../shared/api.js';
 import { escapeHtml } from '../shared/escape.js';
 import { exibirMensagem } from '../shared/ui.js';
+import { iconeMenuAcoes, criarMenuAcoes } from '../shared/menuAcoes.js';
 
 let usuarios = [];
 let unidades = [];
@@ -12,39 +13,45 @@ async function carregarUsuarios() {
   const tbody = document.getElementById('tabela-usuarios');
   tbody.innerHTML = usuarios.map((u) => `
     <tr class="border-t border-painel-border" data-id="${u.id}">
-      <td class="py-2">${escapeHtml(u.nome_usuario)}</td>
-      <td class="py-2">${escapeHtml(u.permissao)}</td>
-      <td class="py-2 text-right">
-        ${u.id !== 1 ? `
-          <button class="btn-secondary btn-editar btn-sm">Editar</button>
-          <button class="btn-danger btn-excluir btn-sm">Excluir</button>
-        ` : '<span class="text-xs text-slate-500">admin principal</span>'}
+      <td class="py-2.5">${escapeHtml(u.nome_usuario)}</td>
+      <td class="py-2.5">${escapeHtml(u.permissao)}</td>
+      <td class="py-2.5 text-right">
+        ${u.id !== 1 ? iconeMenuAcoes() : '<span class="text-xs text-slate-500">admin principal</span>'}
       </td>
     </tr>
   `).join('');
 
-  tbody.querySelectorAll('.btn-editar').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const u = usuarios.find((it) => it.id === Number(btn.closest('tr').dataset.id));
-      document.getElementById('usuario-id').value = u.id;
-      document.getElementById('usuario-nome').value = u.nome_usuario;
-      document.getElementById('usuario-senha').value = '';
-      document.getElementById('usuario-permissao').value = u.permissao;
-      document.getElementById('btn-cancelar-edicao').classList.remove('hidden');
-    });
-  });
-  tbody.querySelectorAll('.btn-excluir').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const id = Number(btn.closest('tr').dataset.id);
-      const u = usuarios.find((it) => it.id === id);
-      if (!confirm(`Excluir o usuario "${u.nome_usuario}"?`)) return;
-      try {
-        await apiDelete(`/api/usuarios/${id}`);
-        await carregarUsuarios();
-      } catch (err) {
-        alert(err.message);
+  tbody.querySelectorAll('tr[data-id]').forEach((tr) => {
+    const id = Number(tr.dataset.id);
+    const trigger = tr.querySelector('.btn-menu-acoes');
+    if (!trigger) return;
+    criarMenuAcoes(trigger, [
+      {
+        label: 'Editar',
+        onClick: () => {
+          const u = usuarios.find((it) => it.id === id);
+          document.getElementById('usuario-id').value = u.id;
+          document.getElementById('usuario-nome').value = u.nome_usuario;
+          document.getElementById('usuario-senha').value = '';
+          document.getElementById('usuario-permissao').value = u.permissao;
+          document.getElementById('btn-cancelar-edicao').classList.remove('hidden');
+        }
+      },
+      {
+        label: 'Excluir',
+        perigo: true,
+        onClick: async () => {
+          const u = usuarios.find((it) => it.id === id);
+          if (!confirm(`Excluir o usuario "${u.nome_usuario}"?`)) return;
+          try {
+            await apiDelete(`/api/usuarios/${id}`);
+            await carregarUsuarios();
+          } catch (err) {
+            alert(err.message);
+          }
+        }
       }
-    });
+    ]);
   });
 }
 
@@ -90,39 +97,43 @@ async function carregarUnidades() {
   const tbody = document.getElementById('tabela-unidades');
   tbody.innerHTML = unidades.map((u) => `
     <tr class="border-t border-painel-border" data-id="${u.id}">
-      <td class="py-2">${escapeHtml(u.nome)}</td>
-      <td class="py-2">${escapeHtml(u.uf || '')}</td>
-      <td class="py-2">${u.is_matriz ? 'Sim' : ''}</td>
-      <td class="py-2">${escapeHtml(tiposCte.find((t) => t.id === u.tipo_cte_outra_uf_id)?.descricao || '')}</td>
-      <td class="py-2 text-right">
-        <button class="btn-secondary btn-editar btn-sm">Editar</button>
-        <button class="btn-danger btn-excluir btn-sm">Excluir</button>
-      </td>
+      <td class="py-2.5">${escapeHtml(u.nome)}</td>
+      <td class="py-2.5">${escapeHtml(u.uf || '')}</td>
+      <td class="py-2.5">${u.is_matriz ? 'Sim' : ''}</td>
+      <td class="py-2.5">${escapeHtml(tiposCte.find((t) => t.id === u.tipo_cte_outra_uf_id)?.descricao || '')}</td>
+      <td class="py-2.5 text-right">${iconeMenuAcoes()}</td>
     </tr>
   `).join('');
 
-  tbody.querySelectorAll('.btn-editar').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const u = unidades.find((it) => it.id === Number(btn.closest('tr').dataset.id));
-      document.getElementById('unidade-id').value = u.id;
-      document.getElementById('unidade-nome').value = u.nome;
-      document.getElementById('unidade-uf').value = u.uf || '';
-      document.getElementById('unidade-tipo-cte').value = u.tipo_cte_padrao_id || '';
-      document.getElementById('unidade-tipo-cte-outra-uf').value = u.tipo_cte_outra_uf_id || '';
-      document.getElementById('unidade-matriz').checked = u.is_matriz;
-    });
-  });
-  tbody.querySelectorAll('.btn-excluir').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const id = Number(btn.closest('tr').dataset.id);
-      if (!confirm('Excluir esta unidade?')) return;
-      try {
-        await apiDelete(`/api/auxiliar/unidades/${id}`);
-        await carregarUnidades();
-      } catch (err) {
-        alert(err.message);
+  tbody.querySelectorAll('tr[data-id]').forEach((tr) => {
+    const id = Number(tr.dataset.id);
+    criarMenuAcoes(tr.querySelector('.btn-menu-acoes'), [
+      {
+        label: 'Editar',
+        onClick: () => {
+          const u = unidades.find((it) => it.id === id);
+          document.getElementById('unidade-id').value = u.id;
+          document.getElementById('unidade-nome').value = u.nome;
+          document.getElementById('unidade-uf').value = u.uf || '';
+          document.getElementById('unidade-tipo-cte').value = u.tipo_cte_padrao_id || '';
+          document.getElementById('unidade-tipo-cte-outra-uf').value = u.tipo_cte_outra_uf_id || '';
+          document.getElementById('unidade-matriz').checked = u.is_matriz;
+        }
+      },
+      {
+        label: 'Excluir',
+        perigo: true,
+        onClick: async () => {
+          if (!confirm('Excluir esta unidade?')) return;
+          try {
+            await apiDelete(`/api/auxiliar/unidades/${id}`);
+            await carregarUnidades();
+          } catch (err) {
+            alert(err.message);
+          }
+        }
       }
-    });
+    ]);
   });
 }
 

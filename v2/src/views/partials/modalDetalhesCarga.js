@@ -1,13 +1,19 @@
 export function renderModalDetalhesCarga() {
   return `
   <div id="modal-detalhes" class="fixed inset-0 z-30 hidden items-start justify-center overflow-y-auto bg-black/60 py-6">
-    <div class="card w-full max-w-4xl">
-      <div class="mb-4 flex items-start justify-between">
+    <div class="card w-full max-w-6xl">
+      <div class="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 class="text-lg font-semibold"><span id="det-codigo"></span> <span id="det-status-badge" class="ml-2 rounded px-2 py-0.5 text-xs"></span></h2>
           <p class="text-sm text-slate-400">Origem: <span id="det-origem"></span></p>
         </div>
-        <button type="button" id="btn-fechar-detalhes" class="text-slate-400 hover:text-slate-100">&#10005;</button>
+        <div class="flex items-start gap-3">
+          <div class="rounded-lg border border-painel-border bg-painel-bg/40 px-3 py-1.5 text-right text-xs text-slate-400">
+            <p>Peso total: <span class="font-semibold text-slate-100" id="det-total-peso">0,00 kg</span></p>
+            <p>Frete total: <span class="font-semibold text-slate-100" id="det-total-frete">R$ 0,00</span></p>
+          </div>
+          <button type="button" id="btn-fechar-detalhes" class="text-slate-400 hover:text-slate-100">&#10005;</button>
+        </div>
       </div>
 
       <div class="rounded-lg border border-painel-border bg-painel-bg/40 p-4">
@@ -113,7 +119,7 @@ export function renderModalDetalhesCarga() {
   </div>
 
   <div id="modal-editar-entrega" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/70">
-    <form id="form-editar-entrega" class="card w-full max-w-md">
+    <form id="form-editar-entrega" class="card w-full max-w-lg">
       <h3 class="mb-3 text-base font-semibold">Editar entrega</h3>
       <input type="hidden" id="edit-entrega-id">
       <div class="relative mb-2">

@@ -34,7 +34,7 @@ export function renderVeiculosPage() {
     </div>
 
     <div id="modal-veiculo" class="fixed inset-0 z-20 hidden items-center justify-center bg-black/60">
-      <form id="form-veiculo" class="card w-full max-w-sm">
+      <form id="form-veiculo" class="card w-full max-w-md">
         <h2 class="mb-4 text-lg font-semibold" id="modal-titulo">Novo veiculo</h2>
         <input type="hidden" id="veiculo-id">
         <div class="mb-4">

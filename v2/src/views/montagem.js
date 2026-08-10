@@ -13,13 +13,18 @@ export function renderMontagemPage() {
             <input type="hidden" id="nova-cliente-id">
             <input type="text" id="nova-local-coleta" class="input-field" placeholder="Local de coleta (se diferente do remetente)">
             <div class="grid grid-cols-2 gap-2">
+              <input type="text" id="nova-cidade" class="input-field" placeholder="Cidade de entrega (opcional)">
+              <input type="text" id="nova-estado" class="input-field" placeholder="UF" maxlength="2">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
               <input type="text" id="nova-peso" class="input-field" placeholder="Peso bruto (kg)">
               <input type="text" id="nova-cubado" class="input-field" placeholder="Peso cubado (kg)">
             </div>
             <div class="grid grid-cols-2 gap-2">
               <input type="text" id="nova-frete" class="input-field" placeholder="Valor frete (R$)">
-              <input type="text" id="nova-nf" class="input-field" placeholder="Nota fiscal">
+              <input type="text" id="nova-tonelada" class="input-field" placeholder="Valor/tonelada (R$)">
             </div>
+            <input type="text" id="nova-nf" class="input-field" placeholder="Nota fiscal">
             <label class="flex items-center gap-2 text-sm text-slate-300">
               <input type="checkbox" id="nova-cortesia" class="h-4 w-4"> Cortesia (sem cobranca)
             </label>
@@ -98,7 +103,7 @@ export function renderMontagemPage() {
     </div>
 
     <div id="modal-editar" class="fixed inset-0 z-20 hidden items-center justify-center bg-black/60">
-      <form id="form-editar" class="card w-full max-w-md">
+      <form id="form-editar" class="card w-full max-w-lg">
         <h3 class="mb-3 text-base font-semibold">Editar entrega</h3>
         <input type="hidden" id="edit-id">
         <div class="relative mb-2">
@@ -116,7 +121,11 @@ export function renderMontagemPage() {
         </div>
         <div class="mb-2 grid grid-cols-2 gap-2">
           <div><label class="mb-1 block text-xs text-slate-400">Valor frete</label><input type="text" id="edit-frete" class="input-field"></div>
-          <div><label class="mb-1 block text-xs text-slate-400">Nota fiscal</label><input type="text" id="edit-nf" class="input-field"></div>
+          <div><label class="mb-1 block text-xs text-slate-400">Valor/tonelada</label><input type="text" id="edit-tonelada" class="input-field"></div>
+        </div>
+        <div class="mb-2">
+          <label class="mb-1 block text-xs text-slate-400">Nota fiscal</label>
+          <input type="text" id="edit-nf" class="input-field">
         </div>
         <div class="mb-2">
           <label class="mb-1 block text-xs text-slate-400">Local de coleta (se diferente do remetente)</label>

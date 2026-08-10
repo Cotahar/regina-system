@@ -1,6 +1,7 @@
 import { apiGet, apiPost, apiPut, apiDelete } from '../shared/api.js';
 import { abrirModal, fecharModal } from '../shared/ui.js';
 import { escapeHtml } from '../shared/escape.js';
+import { iconeMenuAcoes, criarMenuAcoes } from '../shared/menuAcoes.js';
 
 let marcas = [];
 const isAdmin = document.querySelector('[data-admin]')?.dataset.admin === '1';
@@ -17,20 +18,18 @@ async function carregar() {
 function renderizar() {
   tabela.innerHTML = marcas.map((m) => `
     <tr class="border-t border-painel-border" data-id="${m.id}">
-      <td class="py-2">${escapeHtml(m.nome)}</td>
-      ${isAdmin ? `<td class="py-2 text-right">
-        <button class="btn-secondary btn-editar btn-sm">Editar</button>
-        <button class="btn-danger btn-excluir btn-sm">Excluir</button>
-      </td>` : ''}
+      <td class="py-2.5">${escapeHtml(m.nome)}</td>
+      ${isAdmin ? `<td class="py-2.5 text-right">${iconeMenuAcoes()}</td>` : ''}
     </tr>
   `).join('') || '<tr><td colspan="2" class="py-4 text-center text-slate-500">Nenhuma marca cadastrada.</td></tr>';
 
   if (!isAdmin) return;
-  tabela.querySelectorAll('.btn-editar').forEach((btn) => {
-    btn.addEventListener('click', () => abrirEdicao(Number(btn.closest('tr').dataset.id)));
-  });
-  tabela.querySelectorAll('.btn-excluir').forEach((btn) => {
-    btn.addEventListener('click', () => excluir(Number(btn.closest('tr').dataset.id)));
+  tabela.querySelectorAll('tr[data-id]').forEach((tr) => {
+    const id = Number(tr.dataset.id);
+    criarMenuAcoes(tr.querySelector('.btn-menu-acoes'), [
+      { label: 'Editar', onClick: () => abrirEdicao(id) },
+      { label: 'Excluir', onClick: () => excluir(id), perigo: true }
+    ]);
   });
 }
 

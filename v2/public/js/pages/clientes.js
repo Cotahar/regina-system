@@ -53,13 +53,13 @@ function renderizar(lista) {
 function renderizarLinhas(lista) {
   tabela.innerHTML = lista.map((c) => `
     <tr class="border-t border-painel-border" data-id="${c.id}">
-      <td class="py-2">${escapeHtml(c.codigo_cliente)}</td>
-      <td class="py-2">${escapeHtml(c.razao_social)}</td>
-      <td class="py-2">${escapeHtml(c.cidade || '')}-${escapeHtml(c.estado || '')}</td>
-      <td class="py-2">${escapeHtml(c.telefone_completo)}</td>
-      <td class="py-2">${c.entregas_count}</td>
-      <td class="py-2">${c.is_remetente ? '<span class="rounded bg-destaque/20 px-2 py-0.5 text-xs text-destaque">Sim</span>' : ''}</td>
-      <td class="py-2">${badgesPerfil(c)}</td>
+      <td class="py-2.5">${escapeHtml(c.codigo_cliente)}</td>
+      <td class="py-2.5">${escapeHtml(c.razao_social)}</td>
+      <td class="py-2.5">${escapeHtml(c.cidade || '')}-${escapeHtml(c.estado || '')}</td>
+      <td class="py-2.5">${escapeHtml(c.telefone_completo)}</td>
+      <td class="py-2.5">${c.entregas_count}</td>
+      <td class="py-2.5">${c.is_remetente ? '<span class="rounded bg-destaque/20 px-2 py-0.5 text-xs text-destaque">Sim</span>' : ''}</td>
+      <td class="py-2.5">${badgesPerfil(c)}</td>
       <td class="py-2 text-right">
         <button class="btn-secondary btn-editar btn-sm">Editar</button>
       </td>

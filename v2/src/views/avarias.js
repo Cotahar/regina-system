@@ -70,7 +70,7 @@ export function renderAvariasPage() {
     </div>
 
     <div id="modal-envio" class="fixed inset-0 z-20 hidden items-center justify-center bg-black/60">
-      <form id="form-envio" class="card w-full max-w-md">
+      <form id="form-envio" class="card w-full max-w-lg">
         <h3 class="mb-3 text-base font-semibold">Registrar envio para a fabrica</h3>
         <input type="hidden" id="envio-avaria-id">
         <textarea id="envio-texto" class="input-field" rows="3" placeholder="Protocolo / e-mail enviado..." required></textarea>
@@ -82,7 +82,7 @@ export function renderAvariasPage() {
     </div>
 
     <div id="modal-finalizar" class="fixed inset-0 z-20 hidden items-center justify-center bg-black/60">
-      <form id="form-finalizar" class="card w-full max-w-md">
+      <form id="form-finalizar" class="card w-full max-w-lg">
         <h3 class="mb-3 text-base font-semibold">Finalizar avaria</h3>
         <input type="hidden" id="finalizar-avaria-id">
         <textarea id="finalizar-retorno" class="input-field mb-3" rows="3" placeholder="Retorno da fabrica..." required></textarea>

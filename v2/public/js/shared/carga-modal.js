@@ -4,6 +4,7 @@ import { formatarMoeda, formatarPeso, formatarDataParaInput, parseDecimal } from
 import { abrirModal, fecharModal, exibirMensagem } from './ui.js';
 import { criarCombobox } from './combobox.js';
 import { icones } from './icons.js';
+import { iconeMenuAcoes, criarMenuAcoes } from './menuAcoes.js';
 
 const STATUS_CORES = {
   Pendente: 'bg-slate-500/30 text-slate-200',
@@ -264,18 +265,15 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     const classeGrupo = agrupada ? 'bg-destaque/5 border-l-2 border-l-destaque' : '';
     return `
       <tr class="border-t border-painel-border ${classeGrupo} ${indentada ? 'bg-painel-bg/20' : ''}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
-        <td class="py-1"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
+        <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
         <td class="py-1 text-center"><input type="radio" name="ultima-entrega" class="radio-ultima" ${e.is_last_delivery ? 'checked' : ''}></td>
-        <td class="py-1">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-destaque/20 px-1 text-[10px] text-destaque">grupo</span>' : ''}</td>
-        <td class="py-1">${escapeHtml(e.razao_social)}</td>
-        <td class="py-1">${escapeHtml(e.cidade)}-${escapeHtml(e.estado)}${e.local_coleta ? `<br><span class="text-[10px] text-slate-500">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
-        <td class="py-1">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-500/20 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
-        <td class="py-1">${formatarPeso(e.peso_bruto)}</td>
-        <td class="py-1">${formatarMoeda(e.valor_frete)}</td>
-        <td class="py-1 text-right">
-          <button type="button" class="btn-secondary btn-editar-entrega btn-sm">Editar</button>
-          <button type="button" class="btn-danger btn-excluir-entrega btn-sm">X</button>
-        </td>
+        <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-destaque/20 px-1 text-[10px] text-destaque">grupo</span>' : ''}</td>
+        <td class="py-1.5">${escapeHtml(e.razao_social)}</td>
+        <td class="py-1.5">${escapeHtml(e.cidade)}-${escapeHtml(e.estado)}${e.local_coleta ? `<br><span class="text-[10px] text-slate-500">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
+        <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-500/20 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
+        <td class="py-1.5">${formatarPeso(e.peso_bruto)}</td>
+        <td class="py-1.5">${formatarMoeda(e.valor_frete)}</td>
+        <td class="py-1.5 text-right">${iconeMenuAcoes()}</td>
       </tr>
     `;
   }
@@ -308,7 +306,15 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     `;
   }
 
+  function renderizarTotais() {
+    const pesoTotal = entregasAtuais.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
+    const freteTotal = entregasAtuais.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
+    document.getElementById('det-total-peso').textContent = formatarPeso(pesoTotal);
+    document.getElementById('det-total-frete').textContent = formatarMoeda(freteTotal);
+  }
+
   function renderizarTabelaEntregas() {
+    renderizarTotais();
     const grupos = agruparParaExibicao(entregasAtuais);
 
     tabelaEntregas.innerHTML = grupos.map(({ chave, itens }) => {
@@ -334,17 +340,23 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
           mostrarMensagem(err.message, 'erro');
         }
       });
-      tr.querySelector('.btn-editar-entrega').addEventListener('click', () => abrirEdicaoEntrega(id));
-      tr.querySelector('.btn-excluir-entrega').addEventListener('click', async () => {
-        if (!confirm('Remover esta entrega da carga? Ela volta para "Disponiveis".')) return;
-        try {
-          await apiDelete(`/api/cargas/${cargaAtual.id}/entregas`, { entrega_id: id });
-          await abrir(cargaAtual.id);
-          onMudanca?.();
-        } catch (err) {
-          mostrarMensagem(err.message, 'erro');
+      criarMenuAcoes(tr.querySelector('.btn-menu-acoes'), [
+        { label: 'Editar', onClick: () => abrirEdicaoEntrega(id) },
+        {
+          label: 'Excluir',
+          perigo: true,
+          onClick: async () => {
+            if (!confirm('Remover esta entrega da carga? Ela volta para "Disponiveis".')) return;
+            try {
+              await apiDelete(`/api/cargas/${cargaAtual.id}/entregas`, { entrega_id: id });
+              await abrir(cargaAtual.id);
+              onMudanca?.();
+            } catch (err) {
+              mostrarMensagem(err.message, 'erro');
+            }
+          }
         }
-      });
+      ]);
     });
 
     tabelaEntregas.querySelectorAll('.btn-expandir-grupo').forEach((btn) => {

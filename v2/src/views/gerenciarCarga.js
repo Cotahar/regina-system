@@ -116,7 +116,7 @@ export function renderGerenciarCargaPage() {
     <p id="ger-msg" class="mt-3 hidden text-sm"></p>
 
     <div id="modal-repasse" class="fixed inset-0 z-20 hidden items-center justify-center bg-black/60">
-      <form id="form-repasse" class="card w-full max-w-sm">
+      <form id="form-repasse" class="card w-full max-w-md">
         <h3 class="mb-3 text-base font-semibold">Repasse / comissao</h3>
         <input type="hidden" id="repasse-entrega-id">
         <div class="mb-3">

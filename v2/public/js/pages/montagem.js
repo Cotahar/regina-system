@@ -4,6 +4,7 @@ import { formatarMoeda, formatarPeso, parseDecimal } from '../shared/format.js';
 import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
 import { ouvirMudancas } from '../shared/live.js';
 import { criarCombobox } from '../shared/combobox.js';
+import { iconeMenuAcoes, criarMenuAcoes } from '../shared/menuAcoes.js';
 
 let clientes = [];
 let poolDisponiveis = [];
@@ -50,18 +51,15 @@ function linhaEntrega(e, indentada) {
   const classeGrupo = agrupada ? 'bg-destaque/5 border-l-2 border-l-destaque' : '';
   return `
     <tr class="border-t border-painel-border ${classeGrupo} ${indentada ? 'bg-painel-bg/20' : ''}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
-      <td class="py-1"><input type="checkbox" class="chk-linha" ${selecionados.has(e.id) ? 'checked' : ''}></td>
-      <td class="py-1">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-destaque/20 px-1 text-[10px] text-destaque">grupo</span>' : ''}</td>
-      <td class="py-1">${escapeHtml(e.destinatario_nome)}</td>
-      <td class="py-1">${escapeHtml(e.cidade_entrega || '')}-${escapeHtml(e.estado_entrega || '')}${e.local_coleta ? `<br><span class="text-[10px] text-slate-500">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
-      <td class="py-1">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-500/20 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
-      <td class="py-1">${formatarPeso(e.peso_bruto)}</td>
-      <td class="py-1">${formatarPeso(e.peso_cubado)}</td>
-      <td class="py-1">${formatarMoeda(e.valor_frete)}</td>
-      <td class="py-1 text-right">
-        <button type="button" class="btn-secondary btn-editar btn-sm">Editar</button>
-        ${e.carga_id ? '' : '<button type="button" class="btn-danger btn-excluir btn-sm">X</button>'}
-      </td>
+      <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionados.has(e.id) ? 'checked' : ''}></td>
+      <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-destaque/20 px-1 text-[10px] text-destaque">grupo</span>' : ''}</td>
+      <td class="py-1.5">${escapeHtml(e.destinatario_nome)}</td>
+      <td class="py-1.5">${escapeHtml(e.cidade_entrega || '')}-${escapeHtml(e.estado_entrega || '')}${e.local_coleta ? `<br><span class="text-[10px] text-slate-500">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
+      <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-500/20 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
+      <td class="py-1.5">${formatarPeso(e.peso_bruto)}</td>
+      <td class="py-1.5">${formatarPeso(e.peso_cubado)}</td>
+      <td class="py-1.5">${formatarMoeda(e.valor_frete)}</td>
+      <td class="py-1.5 text-right">${iconeMenuAcoes()}</td>
     </tr>
   `;
 }
@@ -117,8 +115,10 @@ function renderizarTabela() {
       if (e.target.checked) selecionados.add(id); else selecionados.delete(id);
       atualizarTotais();
     });
-    tr.querySelector('.btn-editar').addEventListener('click', () => abrirEdicao(id));
-    tr.querySelector('.btn-excluir')?.addEventListener('click', () => excluirDisponivel(id));
+    const entrega = linhasCombinadas().find((it) => it.id === id);
+    const itensMenu = [{ label: 'Editar', onClick: () => abrirEdicao(id) }];
+    if (!entrega?.carga_id) itensMenu.push({ label: 'Excluir', perigo: true, onClick: () => excluirDisponivel(id) });
+    criarMenuAcoes(tr.querySelector('.btn-menu-acoes'), itensMenu);
   });
 
   tabela.querySelectorAll('.btn-expandir-grupo').forEach((btn) => {
@@ -208,6 +208,7 @@ async function abrirRascunho(id) {
         peso_bruto: e.peso_bruto,
         peso_cubado: e.peso_cubado,
         valor_frete: e.valor_frete,
+        valor_tonelada: e.valor_tonelada,
         remetente_id: e.remetente_id,
         is_cortesia: e.is_cortesia,
         grupo_id: e.grupo_id,
@@ -274,6 +275,7 @@ function abrirEdicao(id) {
   document.getElementById('edit-peso').value = e.peso_bruto ?? '';
   document.getElementById('edit-cubado').value = e.peso_cubado ?? '';
   document.getElementById('edit-frete').value = e.valor_frete ?? '';
+  document.getElementById('edit-tonelada').value = e.valor_tonelada ?? '';
   document.getElementById('edit-nf').value = e.nota_fiscal || '';
   document.getElementById('edit-local-coleta').value = e.local_coleta || '';
   document.getElementById('edit-cortesia').checked = !!e.is_cortesia;
@@ -293,6 +295,7 @@ document.getElementById('form-editar').addEventListener('submit', async (event) 
       peso_bruto: parseDecimal(document.getElementById('edit-peso').value),
       peso_cubado: parseDecimal(document.getElementById('edit-cubado').value),
       valor_frete: parseDecimal(document.getElementById('edit-frete').value),
+      valor_tonelada: parseDecimal(document.getElementById('edit-tonelada').value),
       nota_fiscal: document.getElementById('edit-nf').value || null,
       local_coleta: document.getElementById('edit-local-coleta').value.trim() || null,
       is_cortesia: document.getElementById('edit-cortesia').checked
@@ -317,9 +320,12 @@ document.getElementById('form-nova-entrega').addEventListener('submit', async (e
     await apiPost('/api/entregas/disponiveis', {
       remetente_id: document.getElementById('nova-remetente-id').value || null,
       cliente_id: Number(clienteId),
+      cidade_entrega: document.getElementById('nova-cidade').value.trim() || null,
+      estado_entrega: document.getElementById('nova-estado').value.trim() || null,
       peso_bruto: parseDecimal(document.getElementById('nova-peso').value),
       peso_cubado: parseDecimal(document.getElementById('nova-cubado').value),
       valor_frete: parseDecimal(document.getElementById('nova-frete').value),
+      valor_tonelada: parseDecimal(document.getElementById('nova-tonelada').value),
       nota_fiscal: document.getElementById('nova-nf').value || null,
       local_coleta: document.getElementById('nova-local-coleta').value.trim() || null,
       is_cortesia: document.getElementById('nova-cortesia').checked

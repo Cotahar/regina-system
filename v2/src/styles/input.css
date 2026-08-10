@@ -31,7 +31,10 @@
 
 @layer base {
   thead th {
-    @apply border-b-2 border-painel-border bg-painel-bg/60 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-400;
+    @apply border-b-2 border-painel-border bg-painel-bg/60 px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-400;
+  }
+  tbody td {
+    @apply px-3 py-2.5;
   }
   tbody tr:nth-child(even) {
     @apply bg-white/[0.025];

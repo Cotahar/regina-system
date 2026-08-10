@@ -57,7 +57,7 @@ function linhaTabela(e) {
 
   return `
     <tr class="border-t border-painel-border ${classeGrupo}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
-      <td class="py-1"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
+      <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
       <td class="py-1 pr-2">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-destaque/20 px-1 text-[10px] text-destaque">grupo</span>' : ''}</td>
       <td class="py-1 pr-2">${escapeHtml(e.cliente_nome)}</td>
       <td class="py-1 pr-2"><input type="text" class="input-field campo-nf" value="${escapeHtml(e.nota_fiscal || '')}"></td>

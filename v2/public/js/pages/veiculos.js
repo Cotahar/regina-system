@@ -3,6 +3,7 @@ import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
 import { escapeHtml } from '../shared/escape.js';
 import { configurarColarImport } from '../shared/colar-import.js';
 import { criarPaginacao } from '../shared/paginacao.js';
+import { iconeMenuAcoes, criarMenuAcoes } from '../shared/menuAcoes.js';
 
 let veiculos = [];
 
@@ -29,19 +30,17 @@ function renderizar(lista) {
 function renderizarLinhas(lista) {
   tabela.innerHTML = lista.map((v) => `
     <tr class="border-t border-painel-border" data-id="${v.id}">
-      <td class="py-2">${escapeHtml(v.placa)}</td>
-      <td class="py-2 text-right">
-        <button class="btn-secondary btn-editar btn-sm">Editar</button>
-        <button class="btn-danger btn-excluir btn-sm">Excluir</button>
-      </td>
+      <td class="py-2.5">${escapeHtml(v.placa)}</td>
+      <td class="py-2.5 text-right">${iconeMenuAcoes()}</td>
     </tr>
   `).join('') || '<tr><td colspan="2" class="py-4 text-center text-slate-500">Nenhum veiculo cadastrado.</td></tr>';
 
-  tabela.querySelectorAll('.btn-editar').forEach((btn) => {
-    btn.addEventListener('click', () => abrirEdicao(Number(btn.closest('tr').dataset.id)));
-  });
-  tabela.querySelectorAll('.btn-excluir').forEach((btn) => {
-    btn.addEventListener('click', () => excluir(Number(btn.closest('tr').dataset.id)));
+  tabela.querySelectorAll('tr[data-id]').forEach((tr) => {
+    const id = Number(tr.dataset.id);
+    criarMenuAcoes(tr.querySelector('.btn-menu-acoes'), [
+      { label: 'Editar', onClick: () => abrirEdicao(id) },
+      { label: 'Excluir', onClick: () => excluir(id), perigo: true }
+    ]);
   });
 }
 

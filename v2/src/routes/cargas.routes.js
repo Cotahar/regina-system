@@ -179,6 +179,7 @@ cargasRouter.get('/api/cargas/:id', requireLogin, (req, res) => {
     peso_bruto: e.peso_bruto,
     valor_frete: e.valor_frete,
     peso_cubado: e.peso_cubado,
+    valor_tonelada: e.valor_tonelada,
     nota_fiscal: e.nota_fiscal,
     is_last_delivery: e.is_last_delivery,
     is_cortesia: !!e.is_cortesia,

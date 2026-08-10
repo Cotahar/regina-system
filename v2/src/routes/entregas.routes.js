@@ -90,6 +90,7 @@ entregasRouter.get('/api/entregas/disponiveis', requireLogin, (req, res) => {
     peso_bruto: e.peso_bruto,
     valor_frete: e.valor_frete,
     peso_cubado: e.peso_cubado,
+    valor_tonelada: e.valor_tonelada,
     nota_fiscal: e.nota_fiscal,
     is_cortesia: !!e.is_cortesia,
     grupo_id: e.grupo_id,
@@ -102,11 +103,11 @@ entregasRouter.post('/api/entregas/disponiveis', requireLogin, (req, res) => {
   const data = req.body || {};
   const isCortesia = !!data.is_cortesia;
   db.prepare(`
-    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, peso_cubado, nota_fiscal, cidade_entrega, estado_entrega, local_coleta, is_cortesia)
-    VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, peso_cubado, valor_tonelada, nota_fiscal, cidade_entrega, estado_entrega, local_coleta, is_cortesia)
+    VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     data.cliente_id, data.remetente_id || null, data.peso_bruto || null, isCortesia ? 0 : (data.valor_frete || null),
-    data.peso_cubado || null, data.nota_fiscal || null, data.cidade_entrega || null, data.estado_entrega || null,
+    data.peso_cubado || null, data.valor_tonelada || null, data.nota_fiscal || null, data.cidade_entrega || null, data.estado_entrega || null,
     data.local_coleta || null, isCortesia ? 1 : 0
   );
   res.status(201).json({ message: 'Entrega adicionada a lista de disponiveis!' });
@@ -144,7 +145,7 @@ entregasRouter.put('/api/entregas/:id', requireLogin, (req, res) => {
   const cortesiaForcada = 'is_cortesia' in data && data.is_cortesia;
   const camposSimples = [
     'remetente_id', 'peso_bruto', 'valor_frete', 'peso_cubado', 'nota_fiscal', 'cidade_entrega', 'estado_entrega',
-    'local_coleta', 'valor_combinado', 'repasse_destinatario'
+    'local_coleta', 'valor_combinado', 'repasse_destinatario', 'valor_tonelada'
   ];
   const sets = [];
   const valores = [];

@@ -43,7 +43,7 @@ export function renderClientesPage() {
     </div>
 
     <div id="modal-cliente" class="fixed inset-0 z-20 hidden items-center justify-center overflow-y-auto bg-black/60 py-8">
-      <form id="form-cliente" class="card w-full max-w-lg">
+      <form id="form-cliente" class="card w-full max-w-xl">
         <h2 class="mb-4 text-lg font-semibold" id="modal-titulo">Novo cliente</h2>
         <input type="hidden" id="cliente-id">
 

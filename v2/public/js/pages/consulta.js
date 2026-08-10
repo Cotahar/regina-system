@@ -52,13 +52,13 @@ function renderizarResultados(lista) {
   tbody.innerHTML = lista.map((c) => `
     <tr class="cursor-pointer border-t border-painel-border hover:bg-painel-card" data-id="${c.id}">
       <td class="py-2 font-medium text-destaque">${escapeHtml(c.codigo_carga)}</td>
-      <td class="py-2">${escapeHtml(c.status)}</td>
-      <td class="py-2">${escapeHtml(c.origem)}</td>
-      <td class="py-2">${escapeHtml(c.destino)}</td>
-      <td class="py-2">${escapeHtml(c.motorista)}</td>
-      <td class="py-2">${c.num_entregas}</td>
-      <td class="py-2">${formatarPeso(c.peso_total)}</td>
-      <td class="py-2">${c.data_finalizacao ? formatarData(c.data_finalizacao) : '-'}</td>
+      <td class="py-2.5">${escapeHtml(c.status)}</td>
+      <td class="py-2.5">${escapeHtml(c.origem)}</td>
+      <td class="py-2.5">${escapeHtml(c.destino)}</td>
+      <td class="py-2.5">${escapeHtml(c.motorista)}</td>
+      <td class="py-2.5">${c.num_entregas}</td>
+      <td class="py-2.5">${formatarPeso(c.peso_total)}</td>
+      <td class="py-2.5">${c.data_finalizacao ? formatarData(c.data_finalizacao) : '-'}</td>
     </tr>
   `).join('') || '<tr><td colspan="8" class="py-4 text-center text-slate-500">Nenhuma carga encontrada.</td></tr>';
 
