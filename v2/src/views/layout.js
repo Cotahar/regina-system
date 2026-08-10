@@ -49,7 +49,7 @@ export function renderLayout({ title, bodyHtml, user, activeHref = '', extraHead
 </head>
 <body class="min-h-screen bg-painel-bg text-slate-100">
   <header class="border-b border-painel-border bg-painel-card/50">
-    <nav class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-4">
+    <nav class="flex flex-wrap items-center justify-between gap-2 px-6 py-4">
       <div class="flex flex-wrap items-center gap-1.5">
         <span class="mr-5 text-lg font-bold text-destaque">Regina System</span>
         ${navHtml}
@@ -61,7 +61,7 @@ export function renderLayout({ title, bodyHtml, user, activeHref = '', extraHead
       </div>
     </nav>
   </header>
-  <main class="mx-auto max-w-7xl px-4 py-6">
+  <main class="px-6 py-6">
     ${bodyHtml}
   </main>
   <script>

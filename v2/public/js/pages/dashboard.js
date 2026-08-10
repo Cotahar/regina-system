@@ -29,10 +29,25 @@ function renderizarCard(c) {
       <p class="mt-1 text-slate-300">${escapeHtml(c.origem)} &rarr; ${escapeHtml(c.destino_principal)}</p>
       <p class="mt-1 text-xs text-slate-400">${escapeHtml(c.motorista_nome || 'Sem motorista')} ${c.placa_veiculo ? '- ' + escapeHtml(c.placa_veiculo) : ''}</p>
       <p class="mt-1 text-xs text-slate-400">${formatarPeso(c.peso_total)} - ${formatarMoeda(c.valor_frete_total)}</p>
-      ${c.data_agendamento ? `<p class="mt-1 text-xs text-slate-500">Agendado: ${formatarData(c.data_agendamento)}</p>` : ''}
-      ${c.previsao_entrega ? `<p class="mt-1 text-xs text-slate-500">Previsao: ${formatarData(c.previsao_entrega)}</p>` : ''}
+      ${linhaData(c)}
     </div>
   `;
+}
+
+// Cada coluna do painel mostra so a data relevante pro seu estagio - a
+// data de agendamento nao importa mais depois que a carga ja esta em
+// transito, por exemplo.
+function linhaData(c) {
+  if (c.status === 'Agendada' && c.data_agendamento) {
+    return `<p class="mt-1 text-xs text-slate-500">Agendado: ${formatarData(c.data_agendamento)}</p>`;
+  }
+  if (c.status === 'Em Trânsito') {
+    return `
+      ${c.data_carregamento ? `<p class="mt-1 text-xs text-slate-500">Carregado: ${formatarData(c.data_carregamento)}</p>` : ''}
+      ${c.previsao_entrega ? `<p class="mt-1 text-xs text-slate-500">Previsao: ${formatarData(c.previsao_entrega)}</p>` : ''}
+    `;
+  }
+  return '';
 }
 
 function renderizarColunas() {
