@@ -140,6 +140,5 @@ CREATE TABLE IF NOT EXISTS avaria_fotos (
 CREATE INDEX IF NOT EXISTS idx_entregas_carga_id ON entregas(carga_id);
 CREATE INDEX IF NOT EXISTS idx_entregas_cliente_id ON entregas(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_entregas_remetente_id ON entregas(remetente_id);
-CREATE INDEX IF NOT EXISTS idx_entregas_grupo_id ON entregas(grupo_id);
 CREATE INDEX IF NOT EXISTS idx_avarias_entrega_id ON avarias(entrega_id);
 CREATE INDEX IF NOT EXISTS idx_cargas_status ON cargas(status);
