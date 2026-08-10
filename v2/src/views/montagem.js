@@ -47,12 +47,17 @@ export function renderMontagemPage() {
             </div>
           </div>
 
-          <div class="mb-3 flex flex-wrap gap-2">
-            <input type="text" id="filtro-busca" class="input-field max-w-xs" placeholder="Buscar na lista...">
-            <button type="button" id="btn-agrupar" class="btn-secondary btn-sm">Agrupar selecionadas</button>
-            <button type="button" id="btn-desagrupar" class="btn-secondary btn-sm">Desagrupar selecionadas</button>
-            <button type="button" id="btn-excluir-selecionadas" class="btn-danger btn-sm">Excluir selecionadas</button>
-            <button type="button" id="btn-lote-remetente" class="btn-secondary btn-sm">Alterar remetente selecionadas</button>
+          <div class="mb-3">
+            <input type="text" id="filtro-busca" class="input-field mb-2 max-w-xs" placeholder="Buscar na lista...">
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-painel-border bg-painel-bg/40 p-2">
+              <div class="flex flex-wrap gap-2">
+                <button type="button" id="btn-agrupar" class="btn-secondary btn-sm">Agrupar selecionadas</button>
+                <button type="button" id="btn-desagrupar" class="btn-secondary btn-sm">Desagrupar selecionadas</button>
+                <button type="button" id="btn-lote-remetente" class="btn-secondary btn-sm">Alterar remetente selecionadas</button>
+              </div>
+              <div class="h-6 w-px bg-painel-border max-sm:hidden"></div>
+              <button type="button" id="btn-excluir-selecionadas" class="btn-danger btn-sm ml-auto">Excluir selecionadas</button>
+            </div>
           </div>
 
           <form id="form-lote-remetente" class="mb-3 hidden flex-wrap items-center gap-2 rounded-md border border-painel-border p-3">
