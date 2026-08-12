@@ -1,58 +1,58 @@
 export function renderModalDetalhesCarga() {
   return `
-  <div id="modal-detalhes" class="fixed inset-0 z-30 hidden items-start justify-center overflow-y-auto bg-black/60 py-6">
+  <div id="modal-detalhes" class="fixed inset-0 z-30 hidden items-start justify-center overflow-y-auto bg-slate-900/50 py-6">
     <div class="card w-full max-w-6xl">
       <div class="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 class="text-lg font-semibold"><span id="det-codigo"></span> <span id="det-status-badge" class="ml-2 rounded px-2 py-0.5 text-xs"></span></h2>
-          <p class="text-sm text-slate-400">Origem: <span id="det-origem"></span></p>
+          <p class="text-sm text-slate-600">Origem: <span id="det-origem"></span></p>
         </div>
         <div class="flex items-start gap-3">
-          <div class="rounded-lg border border-painel-border bg-painel-bg/40 px-3 py-1.5 text-right text-xs text-slate-400">
-            <p>Peso total: <span class="font-semibold text-slate-100" id="det-total-peso">0,00 kg</span></p>
-            <p>Frete total: <span class="font-semibold text-slate-100" id="det-total-frete">R$ 0,00</span></p>
+          <div class="rounded-lg border border-painel-border bg-painel-bg/40 px-3 py-1.5 text-right text-xs text-slate-600">
+            <p>Peso total: <span class="font-semibold text-slate-900" id="det-total-peso">0,00 kg</span></p>
+            <p>Frete total: <span class="font-semibold text-slate-900" id="det-total-frete">R$ 0,00</span></p>
           </div>
-          <button type="button" id="btn-fechar-detalhes" class="text-slate-400 hover:text-slate-100">&#10005;</button>
+          <button type="button" id="btn-fechar-detalhes" class="text-slate-600 hover:text-slate-900">&#10005;</button>
         </div>
       </div>
 
       <div class="rounded-lg border border-painel-border bg-painel-bg/40 p-4">
-        <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Dados da carga</h3>
+        <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-600">Dados da carga</h3>
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div class="relative">
-            <label class="mb-1 block text-xs text-slate-400">Motorista</label>
+            <label class="mb-1 block text-xs text-slate-600">Motorista</label>
             <input id="det-motorista-input" class="input-field" placeholder="Buscar motorista...">
             <input type="hidden" id="det-motorista-id">
           </div>
           <div class="relative">
-            <label class="mb-1 block text-xs text-slate-400">Veiculo</label>
+            <label class="mb-1 block text-xs text-slate-600">Veiculo</label>
             <input id="det-veiculo-input" class="input-field" placeholder="Buscar placa...">
             <input type="hidden" id="det-veiculo-id">
           </div>
           <div>
-            <label class="mb-1 block text-xs text-slate-400">Data agendamento</label>
+            <label class="mb-1 block text-xs text-slate-600">Data agendamento</label>
             <input type="date" id="det-data-agendamento" class="input-field">
           </div>
           <div>
-            <label class="mb-1 block text-xs text-slate-400">Frete pago (R$)</label>
+            <label class="mb-1 block text-xs text-slate-600">Frete pago (R$)</label>
             <input type="text" id="det-frete-pago" class="input-field">
           </div>
           <div data-estagio="carregamento">
-            <label class="mb-1 block text-xs text-slate-400">Data carregamento</label>
+            <label class="mb-1 block text-xs text-slate-600">Data carregamento</label>
             <input type="date" id="det-data-carregamento" class="input-field">
           </div>
           <div data-estagio="carregamento">
-            <label class="mb-1 block text-xs text-slate-400">Previsao de entrega</label>
+            <label class="mb-1 block text-xs text-slate-600">Previsao de entrega</label>
             <input type="date" id="det-previsao-entrega" class="input-field">
           </div>
           <div data-estagio="finalizacao">
-            <label class="mb-1 block text-xs text-slate-400">Data finalizacao</label>
+            <label class="mb-1 block text-xs text-slate-600">Data finalizacao</label>
             <input type="date" id="det-data-finalizacao" class="input-field">
           </div>
         </div>
 
         <div class="mt-3">
-          <label class="mb-1 block text-xs font-semibold text-slate-300">Observacoes</label>
+          <label class="mb-1 block text-xs font-semibold text-slate-700">Observacoes</label>
           <textarea id="det-observacoes" class="input-field" rows="3" placeholder="Informacoes sobre a carga, combinados, avisos..."></textarea>
         </div>
       </div>
@@ -66,7 +66,7 @@ export function renderModalDetalhesCarga() {
 
       <div class="mt-5">
         <div class="mb-2 flex items-center justify-between">
-          <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-400">Entregas</h3>
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-slate-600">Entregas</h3>
           <div class="flex flex-wrap gap-2">
             <button type="button" id="btn-agrupar-entregas" class="btn-secondary hidden btn-sm">Agrupar selecionadas</button>
             <button type="button" id="btn-desagrupar-entregas" class="btn-secondary hidden btn-sm">Desagrupar selecionadas</button>
@@ -77,7 +77,7 @@ export function renderModalDetalhesCarga() {
         </div>
 
         <form id="form-lote-remetente" class="mb-3 hidden flex-wrap items-center gap-2 rounded-md border border-painel-border p-3">
-          <span class="text-xs text-slate-400">Novo remetente para as selecionadas:</span>
+          <span class="text-xs text-slate-600">Novo remetente para as selecionadas:</span>
           <div class="relative max-w-xs flex-1"><input id="lote-remetente-input" class="input-field" placeholder="Buscar cliente..."></div>
           <input type="hidden" id="lote-remetente-id">
           <button type="submit" class="btn-success btn-sm">Aplicar</button>
@@ -96,7 +96,7 @@ export function renderModalDetalhesCarga() {
 
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs">
-            <thead class="text-slate-400">
+            <thead class="text-slate-600">
               <tr>
                 <th class="pb-2"><input type="checkbox" id="chk-todas"></th>
                 <th class="pb-2">Ultima</th>
@@ -118,50 +118,50 @@ export function renderModalDetalhesCarga() {
     </div>
   </div>
 
-  <div id="modal-editar-entrega" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/70">
+  <div id="modal-editar-entrega" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-900/50">
     <form id="form-editar-entrega" class="card w-full max-w-lg">
       <h3 class="mb-3 text-base font-semibold">Editar entrega</h3>
       <input type="hidden" id="edit-entrega-id">
       <div class="relative mb-2">
-        <label class="mb-1 block text-xs text-slate-400">Remetente</label>
+        <label class="mb-1 block text-xs text-slate-600">Remetente</label>
         <input id="edit-remetente-input" class="input-field">
         <input type="hidden" id="edit-remetente-id">
       </div>
       <div class="mb-2 grid grid-cols-2 gap-2">
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Cidade (override)</label>
+          <label class="mb-1 block text-xs text-slate-600">Cidade (override)</label>
           <input type="text" id="edit-cidade" class="input-field">
         </div>
         <div>
-          <label class="mb-1 block text-xs text-slate-400">UF (override)</label>
+          <label class="mb-1 block text-xs text-slate-600">UF (override)</label>
           <input type="text" id="edit-estado" class="input-field" maxlength="2">
         </div>
       </div>
       <div class="mb-2 grid grid-cols-2 gap-2">
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Peso bruto (kg)</label>
+          <label class="mb-1 block text-xs text-slate-600">Peso bruto (kg)</label>
           <input type="text" id="edit-peso" class="input-field">
         </div>
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Peso cubado (kg)</label>
+          <label class="mb-1 block text-xs text-slate-600">Peso cubado (kg)</label>
           <input type="text" id="edit-peso-cubado" class="input-field">
         </div>
       </div>
       <div class="mb-2 grid grid-cols-2 gap-2">
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Valor frete (R$)</label>
+          <label class="mb-1 block text-xs text-slate-600">Valor frete (R$)</label>
           <input type="text" id="edit-frete" class="input-field">
         </div>
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Nota fiscal</label>
+          <label class="mb-1 block text-xs text-slate-600">Nota fiscal</label>
           <input type="text" id="edit-nf" class="input-field">
         </div>
       </div>
       <div class="mb-2">
-        <label class="mb-1 block text-xs text-slate-400">Local de coleta (se diferente do remetente)</label>
+        <label class="mb-1 block text-xs text-slate-600">Local de coleta (se diferente do remetente)</label>
         <input type="text" id="edit-local-coleta" class="input-field">
       </div>
-      <label class="mb-2 flex items-center gap-2 text-sm text-slate-300">
+      <label class="mb-2 flex items-center gap-2 text-sm text-slate-700">
         <input type="checkbox" id="edit-cortesia" class="h-4 w-4"> Cortesia (sem cobranca)
       </label>
       <p id="edit-msg" class="mb-2 hidden text-sm"></p>

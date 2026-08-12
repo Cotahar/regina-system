@@ -5,7 +5,7 @@ export function renderMontagemPage() {
     <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
       <div class="space-y-4 lg:col-span-1">
         <div class="card">
-          <h2 class="mb-3 text-sm font-semibold text-slate-300">Nova entrega disponivel</h2>
+          <h2 class="mb-3 text-sm font-semibold text-slate-700">Nova entrega disponivel</h2>
           <form id="form-nova-entrega" class="space-y-2">
             <div class="relative"><input id="nova-remetente-input" class="input-field" placeholder="Remetente..."></div>
             <input type="hidden" id="nova-remetente-id">
@@ -25,7 +25,7 @@ export function renderMontagemPage() {
               <input type="text" id="nova-tonelada" class="input-field" placeholder="Valor/tonelada (R$)">
             </div>
             <input type="text" id="nova-nf" class="input-field" placeholder="Nota fiscal">
-            <label class="flex items-center gap-2 text-sm text-slate-300">
+            <label class="flex items-center gap-2 text-sm text-slate-700">
               <input type="checkbox" id="nova-cortesia" class="h-4 w-4"> Cortesia (sem cobranca)
             </label>
             <button type="submit" class="btn-primary w-full">Adicionar a lista</button>
@@ -34,7 +34,7 @@ export function renderMontagemPage() {
         </div>
 
         <div class="card">
-          <h2 class="mb-3 text-sm font-semibold text-slate-300">Rascunhos salvos</h2>
+          <h2 class="mb-3 text-sm font-semibold text-slate-700">Rascunhos salvos</h2>
           <div id="lista-rascunhos" class="space-y-2 text-sm"></div>
         </div>
       </div>
@@ -43,7 +43,7 @@ export function renderMontagemPage() {
         <div class="card">
           <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
             <div class="flex-1 min-w-[200px]">
-              <label class="mb-1 block text-xs text-slate-400">Origem do rascunho</label>
+              <label class="mb-1 block text-xs text-slate-600">Origem do rascunho</label>
               <input type="text" id="origem-rascunho" class="input-field" placeholder="Ex: CRICIUMA SC">
             </div>
             <div class="flex gap-2">
@@ -73,7 +73,7 @@ export function renderMontagemPage() {
 
           <div class="overflow-x-auto">
             <table class="w-full text-left text-xs">
-              <thead class="text-slate-400">
+              <thead class="text-slate-600">
                 <tr>
                   <th class="pb-2"><input type="checkbox" id="chk-todas"></th>
                   <th class="pb-2">Remetente</th>
@@ -87,7 +87,7 @@ export function renderMontagemPage() {
                 </tr>
               </thead>
               <tbody id="tabela-entregas"></tbody>
-              <tfoot class="border-t border-painel-border font-semibold text-slate-300">
+              <tfoot class="border-t border-painel-border font-semibold text-slate-700">
                 <tr>
                   <td colspan="5" class="pt-2">Totais (selecionadas):</td>
                   <td class="pt-2" id="total-peso">0,00 kg</td>
@@ -102,36 +102,36 @@ export function renderMontagemPage() {
       </div>
     </div>
 
-    <div id="modal-editar" class="fixed inset-0 z-20 hidden items-center justify-center bg-black/60">
+    <div id="modal-editar" class="fixed inset-0 z-20 hidden items-center justify-center bg-slate-900/50">
       <form id="form-editar" class="card w-full max-w-lg">
         <h3 class="mb-3 text-base font-semibold">Editar entrega</h3>
         <input type="hidden" id="edit-id">
         <div class="relative mb-2">
-          <label class="mb-1 block text-xs text-slate-400">Remetente</label>
+          <label class="mb-1 block text-xs text-slate-600">Remetente</label>
           <input id="edit-remetente-input" class="input-field">
           <input type="hidden" id="edit-remetente-id">
         </div>
         <div class="mb-2 grid grid-cols-2 gap-2">
-          <div><label class="mb-1 block text-xs text-slate-400">Cidade</label><input type="text" id="edit-cidade" class="input-field"></div>
-          <div><label class="mb-1 block text-xs text-slate-400">UF</label><input type="text" id="edit-estado" class="input-field" maxlength="2"></div>
+          <div><label class="mb-1 block text-xs text-slate-600">Cidade</label><input type="text" id="edit-cidade" class="input-field"></div>
+          <div><label class="mb-1 block text-xs text-slate-600">UF</label><input type="text" id="edit-estado" class="input-field" maxlength="2"></div>
         </div>
         <div class="mb-2 grid grid-cols-2 gap-2">
-          <div><label class="mb-1 block text-xs text-slate-400">Peso bruto</label><input type="text" id="edit-peso" class="input-field"></div>
-          <div><label class="mb-1 block text-xs text-slate-400">Peso cubado</label><input type="text" id="edit-cubado" class="input-field"></div>
+          <div><label class="mb-1 block text-xs text-slate-600">Peso bruto</label><input type="text" id="edit-peso" class="input-field"></div>
+          <div><label class="mb-1 block text-xs text-slate-600">Peso cubado</label><input type="text" id="edit-cubado" class="input-field"></div>
         </div>
         <div class="mb-2 grid grid-cols-2 gap-2">
-          <div><label class="mb-1 block text-xs text-slate-400">Valor frete</label><input type="text" id="edit-frete" class="input-field"></div>
-          <div><label class="mb-1 block text-xs text-slate-400">Valor/tonelada</label><input type="text" id="edit-tonelada" class="input-field"></div>
+          <div><label class="mb-1 block text-xs text-slate-600">Valor frete</label><input type="text" id="edit-frete" class="input-field"></div>
+          <div><label class="mb-1 block text-xs text-slate-600">Valor/tonelada</label><input type="text" id="edit-tonelada" class="input-field"></div>
         </div>
         <div class="mb-2">
-          <label class="mb-1 block text-xs text-slate-400">Nota fiscal</label>
+          <label class="mb-1 block text-xs text-slate-600">Nota fiscal</label>
           <input type="text" id="edit-nf" class="input-field">
         </div>
         <div class="mb-2">
-          <label class="mb-1 block text-xs text-slate-400">Local de coleta (se diferente do remetente)</label>
+          <label class="mb-1 block text-xs text-slate-600">Local de coleta (se diferente do remetente)</label>
           <input type="text" id="edit-local-coleta" class="input-field">
         </div>
-        <label class="mb-2 flex items-center gap-2 text-sm text-slate-300">
+        <label class="mb-2 flex items-center gap-2 text-sm text-slate-700">
           <input type="checkbox" id="edit-cortesia" class="h-4 w-4"> Cortesia (sem cobranca)
         </label>
         <p id="edit-msg" class="mb-2 hidden text-sm"></p>

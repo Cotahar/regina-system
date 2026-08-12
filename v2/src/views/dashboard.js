@@ -19,9 +19,9 @@ export function renderDashboardPage() {
     <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
       ${COLUNAS.map((col) => `
         <div class="card border-t-4 ${col.borda}">
-          <h2 class="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-300">
+          <h2 class="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
             <span class="h-2 w-2 rounded-full ${col.ponto}"></span>${col.titulo}
-            <span class="ml-auto rounded-full bg-painel-bg px-2 py-0.5 text-xs font-normal text-slate-400" data-contador="${col.status}">0</span>
+            <span class="ml-auto rounded-full bg-painel-bg px-2 py-0.5 text-xs font-normal text-slate-600" data-contador="${col.status}">0</span>
           </h2>
           <input type="text" class="input-field mb-3 filtro-coluna" data-status="${col.status}" placeholder="Filtrar...">
           <div class="space-y-2" data-coluna="${col.status}"></div>

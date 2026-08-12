@@ -52,10 +52,10 @@ function linhaEntrega(e, indentada) {
   return `
     <tr class="border-t border-painel-border ${classeGrupo} ${indentada ? 'bg-painel-bg/20' : ''}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
       <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionados.has(e.id) ? 'checked' : ''}></td>
-      <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-destaque/20 px-1 text-[10px] text-destaque">grupo</span>' : ''}</td>
+      <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-100 px-1 text-[10px] text-amber-800">grupo</span>' : ''}</td>
       <td class="py-1.5">${escapeHtml(e.destinatario_nome)}</td>
       <td class="py-1.5">${escapeHtml(e.cidade_entrega || '')}-${escapeHtml(e.estado_entrega || '')}${e.local_coleta ? `<br><span class="text-[10px] text-slate-500">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
-      <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-500/20 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
+      <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-100 px-1 text-[10px] text-emerald-800">cortesia</span>' : ''}</td>
       <td class="py-1.5">${formatarPeso(e.peso_bruto)}</td>
       <td class="py-1.5">${formatarPeso(e.peso_cubado)}</td>
       <td class="py-1.5">${formatarMoeda(e.valor_frete)}</td>
@@ -77,11 +77,11 @@ function linhaResumoGrupo(chave, itens, expandido) {
       <td class="py-1.5"><input type="checkbox" class="chk-grupo-visual" data-chave="${escapeHtml(chave)}" ${todosSelecionados ? 'checked' : ''}></td>
       <td class="py-1.5">${remetenteTexto}</td>
       <td class="py-1.5">
-        <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-medium text-slate-100 hover:text-destaque" data-chave="${escapeHtml(chave)}">
+        <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-medium text-slate-900 hover:text-amber-700" data-chave="${escapeHtml(chave)}">
           <svg viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3 shrink-0 transition-transform ${expandido ? 'rotate-90' : ''}"><path d="M7 4l7 6-7 6V4z"/></svg>
           ${escapeHtml(primeiro.destinatario_nome)}
         </button>
-        <span class="ml-1 rounded-full bg-painel-border px-1.5 py-0.5 text-[10px] text-slate-300">${itens.length} notas</span>
+        <span class="ml-1 rounded-full bg-painel-border px-1.5 py-0.5 text-[10px] text-slate-700">${itens.length} notas</span>
       </td>
       <td class="py-1.5">${escapeHtml(primeiro.cidade_entrega || '')}-${escapeHtml(primeiro.estado_entrega || '')}</td>
       <td class="py-1.5 text-slate-500">-</td>
@@ -169,7 +169,7 @@ function renderizarRascunhos() {
     <div class="flex items-center justify-between rounded border border-painel-border p-2" data-id="${r.id}">
       <div>
         <p class="font-medium">${escapeHtml(r.codigo_carga)}</p>
-        <p class="text-xs text-slate-400">${escapeHtml(r.origem)} - ${r.num_entregas} entrega(s)</p>
+        <p class="text-xs text-slate-600">${escapeHtml(r.origem)} - ${r.num_entregas} entrega(s)</p>
       </div>
       <div class="flex gap-1">
         <button type="button" class="btn-secondary btn-abrir btn-sm">Abrir</button>

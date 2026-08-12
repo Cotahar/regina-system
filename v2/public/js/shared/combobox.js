@@ -10,7 +10,7 @@ export function criarCombobox({ input, hidden, getItens, maxResultados = 8 }) {
   }
 
   const dropdown = document.createElement('div');
-  dropdown.className = 'absolute left-0 right-0 z-50 mt-1 hidden max-h-56 overflow-y-auto rounded-md border border-painel-border bg-slate-900 shadow-lg';
+  dropdown.className = 'absolute left-0 right-0 z-50 mt-1 hidden max-h-56 overflow-y-auto rounded-md border border-painel-border bg-white shadow-lg';
   input.insertAdjacentElement('afterend', dropdown);
 
   let resultados = [];
@@ -19,7 +19,7 @@ export function criarCombobox({ input, hidden, getItens, maxResultados = 8 }) {
   function renderizar() {
     dropdown.innerHTML = resultados.length
       ? resultados.map((item, i) => `
-          <div class="combobox-item cursor-pointer px-3 py-2 text-sm ${i === indiceAtivo ? 'bg-painel-border text-slate-100' : 'text-slate-200 hover:bg-painel-border/60'}" data-index="${i}">${escapeHtml(item.text)}</div>
+          <div class="combobox-item cursor-pointer px-3 py-2 text-sm ${i === indiceAtivo ? 'bg-amber-50 text-slate-900' : 'text-slate-800 hover:bg-gray-50'}" data-index="${i}">${escapeHtml(item.text)}</div>
         `).join('')
       : '<div class="px-3 py-2 text-sm text-slate-500">Nenhum resultado</div>';
     dropdown.classList.remove('hidden');

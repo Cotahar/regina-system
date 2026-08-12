@@ -10,7 +10,7 @@ const NAV_LINKS = [
   { href: '/avarias.html', label: 'Avarias', icone: navIcon('<path d="M10 3 18 17H2z"/><path d="M10 8.3v3.4"/><circle cx="10" cy="13.8" r="0.15" fill="currentColor" stroke="none"/>') }
 ];
 
-const ADMIN_DROPDOWN_LINKS = [
+const ADMIN_LINKS = [
   { href: '/motoristas.html', label: 'Motoristas' },
   { href: '/veiculos.html', label: 'Veiculos' },
   { href: '/marcas.html', label: 'Marcas' },
@@ -20,23 +20,27 @@ const ADMIN_DROPDOWN_LINKS = [
 
 export function renderLayout({ title, bodyHtml, user, activeHref = '', extraHead = '', extraScripts = '' }) {
   const isAdmin = user?.permissao === 'admin';
+  const adminAberto = ADMIN_LINKS.some((l) => l.href === activeHref);
 
-  const navHtml = NAV_LINKS.map((link) => {
-    const active = link.href === activeHref;
-    const classes = active
-      ? 'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium bg-painel-card text-destaque'
-      : 'flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-slate-300 hover:bg-painel-card hover:text-destaque';
-    return `<a href="${link.href}" class="${classes}">${link.icone}${escapeHtml(link.label)}</a>`;
-  }).join('');
+  const linkClasses = (href) => href === activeHref
+    ? 'menu-link flex items-center gap-2 rounded-lg border-l-4 border-brand-yellow bg-gray-800 px-3 py-2 text-sm font-semibold text-brand-yellow'
+    : 'menu-link flex items-center gap-2 rounded-lg border-l-4 border-transparent px-3 py-2 text-sm font-medium text-gray-300 hover:bg-gray-800 hover:text-white';
 
-  const adminDropdown = isAdmin
-    ? `<div class="relative">
-        <button type="button" id="admin-menu-btn" class="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-slate-300 hover:bg-painel-card hover:text-destaque">${navIcon('<circle cx="10" cy="10" r="2.3"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2M5.3 5.3l1.4 1.4M13.3 13.3l1.4 1.4M5.3 14.7l1.4-1.4M13.3 6.7l1.4-1.4"/>')}Admin &#9662;</button>
-        <div id="admin-menu" class="absolute right-0 z-10 mt-1 hidden w-52 rounded-md border border-painel-border bg-painel-card py-1 shadow-lg">
-          ${ADMIN_DROPDOWN_LINKS.map((l) => `<a href="${l.href}" class="block px-4 py-2 text-sm text-slate-200 hover:bg-painel-bg hover:text-destaque">${escapeHtml(l.label)}</a>`).join('')}
-        </div>
-      </div>`
-    : '';
+  const navHtml = NAV_LINKS.map((l) => `<a href="${l.href}" class="${linkClasses(l.href)}">${l.icone}${escapeHtml(l.label)}</a>`).join('');
+
+  const adminHtml = isAdmin ? `
+    <div class="mt-2">
+      <button type="button" id="admin-grupo-toggle" class="flex w-full items-center justify-between rounded-lg px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide ${adminAberto ? 'text-brand-yellow' : 'text-gray-400 hover:text-gray-300'}">
+        <span>Administracao</span>
+        <svg id="admin-grupo-chevron" class="h-3 w-3 shrink-0 transition-transform duration-150 ${adminAberto ? 'rotate-90' : ''}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l7 6-7 6V4z"/></svg>
+      </button>
+      <div id="admin-grupo-body" class="space-y-0.5 ${adminAberto ? '' : 'hidden'}">
+        ${ADMIN_LINKS.map((l) => `<a href="${l.href}" class="${linkClasses(l.href)}">${escapeHtml(l.label)}</a>`).join('')}
+      </div>
+    </div>
+  ` : '';
+
+  const iniciais = (user?.userName || '?').charAt(0).toUpperCase();
 
   return `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -47,31 +51,53 @@ export function renderLayout({ title, bodyHtml, user, activeHref = '', extraHead
   <link rel="stylesheet" href="/css/output.css">
   ${extraHead}
 </head>
-<body class="min-h-screen bg-painel-bg text-slate-100">
-  <header class="border-b border-painel-border bg-painel-card/50">
-    <nav class="flex flex-wrap items-center justify-between gap-2 px-6 py-4">
-      <div class="flex flex-wrap items-center gap-1.5">
-        <span class="mr-5 text-lg font-bold text-destaque">Regina System</span>
-        ${navHtml}
-        ${adminDropdown}
+<body class="bg-brand-light text-slate-900">
+  <div class="flex min-h-screen">
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 -translate-x-full transform overflow-y-auto border-r border-gray-800 bg-brand-black p-3 transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0">
+      <div class="mb-4 flex items-center gap-2 px-3 py-2">
+        <span class="text-lg font-bold leading-tight text-brand-yellow">Regina System</span>
       </div>
-      <div class="flex items-center gap-3 text-sm text-slate-300">
-        <span class="flex items-center gap-1.5 rounded-full bg-painel-bg px-3 py-1.5">${navIcon('<circle cx="10" cy="6.5" r="3"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6"/>')}${escapeHtml(user?.userName || '')}</span>
-        <a href="/logout" class="flex items-center gap-1.5 rounded-md bg-painel-border px-3 py-1.5 hover:bg-slate-500">${navIcon('<path d="M8 4H4.5A1.5 1.5 0 0 0 3 5.5v9A1.5 1.5 0 0 0 4.5 16H8"/><path d="M13 13.5 17 10l-4-3.5"/><path d="M7 10h10"/>')}Sair</a>
-      </div>
-    </nav>
-  </header>
-  <main class="px-6 py-6">
-    ${bodyHtml}
-  </main>
+      <nav>${navHtml}${adminHtml}</nav>
+    </aside>
+    <div id="sidebar-overlay" class="fixed inset-0 z-20 hidden bg-slate-900/40 lg:hidden"></div>
+    <div class="flex min-h-screen min-w-0 flex-1 flex-col">
+      <header class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <button type="button" id="btn-abrir-menu" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div class="ml-auto flex items-center gap-3">
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-black text-sm font-bold text-brand-yellow">${escapeHtml(iniciais)}</span>
+          <div class="hidden text-right sm:block">
+            <p class="text-sm font-medium text-slate-900">${escapeHtml(user?.userName || '')}</p>
+            <p class="text-xs text-slate-500">${escapeHtml(user?.permissao || '')}</p>
+          </div>
+          <a href="/logout" class="btn-secondary btn-sm">Sair</a>
+        </div>
+      </header>
+      <main class="flex-1 px-6 py-6">
+        ${bodyHtml}
+      </main>
+    </div>
+  </div>
   <script>
     window.__SESSAO__ = { userName: ${JSON.stringify(user?.userName || null)}, permissao: ${JSON.stringify(user?.permissao || null)} };
-    const adminBtn = document.getElementById('admin-menu-btn');
-    const adminMenu = document.getElementById('admin-menu');
-    if (adminBtn) {
-      adminBtn.addEventListener('click', () => adminMenu.classList.toggle('hidden'));
-      document.addEventListener('click', (e) => {
-        if (!adminBtn.contains(e.target) && !adminMenu.contains(e.target)) adminMenu.classList.add('hidden');
+
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    document.getElementById('btn-abrir-menu')?.addEventListener('click', () => {
+      sidebar.classList.remove('-translate-x-full');
+      overlay.classList.remove('hidden');
+    });
+    overlay?.addEventListener('click', () => {
+      sidebar.classList.add('-translate-x-full');
+      overlay.classList.add('hidden');
+    });
+
+    const adminToggle = document.getElementById('admin-grupo-toggle');
+    if (adminToggle) {
+      adminToggle.addEventListener('click', () => {
+        document.getElementById('admin-grupo-body').classList.toggle('hidden');
+        document.getElementById('admin-grupo-chevron').classList.toggle('rotate-90');
       });
     }
   </script>

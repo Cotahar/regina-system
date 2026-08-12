@@ -19,19 +19,19 @@ export function renderConsultaPage() {
       <div class="relative"><input id="f-cliente-input" class="input-field" placeholder="Cliente..."></div>
       <input type="hidden" id="f-cliente-id">
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Carregamento de</label>
+        <label class="mb-1 block text-xs text-slate-600">Carregamento de</label>
         <input type="date" id="f-carreg-inicio" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Carregamento ate</label>
+        <label class="mb-1 block text-xs text-slate-600">Carregamento ate</label>
         <input type="date" id="f-carreg-fim" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Finalizacao de</label>
+        <label class="mb-1 block text-xs text-slate-600">Finalizacao de</label>
         <input type="date" id="f-final-inicio" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Finalizacao ate</label>
+        <label class="mb-1 block text-xs text-slate-600">Finalizacao ate</label>
         <input type="date" id="f-final-fim" class="input-field">
       </div>
       <div class="flex items-end gap-2 sm:col-span-3 lg:col-span-4">
@@ -43,7 +43,7 @@ export function renderConsultaPage() {
     <div class="card mt-4">
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
-          <thead class="text-slate-400">
+          <thead class="text-slate-600">
             <tr>
               <th class="pb-2">Codigo</th><th class="pb-2">Status</th><th class="pb-2">Origem</th>
               <th class="pb-2">Destino</th><th class="pb-2">Motorista</th><th class="pb-2">Entregas</th>

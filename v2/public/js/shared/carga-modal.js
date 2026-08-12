@@ -7,10 +7,10 @@ import { icones } from './icons.js';
 import { iconeMenuAcoes, criarMenuAcoes } from './menuAcoes.js';
 
 const STATUS_CORES = {
-  Pendente: 'bg-slate-500/30 text-slate-200',
-  Agendada: 'bg-blue-500/30 text-blue-200',
-  'Em Trânsito': 'bg-amber-500/30 text-amber-200',
-  Finalizada: 'bg-emerald-500/30 text-emerald-200'
+  Pendente: 'bg-slate-200 text-slate-800',
+  Agendada: 'bg-blue-100 text-blue-800',
+  'Em Trânsito': 'bg-amber-100 text-amber-800',
+  Finalizada: 'bg-emerald-100 text-emerald-800'
 };
 
 export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
@@ -83,7 +83,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     document.getElementById('det-origem').textContent = c.origem;
     const badge = document.getElementById('det-status-badge');
     badge.textContent = c.status;
-    badge.className = `ml-2 rounded px-2 py-0.5 text-xs ${STATUS_CORES[c.status] || 'bg-slate-600 text-slate-200'}`;
+    badge.className = `ml-2 rounded px-2 py-0.5 text-xs ${STATUS_CORES[c.status] || 'bg-slate-200 text-slate-800'}`;
 
     document.getElementById('det-motorista-input').value = motoristaTexto(c.motorista_id);
     document.getElementById('det-motorista-id').value = c.motorista_id || '';
@@ -267,10 +267,10 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       <tr class="border-t border-painel-border ${classeGrupo} ${indentada ? 'bg-painel-bg/20' : ''}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
         <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
         <td class="py-1 text-center"><input type="radio" name="ultima-entrega" class="radio-ultima" ${e.is_last_delivery ? 'checked' : ''}></td>
-        <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-destaque/20 px-1 text-[10px] text-destaque">grupo</span>' : ''}</td>
+        <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-100 px-1 text-[10px] text-amber-800">grupo</span>' : ''}</td>
         <td class="py-1.5">${escapeHtml(e.razao_social)}</td>
         <td class="py-1.5">${escapeHtml(e.cidade)}-${escapeHtml(e.estado)}${e.local_coleta ? `<br><span class="text-[10px] text-slate-500">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
-        <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-500/20 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
+        <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-100 px-1 text-[10px] text-emerald-800">cortesia</span>' : ''}</td>
         <td class="py-1.5">${formatarPeso(e.peso_bruto)}</td>
         <td class="py-1.5">${formatarMoeda(e.valor_frete)}</td>
         <td class="py-1.5 text-right">${iconeMenuAcoes()}</td>
@@ -291,11 +291,11 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
         <td class="py-1.5"></td>
         <td class="py-1.5">${remetenteTexto}</td>
         <td class="py-1.5">
-          <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-medium text-slate-100 hover:text-destaque" data-chave="${escapeHtml(chave)}">
+          <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-medium text-slate-900 hover:text-amber-700" data-chave="${escapeHtml(chave)}">
             <svg viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3 shrink-0 transition-transform ${expandido ? 'rotate-90' : ''}"><path d="M7 4l7 6-7 6V4z"/></svg>
             ${escapeHtml(primeiro.razao_social)}
           </button>
-          <span class="ml-1 rounded-full bg-painel-border px-1.5 py-0.5 text-[10px] text-slate-300">${itens.length} notas</span>
+          <span class="ml-1 rounded-full bg-painel-border px-1.5 py-0.5 text-[10px] text-slate-700">${itens.length} notas</span>
         </td>
         <td class="py-1.5">${escapeHtml(primeiro.cidade)}-${escapeHtml(primeiro.estado)}</td>
         <td class="py-1.5 text-slate-500">-</td>

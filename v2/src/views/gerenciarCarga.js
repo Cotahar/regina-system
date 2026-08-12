@@ -10,45 +10,45 @@ export function renderGerenciarCargaPage() {
 
     <div class="card mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div class="relative">
-        <label class="mb-1 block text-xs text-slate-400">Motorista</label>
+        <label class="mb-1 block text-xs text-slate-600">Motorista</label>
         <input id="ger-motorista-input" class="input-field">
         <input type="hidden" id="ger-motorista-id">
       </div>
       <div class="relative">
-        <label class="mb-1 block text-xs text-slate-400">Veiculo</label>
+        <label class="mb-1 block text-xs text-slate-600">Veiculo</label>
         <input id="ger-veiculo-input" class="input-field">
         <input type="hidden" id="ger-veiculo-id">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Rota manifesto</label>
+        <label class="mb-1 block text-xs text-slate-600">Rota manifesto</label>
         <input type="text" id="ger-rota" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Vale pedagio (marca)</label>
+        <label class="mb-1 block text-xs text-slate-600">Vale pedagio (marca)</label>
         <input type="text" id="ger-vp-marca" class="input-field" placeholder="Sem Parar / Move Mais">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Vale pedagio (rota)</label>
+        <label class="mb-1 block text-xs text-slate-600">Vale pedagio (rota)</label>
         <input type="text" id="ger-vp-rota" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Vale pedagio (eixos)</label>
+        <label class="mb-1 block text-xs text-slate-600">Vale pedagio (eixos)</label>
         <input type="number" id="ger-vp-eixos" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Frete pago (motorista)</label>
+        <label class="mb-1 block text-xs text-slate-600">Frete pago (motorista)</label>
         <input type="text" id="ger-frete-pago" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Adiantamento (%)</label>
+        <label class="mb-1 block text-xs text-slate-600">Adiantamento (%)</label>
         <input type="number" id="ger-adiant-percentual" class="input-field" value="70">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Valor do adiantamento</label>
+        <label class="mb-1 block text-xs text-slate-600">Valor do adiantamento</label>
         <input type="text" id="ger-adiant-valor" class="input-field" readonly>
       </div>
       <div class="sm:col-span-2 lg:col-span-4">
-        <label class="mb-1 block text-xs text-slate-400">Observacoes de faturamento</label>
+        <label class="mb-1 block text-xs text-slate-600">Observacoes de faturamento</label>
         <textarea id="ger-observacoes" class="input-field" rows="2"></textarea>
       </div>
     </div>
@@ -72,7 +72,7 @@ export function renderGerenciarCargaPage() {
 
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs">
-          <thead class="text-slate-400">
+          <thead class="text-slate-600">
             <tr>
               <th class="pb-2"><input type="checkbox" id="ger-chk-todas"></th>
               <th class="pb-2">Remetente</th>
@@ -91,7 +91,7 @@ export function renderGerenciarCargaPage() {
             </tr>
           </thead>
           <tbody id="ger-tabela"></tbody>
-          <tfoot class="border-t border-painel-border font-semibold text-slate-300">
+          <tfoot class="border-t border-painel-border font-semibold text-slate-700">
             <tr>
               <td colspan="6" class="pt-2">Total geral:</td>
               <td class="pt-2" id="total-geral-peso">0,00 kg</td>
@@ -115,16 +115,16 @@ export function renderGerenciarCargaPage() {
 
     <p id="ger-msg" class="mt-3 hidden text-sm"></p>
 
-    <div id="modal-repasse" class="fixed inset-0 z-20 hidden items-center justify-center bg-black/60">
+    <div id="modal-repasse" class="fixed inset-0 z-20 hidden items-center justify-center bg-slate-900/50">
       <form id="form-repasse" class="card w-full max-w-md">
         <h3 class="mb-3 text-base font-semibold">Repasse / comissao</h3>
         <input type="hidden" id="repasse-entrega-id">
         <div class="mb-3">
-          <label class="mb-1 block text-xs text-slate-400">Valor combinado (o que fica para a empresa)</label>
+          <label class="mb-1 block text-xs text-slate-600">Valor combinado (o que fica para a empresa)</label>
           <input type="text" id="repasse-valor-combinado" class="input-field" placeholder="Ex: 750,00 por ton, ou valor cheio">
         </div>
         <div class="mb-3">
-          <label class="mb-1 block text-xs text-slate-400">Repasse para (nome do representante/parceiro)</label>
+          <label class="mb-1 block text-xs text-slate-600">Repasse para (nome do representante/parceiro)</label>
           <input type="text" id="repasse-destinatario" class="input-field">
         </div>
         <p class="mb-3 text-xs text-slate-500">A diferenca entre o valor do frete cobrado no CT-e e o valor combinado e o que deve ser repassado.</p>

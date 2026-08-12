@@ -14,9 +14,9 @@ let motoristas = [];
 let avarias = [];
 
 const STATUS_CORES = {
-  Pendente: 'bg-slate-500/30 text-slate-200',
-  Enviado: 'bg-amber-500/30 text-amber-200',
-  Finalizada: 'bg-emerald-500/30 text-emerald-200'
+  Pendente: 'bg-slate-200 text-slate-800',
+  Enviado: 'bg-amber-100 text-amber-800',
+  Finalizada: 'bg-emerald-100 text-emerald-800'
 };
 
 async function carregarFiltros() {
@@ -54,17 +54,17 @@ function renderizarLista() {
       <div class="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p class="font-semibold">NF ${escapeHtml(a.nota_fiscal)} - ${escapeHtml(a.cliente)}</p>
-          <p class="text-xs text-slate-400">${escapeHtml(a.data)} - Motorista: ${escapeHtml(a.motorista)} - Marca: ${escapeHtml(a.marca)}</p>
+          <p class="text-xs text-slate-600">${escapeHtml(a.data)} - Motorista: ${escapeHtml(a.motorista)} - Marca: ${escapeHtml(a.marca)}</p>
         </div>
-        <span class="rounded px-2 py-0.5 text-xs ${STATUS_CORES[a.status] || 'bg-slate-600'}">${escapeHtml(a.status)}</span>
+        <span class="rounded px-2 py-0.5 text-xs ${STATUS_CORES[a.status] || 'bg-slate-200 text-slate-800'}">${escapeHtml(a.status)}</span>
       </div>
-      <ul class="mt-2 list-disc pl-5 text-xs text-slate-300">
+      <ul class="mt-2 list-disc pl-5 text-xs text-slate-700">
         ${a.itens.map((i) => `<li>${escapeHtml(i.produto)} - ${i.quantidade} ${escapeHtml(i.unidade || '')}</li>`).join('')}
       </ul>
-      <p class="mt-2 whitespace-pre-line text-xs text-slate-400">${escapeHtml(a.observacoes)}</p>
+      <p class="mt-2 whitespace-pre-line text-xs text-slate-600">${escapeHtml(a.observacoes)}</p>
       ${a.fotos.length ? `<div class="mt-2 flex flex-wrap gap-2">${a.fotos.map((f) => `<a href="/uploads/avarias/${encodeURIComponent(f.arquivo)}" target="_blank"><img src="/uploads/avarias/${encodeURIComponent(f.arquivo)}" class="h-16 w-16 rounded object-cover"></a>`).join('')}</div>` : ''}
-      ${a.status === 'Enviado' || a.status === 'Finalizada' ? `<p class="mt-2 text-xs text-slate-400"><strong>Envio:</strong> ${escapeHtml(a.registro_envio)}</p>` : ''}
-      ${a.status === 'Finalizada' ? `<p class="mt-1 text-xs text-slate-400"><strong>Retorno:</strong> ${escapeHtml(a.retorno_fabrica)} ${a.valor_cobranca ? `(Cobranca: ${formatarMoeda(a.valor_cobranca)})` : ''}</p>` : ''}
+      ${a.status === 'Enviado' || a.status === 'Finalizada' ? `<p class="mt-2 text-xs text-slate-600"><strong>Envio:</strong> ${escapeHtml(a.registro_envio)}</p>` : ''}
+      ${a.status === 'Finalizada' ? `<p class="mt-1 text-xs text-slate-600"><strong>Retorno:</strong> ${escapeHtml(a.retorno_fabrica)} ${a.valor_cobranca ? `(Cobranca: ${formatarMoeda(a.valor_cobranca)})` : ''}</p>` : ''}
       <div class="mt-3 flex gap-2">
         ${a.status === 'Pendente' ? '<button type="button" class="btn-secondary btn-registrar-envio btn-sm">Registrar Envio</button>' : ''}
         ${a.status === 'Enviado' ? '<button type="button" class="btn-secondary btn-finalizar btn-sm">Finalizar</button>' : ''}

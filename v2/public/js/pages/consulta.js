@@ -50,8 +50,8 @@ async function buscar(pagina = 1) {
 function renderizarResultados(lista) {
   const tbody = document.getElementById('tabela-resultados');
   tbody.innerHTML = lista.map((c) => `
-    <tr class="cursor-pointer border-t border-painel-border hover:bg-painel-card" data-id="${c.id}">
-      <td class="py-2 font-medium text-destaque">${escapeHtml(c.codigo_carga)}</td>
+    <tr class="cursor-pointer border-t border-painel-border hover:bg-amber-50" data-id="${c.id}">
+      <td class="py-2 font-medium text-amber-700">${escapeHtml(c.codigo_carga)}</td>
       <td class="py-2.5">${escapeHtml(c.status)}</td>
       <td class="py-2.5">${escapeHtml(c.origem)}</td>
       <td class="py-2.5">${escapeHtml(c.destino)}</td>
@@ -75,7 +75,7 @@ function renderizarPaginacao(paginaAtual, totalPaginas, totalResultados) {
   }
   container.innerHTML = `
     <button type="button" id="btn-anterior" class="btn-secondary btn-sm" ${paginaAtual <= 1 ? 'disabled' : ''}>&larr; Anterior</button>
-    <span class="text-xs text-slate-400">Pagina ${paginaAtual} de ${totalPaginas} (${totalResultados} resultado(s))</span>
+    <span class="text-xs text-slate-600">Pagina ${paginaAtual} de ${totalPaginas} (${totalResultados} resultado(s))</span>
     <button type="button" id="btn-proxima" class="btn-secondary btn-sm" ${paginaAtual >= totalPaginas ? 'disabled' : ''}>Proxima &rarr;</button>
   `;
   document.getElementById('btn-anterior')?.addEventListener('click', () => buscar(paginaAtual - 1));

@@ -28,16 +28,16 @@ export function renderAvariasPage() {
       <h1 class="text-xl font-semibold">Registrar Avaria - <span id="reg-codigo-carga"></span></h1>
       <form id="form-registro" class="card mt-4 space-y-3">
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Entrega / Nota fiscal</label>
+          <label class="mb-1 block text-xs text-slate-600">Entrega / Nota fiscal</label>
           <select id="reg-entrega" class="input-field" required></select>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="mb-1 block text-xs text-slate-400">Marca</label>
+            <label class="mb-1 block text-xs text-slate-600">Marca</label>
             <select id="reg-marca" class="input-field" required></select>
           </div>
           <div>
-            <label class="mb-1 block text-xs text-slate-400">Tipo de descarga</label>
+            <label class="mb-1 block text-xs text-slate-600">Tipo de descarga</label>
             <select id="reg-tipo-descarga" class="input-field">
               <option value="Manual">Manual</option>
               <option value="Empilhadeira">Empilhadeira</option>
@@ -48,13 +48,13 @@ export function renderAvariasPage() {
         </div>
 
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Itens avariados</label>
+          <label class="mb-1 block text-xs text-slate-600">Itens avariados</label>
           <div id="reg-itens" class="space-y-2"></div>
           <button type="button" id="btn-add-item" class="btn-secondary mt-2 btn-sm">+ Item</button>
         </div>
 
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Fotos</label>
+          <label class="mb-1 block text-xs text-slate-600">Fotos</label>
           <input type="file" id="reg-fotos" accept="image/*" multiple class="input-field">
           <div id="reg-progresso" class="mt-1 hidden h-2 rounded bg-painel-border">
             <div id="reg-progresso-barra" class="h-2 rounded bg-destaque" style="width:0%"></div>
@@ -69,7 +69,7 @@ export function renderAvariasPage() {
       </form>
     </div>
 
-    <div id="modal-envio" class="fixed inset-0 z-20 hidden items-center justify-center bg-black/60">
+    <div id="modal-envio" class="fixed inset-0 z-20 hidden items-center justify-center bg-slate-900/50">
       <form id="form-envio" class="card w-full max-w-lg">
         <h3 class="mb-3 text-base font-semibold">Registrar envio para a fabrica</h3>
         <input type="hidden" id="envio-avaria-id">
@@ -81,7 +81,7 @@ export function renderAvariasPage() {
       </form>
     </div>
 
-    <div id="modal-finalizar" class="fixed inset-0 z-20 hidden items-center justify-center bg-black/60">
+    <div id="modal-finalizar" class="fixed inset-0 z-20 hidden items-center justify-center bg-slate-900/50">
       <form id="form-finalizar" class="card w-full max-w-lg">
         <h3 class="mb-3 text-base font-semibold">Finalizar avaria</h3>
         <input type="hidden" id="finalizar-avaria-id">

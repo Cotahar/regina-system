@@ -23,12 +23,12 @@ function renderizarCard(c) {
   return `
     <div class="cursor-pointer rounded-md border border-painel-border bg-painel-bg p-3 text-sm hover:border-destaque" data-id="${c.id}" data-busca="${escapeHtml(`${c.codigo_carga} ${c.destino_principal} ${c.motorista_nome || ''} ${c.placa_veiculo || ''}`.toLowerCase())}">
       <div class="flex items-center justify-between">
-        <span class="font-semibold text-destaque">${escapeHtml(c.codigo_carga)}</span>
-        <span class="text-xs text-slate-400">${c.num_entregas} entrega(s)</span>
+        <span class="font-semibold text-amber-700">${escapeHtml(c.codigo_carga)}</span>
+        <span class="text-xs text-slate-600">${c.num_entregas} entrega(s)</span>
       </div>
-      <p class="mt-1 text-slate-300">${escapeHtml(c.origem)} &rarr; ${escapeHtml(c.destino_principal)}</p>
-      <p class="mt-1 text-xs text-slate-400">${escapeHtml(c.motorista_nome || 'Sem motorista')} ${c.placa_veiculo ? '- ' + escapeHtml(c.placa_veiculo) : ''}</p>
-      <p class="mt-1 text-xs text-slate-400">${formatarPeso(c.peso_total)} - ${formatarMoeda(c.valor_frete_total)}</p>
+      <p class="mt-1 text-slate-700">${escapeHtml(c.origem)} &rarr; ${escapeHtml(c.destino_principal)}</p>
+      <p class="mt-1 text-xs text-slate-600">${escapeHtml(c.motorista_nome || 'Sem motorista')} ${c.placa_veiculo ? '- ' + escapeHtml(c.placa_veiculo) : ''}</p>
+      <p class="mt-1 text-xs text-slate-600">${formatarPeso(c.peso_total)} - ${formatarMoeda(c.valor_frete_total)}</p>
       ${linhaData(c)}
     </div>
   `;
