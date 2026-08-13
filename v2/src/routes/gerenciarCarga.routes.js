@@ -149,10 +149,11 @@ gerenciarCargaRouter.get('/cargas/:id/relatorio_faturamento', requireLogin, (req
 
   const entregas = db.prepare(`
     SELECT e.*, cl.razao_social as cliente_razao_social, cl.cidade as cliente_cidade, cl.estado as cliente_estado,
-      cl.ddd as cliente_ddd, cl.telefone as cliente_telefone, cl.observacoes as cliente_observacoes,
+      rem.razao_social as remetente_razao_social,
       u.nome as unidade_nome, tc.descricao as tipo_cte_descricao, fp.descricao as forma_pagamento_descricao
     FROM entregas e
     LEFT JOIN clientes cl ON cl.id = e.cliente_id
+    LEFT JOIN clientes rem ON rem.id = e.remetente_id
     LEFT JOIN unidades u ON u.id = e.unidade_id
     LEFT JOIN tipos_cte tc ON tc.id = e.tipo_cte_id
     LEFT JOIN formas_pagamento fp ON fp.id = e.forma_pagamento_id

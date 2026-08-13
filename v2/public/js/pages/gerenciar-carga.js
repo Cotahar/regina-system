@@ -294,44 +294,48 @@ document.getElementById('btn-aplicar-massa').addEventListener('click', () => {
 });
 
 // --- SALVAR ---
+// Handler inteiro dentro do try/catch (nao so a chamada de rede) - qualquer
+// excecao inesperada ao ler um campo/linha agora vira uma mensagem de erro
+// visivel em vez de falhar em silencio (o botao "nao fazia nada").
 document.getElementById('btn-salvar').addEventListener('click', async () => {
-  const linhas = [...document.querySelectorAll('#ger-tabela tr[data-id]')].map((tr) => {
-    const id = Number(tr.dataset.id);
-    const entregaOriginal = entregas.find((e) => e.id === id) || {};
-    return {
-      id,
-      nota_fiscal: tr.querySelector('.campo-nf').value.trim() || null,
-      unidade_id: tr.querySelector('.campo-unidade').value || null,
-      tipo_cte_id: tr.querySelector('.campo-tipo-cte').value || null,
-      peso_bruto: parseDecimal(tr.querySelector('.campo-peso').value),
-      peso_cubado: parseDecimal(tr.querySelector('.campo-cubado').value),
-      valor_tonelada: parseDecimal(tr.querySelector('.campo-ton').value),
-      valor_frete: parseDecimal(tr.querySelector('.campo-frete').value),
-      forma_pagamento_id: tr.querySelector('.campo-forma').value || null,
-      tipo_pagamento: tr.querySelector('.campo-tipo-pgto').value || null,
-      is_cortesia: tr.querySelector('.campo-cortesia').checked,
-      valor_combinado: entregaOriginal.valor_combinado ?? null,
-      repasse_destinatario: entregaOriginal.repasse_destinatario ?? null
-    };
-  });
-
-  const fretePago = parseDecimal(document.getElementById('ger-frete-pago').value);
-  const percentual = Number(document.getElementById('ger-adiant-percentual').value) || null;
-  const adiantamentoValor = fretePago && percentual ? (fretePago * percentual) / 100 : null;
-
   try {
+    const linhas = [...document.querySelectorAll('#ger-tabela tr[data-id]')].map((tr) => {
+      const id = Number(tr.dataset.id);
+      const entregaOriginal = entregas.find((e) => e.id === id) || {};
+      return {
+        id,
+        nota_fiscal: tr.querySelector('.campo-nf').value.trim() || null,
+        unidade_id: tr.querySelector('.campo-unidade').value || null,
+        tipo_cte_id: tr.querySelector('.campo-tipo-cte').value || null,
+        peso_bruto: parseDecimal(tr.querySelector('.campo-peso').value),
+        peso_cubado: parseDecimal(tr.querySelector('.campo-cubado').value),
+        valor_tonelada: parseDecimal(tr.querySelector('.campo-ton').value),
+        valor_frete: parseDecimal(tr.querySelector('.campo-frete').value),
+        forma_pagamento_id: tr.querySelector('.campo-forma').value || null,
+        tipo_pagamento: tr.querySelector('.campo-tipo-pgto').value || null,
+        is_cortesia: tr.querySelector('.campo-cortesia').checked,
+        valor_combinado: entregaOriginal.valor_combinado ?? null,
+        repasse_destinatario: entregaOriginal.repasse_destinatario ?? null
+      };
+    });
+
+    const fretePago = parseDecimal(document.getElementById('ger-frete-pago').value);
+    const percentual = Number(document.getElementById('ger-adiant-percentual').value) || null;
+    const adiantamentoValor = fretePago && percentual ? (fretePago * percentual) / 100 : null;
+    const eixosValor = document.getElementById('ger-vp-eixos').value.trim();
+
     await apiPut(`/api/cargas/${cargaId}/gerenciar`, {
       carga: {
         motorista_id: document.getElementById('ger-motorista-id').value || null,
         veiculo_id: document.getElementById('ger-veiculo-id').value || null,
-        rota_manifesto: document.getElementById('ger-rota').value.trim(),
-        vale_pedagio_marca: document.getElementById('ger-vp-marca').value.trim(),
-        vale_pedagio_rota: document.getElementById('ger-vp-rota').value.trim(),
-        vale_pedagio_eixos: Number(document.getElementById('ger-vp-eixos').value) || null,
+        rota_manifesto: document.getElementById('ger-rota').value.trim() || null,
+        vale_pedagio_marca: document.getElementById('ger-vp-marca').value.trim() || null,
+        vale_pedagio_rota: document.getElementById('ger-vp-rota').value.trim() || null,
+        vale_pedagio_eixos: eixosValor ? Number(eixosValor) : null,
         frete_pago: fretePago,
         adiantamento_percentual: percentual,
         adiantamento_valor: adiantamentoValor,
-        observacoes_faturamento: document.getElementById('ger-observacoes').value.trim()
+        observacoes_faturamento: document.getElementById('ger-observacoes').value.trim() || null
       },
       entregas: linhas
     });
