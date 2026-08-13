@@ -9,11 +9,43 @@ function nfComQuebra(notaFiscal) {
     .join('<br>');
 }
 
+// Entregas com o mesmo grupo_id saem em uma unica linha (mesmo CT-e): NFs
+// concatenadas, peso e frete somados - espelha o merge feito no Gerenciar
+// Faturamento.
+function agruparEntregasPorGrupo(entregas) {
+  const gruposMap = new Map();
+  entregas.forEach((e) => {
+    if (!e.grupo_id) return;
+    if (!gruposMap.has(e.grupo_id)) gruposMap.set(e.grupo_id, []);
+    gruposMap.get(e.grupo_id).push(e);
+  });
+
+  const jaProcessado = new Set();
+  const resultado = [];
+  entregas.forEach((e) => {
+    if (jaProcessado.has(e.id)) return;
+    const membros = e.grupo_id ? gruposMap.get(e.grupo_id) : null;
+    if (membros && membros.length > 1) {
+      resultado.push({
+        ...membros[0],
+        nota_fiscal: membros.map((m) => m.nota_fiscal).filter(Boolean).join(' / '),
+        peso_bruto: membros.reduce((acc, m) => acc + (m.peso_bruto || 0), 0),
+        valor_frete: membros.reduce((acc, m) => acc + (m.valor_frete || 0), 0)
+      });
+      membros.forEach((m) => jaProcessado.add(m.id));
+    } else {
+      resultado.push(e);
+      jaProcessado.add(e.id);
+    }
+  });
+  return resultado;
+}
+
 export function renderRelatorioFaturamento({ carga, entregas, destinoPrincipal }) {
   let pesoTotal = 0;
   let freteTotal = 0;
 
-  const linhas = entregas.map((e) => {
+  const linhas = agruparEntregasPorGrupo(entregas).map((e) => {
     pesoTotal += e.peso_bruto || 0;
     freteTotal += e.valor_frete || 0;
     return `

@@ -67,7 +67,8 @@ export function renderGerenciarCargaPage() {
           <option value="Boleto">Boleto</option>
           <option value="Transferencia">Transferencia</option>
         </select>
-        <button type="button" id="btn-aplicar-massa" class="btn-success btn-sm">Aplicar as selecionadas</button>
+        <button type="button" id="btn-aplicar-massa" class="btn-secondary btn-sm">Aplicar as selecionadas</button>
+        <button type="button" id="btn-salvar-rapido" class="btn-success btn-sm">Salvar</button>
       </div>
 
       <div class="overflow-x-auto">
