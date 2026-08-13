@@ -55,7 +55,7 @@ export function renderModalDetalhesCarga() {
 
         <div class="mt-3">
           <label class="mb-1 block text-xs font-semibold text-slate-300">Observacoes</label>
-          <textarea id="det-observacoes" class="input-field resize-none overflow-hidden" rows="3" placeholder="Informacoes sobre a carga, combinados, avisos..."></textarea>
+          <textarea id="det-observacoes" class="input-field min-h-[4.5rem] resize-none overflow-hidden" rows="3" placeholder="Informacoes sobre a carga, combinados, avisos..."></textarea>
         </div>
       </div>
 

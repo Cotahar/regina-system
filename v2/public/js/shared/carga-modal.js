@@ -71,6 +71,10 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       formLote.classList.add('hidden');
       msg.classList.add('hidden');
       abrirModal(modal);
+      // So agora o modal esta com display:flex de verdade - antes disso o
+      // textarea tinha scrollHeight 0 (elemento escondido) e o auto-resize
+      // calculava a altura errada.
+      ajustarAlturaObservacoes();
     } catch (err) {
       alert(err.message);
     }
