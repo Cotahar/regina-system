@@ -113,8 +113,9 @@ async function processarMensagem(gmail, messageId) {
       gmail_message_id, gmail_thread_id, remetente_email, assunto, data_recebimento,
       extraction_source, numero_nf, chave_acesso, cnpj_emitente, nome_emitente,
       cnpj_destinatario, nome_destinatario, peso_bruto, valor_total, data_emissao,
-      remetente_id, cliente_id, xml_arquivo, pdf_arquivo, status, precisa_revisao
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', ?)
+      placa_veiculo, nome_motorista, remetente_id, cliente_id, xml_arquivo, pdf_arquivo,
+      status, precisa_revisao
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', ?)
   `).run(
     messageId,
     mensagem.threadId || null,
@@ -131,6 +132,8 @@ async function processarMensagem(gmail, messageId) {
     campos.pesoBruto,
     campos.valorTotal,
     campos.dataEmissao,
+    campos.placaVeiculo,
+    campos.nomeMotorista,
     remetenteMatch ? remetenteMatch.id : null,
     clienteMatch ? clienteMatch.id : null,
     xmlArquivo,

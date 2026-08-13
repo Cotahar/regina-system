@@ -160,6 +160,8 @@ CREATE TABLE IF NOT EXISTS notas_fiscais_email (
   peso_bruto REAL,
   valor_total REAL,
   data_emissao TEXT,
+  placa_veiculo TEXT,
+  nome_motorista TEXT,
   remetente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
   cliente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
   xml_arquivo TEXT,

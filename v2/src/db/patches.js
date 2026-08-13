@@ -22,8 +22,26 @@ const colunasNovas = [
   ['veiculos', 'dados_pagamento', 'TEXT'],
   ['cargas', 'saldo_motorista', 'REAL'],
   ['cargas', 'vale_pedagio_valor', 'TEXT'],
-  ['clientes', 'cnpj', 'TEXT']
+  ['clientes', 'cnpj', 'TEXT'],
+  ['notas_fiscais_email', 'placa_veiculo', 'TEXT'],
+  ['notas_fiscais_email', 'nome_motorista', 'TEXT']
 ];
+
+// Padroniza data_emissao pra AAAA-MM-DD em linhas gravadas antes dessa
+// mudanca (podiam vir com hora/fuso do XML ou "dd/mm/aaaa" do PDF). Idempotente
+// - so faz UPDATE quando o valor normalizado e diferente do que ja esta salvo.
+function normalizarDatasEmissaoExistentes() {
+  const linhas = db.prepare("SELECT id, data_emissao FROM notas_fiscais_email WHERE data_emissao IS NOT NULL").all();
+  const update = db.prepare('UPDATE notas_fiscais_email SET data_emissao = ? WHERE id = ?');
+  for (const linha of linhas) {
+    const iso = linha.data_emissao.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const br = linha.data_emissao.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    const normalizado = iso ? `${iso[1]}-${iso[2]}-${iso[3]}` : (br ? `${br[3]}-${br[2]}-${br[1]}` : null);
+    if (normalizado && normalizado !== linha.data_emissao) {
+      update.run(normalizado, linha.id);
+    }
+  }
+}
 
 export function aplicarPatches() {
   for (const [tabela, coluna, definicao] of colunasNovas) {
@@ -37,4 +55,5 @@ export function aplicarPatches() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_entregas_grupo_id ON entregas(grupo_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_clientes_cnpj ON clientes(cnpj)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_notas_fiscais_email_status ON notas_fiscais_email(status)');
+  normalizarDatasEmissaoExistentes();
 }

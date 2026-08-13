@@ -50,6 +50,8 @@ function linhaTabela(n) {
       <td class="py-1.5 px-1.5">${n.peso_bruto ? formatarPeso(n.peso_bruto) : '-'}</td>
       <td class="py-1.5 px-1.5">${n.valor_total ? formatarMoeda(n.valor_total) : '-'}</td>
       <td class="py-1.5 px-1.5">${n.data_emissao ? formatarData(n.data_emissao) : '-'}</td>
+      <td class="py-1.5 px-1.5">${escapeHtml(n.placa_veiculo || '-')}</td>
+      <td class="py-1.5 px-1.5">${escapeHtml(n.nome_motorista || '-')}</td>
       <td class="py-1.5 px-1.5">
         <span class="rounded bg-painel-border px-1.5 py-0.5 text-[10px] uppercase text-slate-300">${escapeHtml(n.extraction_source)}</span>
         ${n.precisa_revisao ? '<span class="ml-1 rounded bg-red-900/40 px-1.5 py-0.5 text-[10px] text-red-300">conferir</span>' : ''}
@@ -66,7 +68,7 @@ function linhaTabela(n) {
 
 function renderizarTabela() {
   tabela.innerHTML = notas.map(linhaTabela).join('') ||
-    '<tr><td colspan="10" class="py-4 text-center text-slate-400">Nenhuma nota encontrada.</td></tr>';
+    '<tr><td colspan="12" class="py-4 text-center text-slate-400">Nenhuma nota encontrada.</td></tr>';
 
   tabela.querySelectorAll('.nf-chk-linha').forEach((chk) => {
     const id = Number(chk.closest('tr').dataset.id);
@@ -169,7 +171,7 @@ document.getElementById('btn-nf-vincular-continuar').addEventListener('click', a
 
   document.getElementById('nf-vincular-linhas').innerHTML = notasSelecionadas.map((n) => `
     <div class="rounded border border-painel-border p-2">
-      <p class="mb-1 text-xs text-slate-300">NF ${escapeHtml(n.numero_nf || '-')} - ${n.peso_bruto ? formatarPeso(n.peso_bruto) : 'sem peso'}</p>
+      <p class="mb-1 text-xs text-slate-300">NF ${escapeHtml(n.numero_nf || '-')} - ${escapeHtml(n.cliente_nome_cadastro || n.nome_destinatario || 'Cliente nao identificado')} - ${n.peso_bruto ? formatarPeso(n.peso_bruto) : 'sem peso'}</p>
       <select class="input-field nf-select-entrega" data-nota-id="${n.id}">${opcoesEntregas}</select>
     </div>
   `).join('');

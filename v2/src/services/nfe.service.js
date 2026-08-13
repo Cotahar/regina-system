@@ -16,12 +16,49 @@ const CAMPOS_VAZIOS = {
   nomeDestinatario: null,
   pesoBruto: null,
   valorTotal: null,
-  dataEmissao: null
+  dataEmissao: null,
+  placaVeiculo: null,
+  nomeMotorista: null
 };
 
 function numeroOuNulo(valor) {
   const n = Number(valor);
   return Number.isFinite(n) ? n : null;
+}
+
+// Guarda sempre como AAAA-MM-DD (sem hora) - dhEmi do XML vem com hora e fuso
+// (ex: "2024-06-15T10:30:00-03:00"), DANFE em PDF vem "dd/mm/aaaa", e sem
+// padronizar aqui a tela acaba mostrando formatos diferentes por nota.
+function normalizarData(valor) {
+  if (!valor) return null;
+  const iso = String(valor).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const br = String(valor).match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+  return null;
+}
+
+// Motorista nao e um campo padrao do schema da NF-e - quando aparece, e texto
+// livre nas informacoes complementares (infCpl), que tambem costuma ser
+// impressa na DANFE em PDF. Melhor esforco: para antes da proxima label
+// conhecida (TEL, PLACA, CPF...) em vez de so parar em numero/pontuacao,
+// senao um "MOTORISTA JOAO TEL 4799..." vira nome "JOAO TEL".
+const LABELS_SEGUINTES = 'TEL|FONE|CEL|CELULAR|PLACA|CPF|CNPJ|RG|CNH|OBS|OBSERVA|PEDIDO|NF|NOTA|CT-?E';
+function extrairMotoristaDeTexto(texto) {
+  if (!texto) return null;
+  const regex = new RegExp(
+    `MOTORISTA[:\\-\\s]+((?:(?!${LABELS_SEGUINTES})[A-ZÀ-ÖØ-Þa-zà-öø-ÿ]+\\s*){1,5})`,
+    'i'
+  );
+  const m = texto.match(regex);
+  return m ? m[1].trim() : null;
+}
+
+// Placa no formato antigo (ABC1234) ou Mercosul (ABC1D23).
+function extrairPlacaDeTexto(texto) {
+  if (!texto) return null;
+  const m = texto.match(/\b[A-Z]{3}[-\s]?\d[A-Z0-9]\d{2}\b/);
+  return m ? m[0].replace(/[-\s]/g, '').toUpperCase() : null;
 }
 
 // Extrai os dados da NF-e a partir do XML (schema padrao da Receita). Aceita
@@ -46,7 +83,7 @@ export function parseNFeXml(xmlText) {
   const numeroNFBruto = infNFe?.ide?.nNF;
   const numeroNF = numeroNFBruto !== undefined && numeroNFBruto !== null ? String(numeroNFBruto) : null;
 
-  const dataEmissao = infNFe?.ide?.dhEmi ?? infNFe?.ide?.dEmi ?? null;
+  const dataEmissao = normalizarData(infNFe?.ide?.dhEmi ?? infNFe?.ide?.dEmi);
 
   const cnpjEmitente = infNFe?.emit?.CNPJ ?? null;
   const nomeEmitente = infNFe?.emit?.xNome ?? null;
@@ -64,6 +101,12 @@ export function parseNFeXml(xmlText) {
     pesoBruto = soma > 0 ? soma : null;
   }
 
+  // Placa: campo estruturado (transp/veicTransp/placa), alta confianca.
+  // Motorista: nao existe campo proprio no layout - procura nas informacoes
+  // complementares (texto livre que a transportadora as vezes usa pra isso).
+  const placaVeiculo = infNFe?.transp?.veicTransp?.placa || null;
+  const nomeMotorista = extrairMotoristaDeTexto(infNFe?.infAdic?.infCpl);
+
   return {
     numeroNF,
     chaveAcesso: chaveAcesso || null,
@@ -73,7 +116,9 @@ export function parseNFeXml(xmlText) {
     nomeDestinatario,
     pesoBruto,
     valorTotal,
-    dataEmissao
+    dataEmissao,
+    placaVeiculo,
+    nomeMotorista
   };
 }
 
@@ -120,6 +165,8 @@ export function extractFromPdfText(texto) {
     nomeDestinatario: null,
     pesoBruto: pesoMatch ? decimalPtBr(pesoMatch[1]) : null,
     valorTotal: valorMatch ? decimalPtBr(valorMatch[1]) : null,
-    dataEmissao: dataMatch ? dataMatch[1] : null
+    dataEmissao: dataMatch ? normalizarData(dataMatch[1]) : null,
+    placaVeiculo: extrairPlacaDeTexto(texto),
+    nomeMotorista: extrairMotoristaDeTexto(texto)
   };
 }

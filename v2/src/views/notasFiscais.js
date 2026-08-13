@@ -38,6 +38,8 @@ export function renderNotasFiscaisPage() {
               <th class="pb-2">Peso</th>
               <th class="pb-2">Valor NF</th>
               <th class="pb-2">Emissao</th>
+              <th class="pb-2">Placa</th>
+              <th class="pb-2">Motorista</th>
               <th class="pb-2">Origem</th>
               <th class="pb-2">Status</th>
               <th class="pb-2 text-right">Arquivos</th>
