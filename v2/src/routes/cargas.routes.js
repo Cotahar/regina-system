@@ -198,7 +198,8 @@ cargasRouter.get('/api/cargas/:id', requireLogin, (req, res) => {
     grupo_id: e.grupo_id,
     local_coleta: e.local_coleta,
     valor_combinado: e.valor_combinado,
-    repasse_destinatario: e.repasse_destinatario
+    repasse_destinatario: e.repasse_destinatario,
+    data_agendamento_descarga: e.data_agendamento_descarga
   }));
 
   res.json({ detalhes_carga: detalhesCarga, entregas: entregasData });

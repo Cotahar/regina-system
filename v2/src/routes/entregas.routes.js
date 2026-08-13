@@ -146,7 +146,7 @@ entregasRouter.put('/api/entregas/:id', requireLogin, (req, res) => {
   const cortesiaForcada = 'is_cortesia' in data && data.is_cortesia;
   const camposSimples = [
     'remetente_id', 'peso_bruto', 'valor_frete', 'peso_cubado', 'nota_fiscal', 'cidade_entrega', 'estado_entrega',
-    'local_coleta', 'valor_combinado', 'repasse_destinatario', 'valor_tonelada'
+    'local_coleta', 'valor_combinado', 'repasse_destinatario', 'valor_tonelada', 'data_agendamento_descarga'
   ];
   const sets = [];
   const valores = [];

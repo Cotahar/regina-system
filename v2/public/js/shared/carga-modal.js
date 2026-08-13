@@ -1,7 +1,7 @@
 import { apiGet, apiPost, apiPut, apiDelete } from './api.js';
 import { escapeHtml } from './escape.js';
-import { formatarMoeda, formatarPeso, formatarDataParaInput, parseDecimal } from './format.js';
-import { abrirModal, fecharModal, exibirMensagem } from './ui.js';
+import { formatarMoeda, formatarPeso, formatarData, formatarDataParaInput, parseDecimal } from './format.js';
+import { abrirModal, fecharModal, exibirMensagem, ativarAutoResize } from './ui.js';
 import { criarCombobox } from './combobox.js';
 import { icones } from './icons.js';
 import { iconeMenuAcoes, criarMenuAcoes } from './menuAcoes.js';
@@ -9,6 +9,8 @@ import { aplicarMascaraDecimal } from './mask.js';
 
 ['det-frete-pago', 'add-peso', 'add-frete', 'edit-peso', 'edit-peso-cubado', 'edit-frete']
   .forEach((id) => aplicarMascaraDecimal(document.getElementById(id)));
+
+const ajustarAlturaObservacoes = ativarAutoResize(document.getElementById('det-observacoes'));
 
 const STATUS_CORES = {
   Pendente: 'bg-slate-500/20 text-slate-300',
@@ -100,6 +102,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     document.getElementById('det-data-finalizacao').value = formatarDataParaInput(c.data_finalizacao);
     document.getElementById('det-frete-pago').value = c.frete_pago ?? '';
     document.getElementById('det-observacoes').value = c.observacoes || '';
+    ajustarAlturaObservacoes();
 
     // So mostra o campo de data quando a carga ja chegou naquele estagio -
     // datas futuras/nao aplicaveis so confundem quem esta olhando.
@@ -158,8 +161,8 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     if (c.status === 'Pendente') {
       fluxo.appendChild(botao('Agendar', 'btn-primary', async () => {
         const campos = coletarCamposEditaveis();
-        if (!campos.motorista_id || !campos.veiculo_id || !campos.data_agendamento) {
-          return mostrarMensagem('Motorista, veiculo e data de agendamento sao obrigatorios.', 'erro');
+        if (!campos.data_agendamento) {
+          return mostrarMensagem('Data de agendamento e obrigatoria.', 'erro');
         }
         await atualizarStatus({
           motorista_id: campos.motorista_id,
@@ -276,20 +279,26 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     return ordem.map((chave) => ({ chave, itens: mapa.get(chave) }));
   }
 
-  // Icone compacto com tooltip nativo (title) resumindo o perfil do cliente -
-  // acesso rapido sem precisar abrir o cadastro pra ver se precisa agendar,
-  // se faz autodescarga, se precisa de ajudantes, etc.
-  function infoClienteIcone(e) {
-    const partes = [];
-    if (e.cliente_precisa_agendamento) partes.push('Precisa agendar entrega');
-    if (e.cliente_autodescarga) partes.push('Faz autodescarga');
-    if (e.cliente_precisa_ajudantes) partes.push('Precisa de ajudantes (chapas)');
-    if (e.cliente_descarga_paga_direto) partes.push('Descarga paga direto');
-    if (e.cliente_resolve_com_representante) partes.push('Resolver com representante');
-    if (e.cliente_contato_extra) partes.push(`Contato extra: ${e.cliente_contato_extra}`);
-    if (e.obs_cliente) partes.push(`Obs: ${e.obs_cliente}`);
-    if (!partes.length) return '';
-    return `<span class="ml-1 inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full bg-sky-900/40 text-[10px] font-bold text-sky-300" title="${escapeHtml(partes.join(' • '))}">i</span>`;
+  // Perfil do cliente sempre visivel (nao mais escondido atras de hover) -
+  // quem acompanha a carga pelo modal precisa ver de cara se precisa
+  // agendar descarga, sem precisar abrir o cadastro do cliente. Agendamento
+  // pendente vira um aviso chamativo; depois de preencher a data, vira uma
+  // confirmacao tranquila.
+  function perfilClienteLinha(e) {
+    const badges = [];
+    if (e.cliente_precisa_agendamento) {
+      badges.push(e.data_agendamento_descarga
+        ? `<span class="rounded bg-emerald-900/40 px-1.5 py-0.5 text-[10px] font-bold text-emerald-300">Agendado: ${escapeHtml(formatarData(e.data_agendamento_descarga))}</span>`
+        : '<span class="rounded bg-red-900/50 px-1.5 py-0.5 text-[10px] font-bold text-red-300">&#9888; Agendar descarga</span>');
+    }
+    if (e.cliente_autodescarga) badges.push('<span class="rounded bg-sky-900/40 px-1.5 py-0.5 text-[10px] text-sky-300">Descarga por conta do cliente</span>');
+    if (e.cliente_precisa_ajudantes) badges.push('<span class="rounded bg-sky-900/40 px-1.5 py-0.5 text-[10px] text-sky-300">Precisa de ajudantes</span>');
+    if (e.cliente_descarga_paga_direto) badges.push('<span class="rounded bg-sky-900/40 px-1.5 py-0.5 text-[10px] text-sky-300">Descarga paga direto</span>');
+    if (e.cliente_resolve_com_representante) badges.push('<span class="rounded bg-sky-900/40 px-1.5 py-0.5 text-[10px] text-sky-300">Resolver com representante</span>');
+    const obs = e.obs_cliente ? `<div class="mt-0.5 text-[10px] italic text-slate-400">Obs: ${escapeHtml(e.obs_cliente)}</div>` : '';
+    const contatoExtra = e.cliente_contato_extra ? `<div class="mt-0.5 text-[10px] text-slate-400">Contato extra: ${escapeHtml(e.cliente_contato_extra)}</div>` : '';
+    if (!badges.length && !obs && !contatoExtra) return '';
+    return `<div class="mt-1 flex flex-wrap gap-1">${badges.join('')}</div>${obs}${contatoExtra}`;
   }
 
   function formatarContato(ddd, telefone) {
@@ -306,7 +315,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       <tr class="border-t border-painel-border transition-colors ${classeGrupo} ${classeIndentada}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
         <td class="${py}"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
         <td class="${py}">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}</td>
-        <td class="${py}">${escapeHtml(e.razao_social)}${infoClienteIcone(e)}</td>
+        <td class="${py}">${escapeHtml(e.razao_social)}${perfilClienteLinha(e)}</td>
         <td class="${py}">${formatarContato(e.ddd, e.telefone)}</td>
         <td class="${py}">${escapeHtml(e.cidade)}-${escapeHtml(e.estado)}${e.local_coleta ? `<br><span class="text-[10px] text-slate-400">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
         <td class="${py}">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-900/40 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
@@ -337,6 +346,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
             ${escapeHtml(primeiro.razao_social)}
           </button>
           <span class="ml-1 rounded-full bg-blue-500/25 px-1.5 py-0.5 text-[10px] font-medium text-blue-200">${itens.length} notas</span>
+          ${perfilClienteLinha(primeiro)}
         </td>
         <td class="py-1.5">${formatarContato(primeiro.ddd, primeiro.telefone)}</td>
         <td class="py-1.5">${escapeHtml(primeiro.cidade)}-${escapeHtml(primeiro.estado)}</td>
@@ -433,6 +443,8 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     document.getElementById('edit-nf').value = e.nota_fiscal || '';
     document.getElementById('edit-local-coleta').value = e.local_coleta || '';
     document.getElementById('edit-cortesia').checked = !!e.is_cortesia;
+    document.getElementById('edit-agendamento-wrap').classList.toggle('hidden', !e.cliente_precisa_agendamento);
+    document.getElementById('edit-data-agendamento-descarga').value = formatarDataParaInput(e.data_agendamento_descarga);
     document.getElementById('edit-msg').classList.add('hidden');
     abrirModal(modalEditar);
   }
@@ -566,7 +578,8 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
         valor_frete: parseDecimal(document.getElementById('edit-frete').value),
         nota_fiscal: document.getElementById('edit-nf').value || null,
         local_coleta: document.getElementById('edit-local-coleta').value.trim() || null,
-        is_cortesia: document.getElementById('edit-cortesia').checked
+        is_cortesia: document.getElementById('edit-cortesia').checked,
+        data_agendamento_descarga: document.getElementById('edit-data-agendamento-descarga').value || null
       });
       fecharModal(modalEditar);
       await abrir(cargaAtual.id);

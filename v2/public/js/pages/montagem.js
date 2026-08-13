@@ -98,10 +98,13 @@ function linhaEntrega(e, indentada) {
   const agrupada = !!e.grupo_id;
   const classeGrupo = agrupada ? 'bg-destaque/5 border-l-2 border-l-destaque' : '';
   const classeIndentada = indentada ? 'bg-blue-500/10 border-l-4 border-l-blue-500/40' : '';
+  // Linhas que ja fazem parte do rascunho aberto ganham um tom diferente pra
+  // separar visualmente do que ainda esta so disponivel na pool.
+  const classeRascunho = e._rascunho ? 'bg-violet-500/10 border-l-4 border-l-violet-500/50' : '';
   return `
-    <tr class="border-t border-painel-border transition-colors ${classeGrupo} ${classeIndentada}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
+    <tr class="border-t border-painel-border transition-colors ${classeGrupo} ${classeIndentada} ${classeRascunho}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
       <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionados.has(e.id) ? 'checked' : ''}></td>
-      <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}</td>
+      <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}${e._rascunho ? ' <span class="rounded bg-violet-900/40 px-1 text-[10px] text-violet-300">rascunho</span>' : ''}</td>
       <td class="py-1.5">${escapeHtml(e.destinatario_nome)}</td>
       <td class="py-1.5">${escapeHtml(e.cidade_entrega || '')}-${escapeHtml(e.estado_entrega || '')}${e.local_coleta ? `<br><span class="text-[10px] text-slate-400">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
       <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-900/40 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
@@ -121,9 +124,12 @@ function linhaResumoGrupo(chave, itens, expandido) {
   const cubadoTotal = itens.reduce((acc, e) => acc + (e.peso_cubado || 0), 0);
   const freteTotal = itens.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
   const todosSelecionados = itens.every((e) => selecionados.has(e.id));
-  const corGrupo = expandido
-    ? 'bg-blue-500/15 border-l-4 border-l-blue-500'
-    : 'bg-blue-500/5 border-l-4 border-l-blue-500/40 hover:bg-blue-500/10';
+  const todosRascunho = itens.every((e) => e._rascunho);
+  const corGrupo = todosRascunho
+    ? 'bg-violet-500/10 border-l-4 border-l-violet-500/50'
+    : expandido
+      ? 'bg-blue-500/15 border-l-4 border-l-blue-500'
+      : 'bg-blue-500/5 border-l-4 border-l-blue-500/40 hover:bg-blue-500/10';
   return `
     <tr class="border-t border-painel-border transition-colors ${corGrupo}" data-grupo-visual="${escapeHtml(chave)}">
       <td class="py-1.5"><input type="checkbox" class="chk-grupo-visual" data-chave="${escapeHtml(chave)}" ${todosSelecionados ? 'checked' : ''}></td>
@@ -134,6 +140,7 @@ function linhaResumoGrupo(chave, itens, expandido) {
           ${escapeHtml(primeiro.destinatario_nome)}
         </button>
         <span class="ml-1 rounded-full bg-blue-500/25 px-1.5 py-0.5 text-[10px] font-medium text-blue-200">${itens.length} notas</span>
+        ${todosRascunho ? '<span class="ml-1 rounded bg-violet-900/40 px-1 text-[10px] text-violet-300">rascunho</span>' : ''}
       </td>
       <td class="py-1.5">${escapeHtml(primeiro.cidade_entrega || '')}-${escapeHtml(primeiro.estado_entrega || '')}</td>
       <td class="py-1.5 text-slate-400">-</td>
@@ -271,7 +278,8 @@ async function abrirRascunho(id) {
         remetente_uf: e.remetente_uf,
         is_cortesia: e.is_cortesia,
         grupo_id: e.grupo_id,
-        local_coleta: e.local_coleta
+        local_coleta: e.local_coleta,
+        _rascunho: true
       }))
     };
     origemInput.value = draftAtual.origem;

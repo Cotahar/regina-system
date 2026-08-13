@@ -13,8 +13,8 @@ function contatoTexto(perfil) {
 // confirmar.
 function perfilLinha(perfil) {
   const tags = [];
-  if (perfil.precisaAgendamento) tags.push('Precisa agendar');
-  if (perfil.autodescarga) tags.push('Autodescarga');
+  if (perfil.precisaAgendamento) tags.push('Descarga Agendada');
+  if (perfil.autodescarga) tags.push('Descarga por conta do cliente');
   if (perfil.precisaAjudantes) tags.push('Precisa de ajudantes');
   if (perfil.descargaPagaDireto) tags.push('Descarga paga direto');
   if (perfil.resolveComRepresentante) tags.push('Resolver com representante');
@@ -34,6 +34,9 @@ export function renderEspelhoCarga({ carga, entregasAgrupadas, coletasPorRemeten
     </tr>
   `).join('');
 
+  // Nos blocos de coleta so interessa localizar a entrega (cliente/cidade/
+  // contato) - o perfil de atendimento (agendamento, descarga, obs) so
+  // aparece na Lista de Entregas, pra nao duplicar a mesma informacao.
   const blocosColeta = coletasPorRemetente.map(([remetente, dados]) => `
     <div class="coleta">
       <h3>Coleta: ${escapeHtml(remetente)} <span class="peso-coleta">(${formatarPesoServidor(dados.totalPeso)})</span></h3>
@@ -42,7 +45,7 @@ export function renderEspelhoCarga({ carga, entregasAgrupadas, coletasPorRemeten
         <tbody>
           ${dados.entregas.map((e) => `
             <tr>
-              <td><strong>${escapeHtml(e.cliente)}</strong>${perfilLinha(e.perfil)}</td>
+              <td><strong>${escapeHtml(e.cliente)}</strong></td>
               <td>${escapeHtml(e.cidadeUf)}</td>
               <td>${contatoTexto(e.perfil)}</td>
               <td class="num">${formatarPesoServidor(e.peso)}</td>
@@ -123,15 +126,15 @@ export function renderEspelhoCarga({ carga, entregasAgrupadas, coletasPorRemeten
       <div class="item"><div class="rotulo">Data</div><div class="valor">${formatarDataServidor(new Date().toISOString())}</div></div>
     </div>
 
-    ${carga.observacoes ? `<div class="obs-carga"><div class="rotulo">Observacoes da carga</div><div class="texto">${escapeHtml(carga.observacoes)}</div></div>` : ''}
-
-    <h2>Entregas por destino <span class="peso-total">(peso total: ${formatarPesoServidor(pesoTotal)})</span></h2>
+    <h2>Lista de Entregas: <span class="peso-total">(peso total: ${formatarPesoServidor(pesoTotal)})</span></h2>
     <table>
       <thead><tr><th>Cliente</th><th>Cidade/UF</th><th>Contato</th><th class="num">Peso</th></tr></thead>
       <tbody>${linhasEntregas}</tbody>
     </table>
 
-    <h2>Coletas por remetente</h2>
+    ${carga.observacoes ? `<div class="obs-carga"><div class="rotulo">Observacoes da carga</div><div class="texto">${escapeHtml(carga.observacoes)}</div></div>` : ''}
+
+    <h2>Lista de Coletas: </h2>
     ${blocosColeta}
   </div>
 </body>

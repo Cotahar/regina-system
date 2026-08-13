@@ -106,7 +106,8 @@ CREATE TABLE IF NOT EXISTS entregas (
   grupo_id INTEGER,
   local_coleta TEXT,
   valor_combinado REAL,
-  repasse_destinatario TEXT
+  repasse_destinatario TEXT,
+  data_agendamento_descarga TEXT
 );
 
 CREATE TABLE IF NOT EXISTS avarias (

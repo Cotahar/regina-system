@@ -55,7 +55,7 @@ export function renderModalDetalhesCarga() {
 
         <div class="mt-3">
           <label class="mb-1 block text-xs font-semibold text-slate-300">Observacoes</label>
-          <textarea id="det-observacoes" class="input-field" rows="3" placeholder="Informacoes sobre a carga, combinados, avisos..."></textarea>
+          <textarea id="det-observacoes" class="input-field resize-none overflow-hidden" rows="3" placeholder="Informacoes sobre a carga, combinados, avisos..."></textarea>
         </div>
       </div>
 
@@ -128,6 +128,10 @@ export function renderModalDetalhesCarga() {
         <label class="label">Remetente</label>
         <input id="edit-remetente-input" class="input-field">
         <input type="hidden" id="edit-remetente-id">
+      </div>
+      <div id="edit-agendamento-wrap" class="mb-2 hidden rounded-md border border-amber-500/30 bg-amber-900/10 p-2">
+        <label class="label text-amber-300">Data agendamento descarga (controle interno)</label>
+        <input type="date" id="edit-data-agendamento-descarga" class="input-field">
       </div>
       <div class="mb-2 grid grid-cols-2 gap-2">
         <div>
