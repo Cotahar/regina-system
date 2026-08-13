@@ -263,8 +263,9 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
   function linhaEntrega(e, indentada) {
     const agrupada = !!e.grupo_id;
     const classeGrupo = agrupada ? 'bg-destaque/5 border-l-2 border-l-destaque' : '';
+    const classeIndentada = indentada ? 'bg-blue-50/60 border-l-4 border-l-blue-200' : '';
     return `
-      <tr class="border-t border-painel-border ${classeGrupo} ${indentada ? 'bg-painel-bg/20' : ''}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
+      <tr class="border-t border-painel-border transition-colors ${classeGrupo} ${classeIndentada}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
         <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
         <td class="py-1 text-center"><input type="radio" name="ultima-entrega" class="radio-ultima" ${e.is_last_delivery ? 'checked' : ''}></td>
         <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-100 px-1 text-[10px] text-amber-800">grupo</span>' : ''}</td>
@@ -285,22 +286,25 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     const pesoTotal = itens.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
     const freteTotal = itens.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
     const todosSelecionados = itens.every((e) => selecionadas.has(e.id));
+    const corGrupo = expandido
+      ? 'bg-blue-100 border-l-4 border-l-blue-500'
+      : 'bg-blue-50/70 border-l-4 border-l-blue-300 hover:bg-blue-100/70';
     return `
-      <tr class="border-t border-painel-border bg-painel-card/60" data-grupo-visual="${escapeHtml(chave)}">
+      <tr class="border-t border-painel-border transition-colors ${corGrupo}" data-grupo-visual="${escapeHtml(chave)}">
         <td class="py-1.5"><input type="checkbox" class="chk-grupo-visual" data-chave="${escapeHtml(chave)}" ${todosSelecionados ? 'checked' : ''}></td>
         <td class="py-1.5"></td>
         <td class="py-1.5">${remetenteTexto}</td>
         <td class="py-1.5">
-          <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-medium text-slate-900 hover:text-amber-700" data-chave="${escapeHtml(chave)}">
+          <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-semibold text-blue-900 hover:text-blue-700" data-chave="${escapeHtml(chave)}">
             <svg viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3 shrink-0 transition-transform ${expandido ? 'rotate-90' : ''}"><path d="M7 4l7 6-7 6V4z"/></svg>
             ${escapeHtml(primeiro.razao_social)}
           </button>
-          <span class="ml-1 rounded-full bg-painel-border px-1.5 py-0.5 text-[10px] text-slate-700">${itens.length} notas</span>
+          <span class="ml-1 rounded-full bg-blue-200 px-1.5 py-0.5 text-[10px] font-medium text-blue-900">${itens.length} notas</span>
         </td>
         <td class="py-1.5">${escapeHtml(primeiro.cidade)}-${escapeHtml(primeiro.estado)}</td>
         <td class="py-1.5 text-slate-500">-</td>
-        <td class="py-1.5 font-medium">${formatarPeso(pesoTotal)}</td>
-        <td class="py-1.5 font-medium">${formatarMoeda(freteTotal)}</td>
+        <td class="py-1.5 font-semibold text-blue-900">${formatarPeso(pesoTotal)}</td>
+        <td class="py-1.5 font-semibold text-blue-900">${formatarMoeda(freteTotal)}</td>
         <td class="py-1.5"></td>
       </tr>
     `;

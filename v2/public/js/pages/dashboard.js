@@ -19,9 +19,16 @@ function ordenarColuna(status, lista) {
   return [...lista].sort((a, b) => b.id - a.id);
 }
 
+const BORDA_STATUS = {
+  Pendente: 'border-l-slate-400 hover:border-l-slate-600',
+  Agendada: 'border-l-blue-400 hover:border-l-blue-600',
+  'Em Trânsito': 'border-l-amber-400 hover:border-l-amber-600'
+};
+
 function renderizarCard(c) {
+  const borda = BORDA_STATUS[c.status] || 'border-l-slate-400';
   return `
-    <div class="cursor-pointer rounded-md border border-painel-border bg-painel-bg p-3 text-sm hover:border-destaque" data-id="${c.id}" data-busca="${escapeHtml(`${c.codigo_carga} ${c.destino_principal} ${c.motorista_nome || ''} ${c.placa_veiculo || ''}`.toLowerCase())}">
+    <div class="cursor-pointer rounded-md border border-painel-border border-l-4 ${borda} bg-white p-3 text-sm shadow-sm transition-colors" data-id="${c.id}" data-busca="${escapeHtml(`${c.codigo_carga} ${c.destino_principal} ${c.motorista_nome || ''} ${c.placa_veiculo || ''}`.toLowerCase())}">
       <div class="flex items-center justify-between">
         <span class="font-semibold text-amber-700">${escapeHtml(c.codigo_carga)}</span>
         <span class="text-xs text-slate-600">${c.num_entregas} entrega(s)</span>

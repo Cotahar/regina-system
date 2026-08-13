@@ -12,11 +12,11 @@ export default {
         'brand-yellow-hover': '#EAB308',
         'brand-black': '#111827',
         'brand-dark': '#1F2937',
-        'brand-light': '#F9FAFB',
+        'brand-light': '#EEF1F6',
         painel: {
-          bg: '#F9FAFB',
+          bg: '#EEF1F6',
           card: '#FFFFFF',
-          border: '#E5E7EB'
+          border: '#E2E8F0'
         },
         destaque: '#FACC15'
       }
