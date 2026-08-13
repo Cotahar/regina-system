@@ -3,7 +3,7 @@ import { escapeHtml } from '../shared/escape.js';
 import { formatarMoeda, formatarPeso, parseDecimal } from '../shared/format.js';
 import { exibirMensagem } from '../shared/ui.js';
 import { criarCombobox } from '../shared/combobox.js';
-import { aplicarMascaraDecimal } from '../shared/mask.js';
+import { aplicarMascaraDecimal, formatarDecimalParaInput } from '../shared/mask.js';
 
 const cargaId = new URLSearchParams(window.location.search).get('carga_id');
 const msg = document.getElementById('ger-msg');
@@ -61,26 +61,26 @@ function linhaTabela(e) {
 
   return `
     <tr class="border-t border-painel-border ${classeGrupo}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
-      <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
-      <td class="py-1 pr-2">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}</td>
-      <td class="py-1 pr-2">${escapeHtml(e.cliente_nome)}</td>
-      <td class="py-1 pr-2"><input type="text" class="input-field campo-nf" value="${escapeHtml(e.nota_fiscal || '')}"></td>
-      <td class="py-1 pr-2"><select class="input-field campo-unidade">${opcoes(unidades, unidadeId)}</select></td>
-      <td class="py-1 pr-2"><select class="input-field campo-tipo-cte">${opcoes(tiposCte, tipoCteId)}</select></td>
-      <td class="py-1 pr-2"><input type="text" class="input-field campo-peso" value="${e.peso_bruto ?? ''}"></td>
-      <td class="py-1 pr-2"><input type="text" class="input-field campo-cubado" value="${e.peso_cubado ?? ''}"></td>
-      <td class="py-1 pr-2"><input type="text" class="input-field campo-ton" value="${e.valor_tonelada ?? ''}"></td>
-      <td class="py-1 pr-2"><input type="text" class="input-field campo-frete" value="${e.valor_frete ?? ''}" ${e.is_cortesia ? 'readonly' : ''}></td>
-      <td class="py-1 pr-2"><select class="input-field campo-forma">${opcoes(formasPagamento, formaId)}</select></td>
-      <td class="py-1 pr-2">
-        <select class="input-field campo-tipo-pgto">
+      <td class="py-1.5 px-1.5"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
+      <td class="py-1 px-1.5 max-w-[11rem] whitespace-normal break-words">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}</td>
+      <td class="py-1 px-1.5 max-w-[11rem] whitespace-normal break-words">${escapeHtml(e.cliente_nome)}</td>
+      <td class="py-1 px-1"><input type="text" class="input-cell campo-nf" value="${escapeHtml(e.nota_fiscal || '')}"></td>
+      <td class="py-1 px-1"><select class="input-cell campo-unidade">${opcoes(unidades, unidadeId)}</select></td>
+      <td class="py-1 px-1"><select class="input-cell campo-tipo-cte">${opcoes(tiposCte, tipoCteId)}</select></td>
+      <td class="py-1 px-1"><input type="text" class="input-cell campo-peso text-right" value="${formatarDecimalParaInput(e.peso_bruto)}"></td>
+      <td class="py-1 px-1"><input type="text" class="input-cell campo-cubado text-right" value="${formatarDecimalParaInput(e.peso_cubado)}"></td>
+      <td class="py-1 px-1"><input type="text" class="input-cell campo-ton text-right" value="${formatarDecimalParaInput(e.valor_tonelada)}"></td>
+      <td class="py-1 px-1"><input type="text" class="input-cell campo-frete text-right" value="${formatarDecimalParaInput(e.valor_frete)}" ${e.is_cortesia ? 'readonly' : ''}></td>
+      <td class="py-1 px-1"><select class="input-cell campo-forma">${opcoes(formasPagamento, formaId)}</select></td>
+      <td class="py-1 px-1">
+        <select class="input-cell campo-tipo-pgto">
           <option value="">-</option>
           <option value="Boleto" ${tipo === 'Boleto' ? 'selected' : ''}>Boleto</option>
           <option value="Transferencia" ${tipo === 'Transferencia' ? 'selected' : ''}>Transferencia</option>
         </select>
       </td>
-      <td class="py-1 pr-2 text-center"><input type="checkbox" class="campo-cortesia" ${e.is_cortesia ? 'checked' : ''}></td>
-      <td class="py-1 text-right"><button type="button" class="btn-secondary btn-repasse btn-sm">Repasse</button></td>
+      <td class="py-1 px-1.5 text-center"><input type="checkbox" class="campo-cortesia" ${e.is_cortesia ? 'checked' : ''}></td>
+      <td class="py-1 px-1.5 text-right"><button type="button" class="btn-secondary btn-repasse btn-sm">Repasse</button></td>
     </tr>
   `;
 }
@@ -101,7 +101,7 @@ function ligarCalculoFreteLinha(tr) {
     const ton = parseDecimal(tonInput.value) || 0;
     const pesoConsiderado = cubado > peso ? cubado : peso;
     if (pesoConsiderado > 0 && ton > 0) {
-      freteInput.value = ((pesoConsiderado / 1000) * ton).toFixed(2).replace('.', ',');
+      freteInput.value = formatarDecimalParaInput((pesoConsiderado / 1000) * ton);
     }
   };
 
@@ -109,7 +109,7 @@ function ligarCalculoFreteLinha(tr) {
 
   cortesiaChk.addEventListener('change', () => {
     freteInput.readOnly = cortesiaChk.checked;
-    if (cortesiaChk.checked) freteInput.value = '0,00';
+    if (cortesiaChk.checked) freteInput.value = formatarDecimalParaInput(0);
   });
 }
 

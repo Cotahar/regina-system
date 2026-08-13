@@ -1,5 +1,15 @@
 import { parseDecimal } from './format.js';
 
+// Formata um numero (ou string numerica) no padrao pt-BR de duas casas -
+// mesma formatacao usada no blur da mascara, reaproveitada tambem para
+// preencher campos editaveis ja formatados na primeira renderizacao (em vez
+// de mostrar o numero cru do banco, tipo "419.7").
+export function formatarDecimalParaInput(valor) {
+  if (valor === null || valor === undefined || valor === '') return '';
+  const numero = Number(valor);
+  return Number.isNaN(numero) ? '' : numero.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 // Mascara de input decimal (pt-BR: virgula como separador). Implementacao unica
 // que substitui as 3 versoes divergentes que existiam no sistema antigo
 // (script.js, consulta.js e gerenciar_carga.js).

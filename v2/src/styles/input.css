@@ -30,6 +30,12 @@
   .input-field-sm {
     @apply px-2.5 py-1 text-xs;
   }
+  /* Campo editavel dentro de uma tabela - sem "barra" visivel por padrao,
+     usa a propria celula. So mostra borda/fundo no hover/foco, pra caber
+     mais numero visivel em colunas estreitas. */
+  .input-cell {
+    @apply block w-full min-w-0 rounded border border-transparent bg-transparent px-1 py-1 text-xs text-slate-100 placeholder-slate-500 transition-colors hover:border-painel-border focus:border-brand-yellow focus:bg-painel-bg focus:outline-none focus:ring-1 focus:ring-brand-yellow disabled:opacity-50;
+  }
   .label {
     @apply mb-1 block text-xs font-medium text-slate-400;
   }
