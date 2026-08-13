@@ -21,7 +21,8 @@ const colunasNovas = [
   ['entregas', 'data_agendamento_descarga', 'TEXT'],
   ['veiculos', 'dados_pagamento', 'TEXT'],
   ['cargas', 'saldo_motorista', 'REAL'],
-  ['cargas', 'vale_pedagio_valor', 'TEXT']
+  ['cargas', 'vale_pedagio_valor', 'TEXT'],
+  ['clientes', 'cnpj', 'TEXT']
 ];
 
 export function aplicarPatches() {
@@ -34,4 +35,6 @@ export function aplicarPatches() {
     }
   }
   db.exec('CREATE INDEX IF NOT EXISTS idx_entregas_grupo_id ON entregas(grupo_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_clientes_cnpj ON clientes(cnpj)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_notas_fiscais_email_status ON notas_fiscais_email(status)');
 }

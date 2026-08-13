@@ -15,6 +15,7 @@ import { renderGerenciarCargaPage } from '../views/gerenciarCarga.js';
 import { renderPagamentoCargaPage } from '../views/pagamentoCarga.js';
 import { renderAvariasPage } from '../views/avarias.js';
 import { renderUsuariosPage } from '../views/usuarios.js';
+import { renderNotasFiscaisPage } from '../views/notasFiscais.js';
 
 export const pagesRouter = Router();
 
@@ -102,6 +103,16 @@ pagesRouter.get('/consulta.html', requireLogin, (req, res) => {
     user: req.session,
     bodyHtml: renderConsultaPage(),
     extraScripts: '<script type="module" src="/js/pages/consulta.js"></script>'
+  }));
+});
+
+pagesRouter.get('/notas-fiscais.html', requireLogin, (req, res) => {
+  res.type('html').send(renderLayout({
+    title: 'Notas Fiscais',
+    activeHref: '/notas-fiscais.html',
+    user: req.session,
+    bodyHtml: renderNotasFiscaisPage(),
+    extraScripts: '<script type="module" src="/js/pages/notas-fiscais.js"></script>'
   }));
 });
 

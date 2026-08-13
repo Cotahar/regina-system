@@ -28,6 +28,7 @@ export function renderClientesPage() {
             <tr>
               <th class="pb-2">Codigo</th>
               <th class="pb-2">Razao Social</th>
+              <th class="pb-2">CNPJ</th>
               <th class="pb-2">Cidade/UF</th>
               <th class="pb-2">Telefone</th>
               <th class="pb-2">Entregas</th>
@@ -55,6 +56,11 @@ export function renderClientesPage() {
         <div class="mb-3">
           <label class="label">Razao social</label>
           <input type="text" id="cliente-razao" class="input-field" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="label">CNPJ</label>
+          <input type="text" id="cliente-cnpj" class="input-field" placeholder="00.000.000/0000-00" maxlength="18">
         </div>
 
         <div class="mb-3 grid grid-cols-2 gap-3">

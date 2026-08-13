@@ -17,7 +17,9 @@ import { gerenciarCargaRouter } from './routes/gerenciarCarga.routes.js';
 import { pagamentoCargaRouter } from './routes/pagamentoCarga.routes.js';
 import { avariasRouter } from './routes/avarias.routes.js';
 import { usuariosRouter } from './routes/usuarios.routes.js';
+import { notasFiscaisRouter } from './routes/notasFiscais.routes.js';
 import { registrarClienteSSE, removerClienteSSE } from './services/eventos.js';
+import { iniciarPollingGmail } from './services/gmailImport.service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -67,6 +69,7 @@ app.use(gerenciarCargaRouter);
 app.use(pagamentoCargaRouter);
 app.use(avariasRouter);
 app.use(usuariosRouter);
+app.use(notasFiscaisRouter);
 app.use(pagesRouter);
 
 app.use((req, res) => {
@@ -82,4 +85,5 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Frottex - B. Nunes (v2) rodando em http://localhost:${PORT}`);
+  iniciarPollingGmail();
 });

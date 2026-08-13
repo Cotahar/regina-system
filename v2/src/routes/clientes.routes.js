@@ -11,6 +11,11 @@ function textoCliente(c) {
   return `${(c.razao_social || '').toUpperCase()} (${c.cidade || 'N/A'}-${c.estado || 'N/A'})`;
 }
 
+function normalizarCnpj(valor) {
+  const digitos = (valor || '').replace(/\D/g, '');
+  return digitos || null;
+}
+
 clientesRouter.get('/api/clientes/detalhes', requireLogin, (req, res) => {
   const clientes = db.prepare(`
     SELECT c.*, COUNT(e.id) as entregas_count
@@ -24,6 +29,7 @@ clientesRouter.get('/api/clientes/detalhes', requireLogin, (req, res) => {
     id: c.id,
     codigo_cliente: c.codigo_cliente,
     razao_social: c.razao_social,
+    cnpj: c.cnpj,
     telefone_completo: `(${c.ddd || ''}) ${c.telefone || ''}`.trim(),
     cidade: c.cidade,
     estado: c.estado,
@@ -49,6 +55,7 @@ clientesRouter.get('/api/clientes', requireLogin, (req, res) => {
   res.json(clientes.map((c) => ({
     id: c.id,
     text: textoCliente(c),
+    cnpj: c.cnpj,
     cidade: c.cidade,
     estado: c.estado,
     is_remetente: !!c.is_remetente,
@@ -74,14 +81,15 @@ clientesRouter.post('/api/clientes', requireLogin, (req, res) => {
 
   const info = db.prepare(`
     INSERT INTO clientes (
-      codigo_cliente, razao_social, ddd, telefone, cidade, estado, observacoes, is_remetente,
+      codigo_cliente, razao_social, cnpj, ddd, telefone, cidade, estado, observacoes, is_remetente,
       padrao_forma_pagamento_id, padrao_tipo_pagamento,
       autodescarga, precisa_ajudantes, descarga_paga_direto, precisa_agendamento, resolve_com_representante, contato_extra
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     codigo,
     razaoSocial,
+    normalizarCnpj(data.cnpj),
     data.ddd || null,
     data.telefone || null,
     (data.cidade || '').toUpperCase() || null,
@@ -108,13 +116,14 @@ clientesRouter.put('/api/clientes/:id', requireLogin, (req, res) => {
   const data = req.body || {};
   db.prepare(`
     UPDATE clientes SET
-      razao_social = ?, cidade = ?, estado = ?, ddd = ?, telefone = ?, observacoes = ?,
+      razao_social = ?, cnpj = ?, cidade = ?, estado = ?, ddd = ?, telefone = ?, observacoes = ?,
       is_remetente = ?, padrao_forma_pagamento_id = ?, padrao_tipo_pagamento = ?,
       autodescarga = ?, precisa_ajudantes = ?, descarga_paga_direto = ?, precisa_agendamento = ?,
       resolve_com_representante = ?, contato_extra = ?
     WHERE id = ?
   `).run(
     (data.razao_social || '').toUpperCase(),
+    normalizarCnpj(data.cnpj),
     (data.cidade || '').toUpperCase() || null,
     (data.estado || '').toUpperCase() || null,
     data.ddd || null,

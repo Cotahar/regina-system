@@ -50,11 +50,18 @@ function renderizar(lista) {
   paginacao.definirItens(lista);
 }
 
+function formatarCnpj(cnpj) {
+  const digitos = (cnpj || '').replace(/\D/g, '');
+  if (digitos.length !== 14) return cnpj || '';
+  return digitos.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+}
+
 function renderizarLinhas(lista) {
   tabela.innerHTML = lista.map((c) => `
     <tr class="border-t border-painel-border" data-id="${c.id}">
       <td class="py-2.5">${escapeHtml(c.codigo_cliente)}</td>
       <td class="py-2.5">${escapeHtml(c.razao_social)}</td>
+      <td class="py-2.5">${escapeHtml(formatarCnpj(c.cnpj))}</td>
       <td class="py-2.5">${escapeHtml(c.cidade || '')}-${escapeHtml(c.estado || '')}</td>
       <td class="py-2.5">${escapeHtml(c.telefone_completo)}</td>
       <td class="py-2.5">${c.entregas_count}</td>
@@ -64,7 +71,7 @@ function renderizarLinhas(lista) {
         <button class="btn-secondary btn-editar btn-sm">Editar</button>
       </td>
     </tr>
-  `).join('') || '<tr><td colspan="8" class="py-4 text-center text-slate-400">Nenhum cliente cadastrado.</td></tr>';
+  `).join('') || '<tr><td colspan="9" class="py-4 text-center text-slate-400">Nenhum cliente cadastrado.</td></tr>';
 
   tabela.querySelectorAll('.btn-editar').forEach((btn) => {
     btn.addEventListener('click', () => abrirEdicao(Number(btn.closest('tr').dataset.id)));
@@ -86,6 +93,7 @@ function abrirEdicao(id) {
   document.getElementById('cliente-codigo').value = c.codigo_cliente;
   document.getElementById('cliente-codigo').disabled = true;
   document.getElementById('cliente-razao').value = c.razao_social;
+  document.getElementById('cliente-cnpj').value = c.cnpj || '';
   document.getElementById('cliente-cidade').value = c.cidade || '';
   document.getElementById('cliente-estado').value = c.estado || '';
   document.getElementById('cliente-ddd').value = c.ddd || '';
@@ -117,6 +125,7 @@ form.addEventListener('submit', async (event) => {
   const payload = {
     codigo_cliente: document.getElementById('cliente-codigo').value.trim(),
     razao_social: document.getElementById('cliente-razao').value.trim(),
+    cnpj: document.getElementById('cliente-cnpj').value.trim(),
     cidade: document.getElementById('cliente-cidade').value.trim(),
     estado: document.getElementById('cliente-estado').value.trim(),
     ddd: document.getElementById('cliente-ddd').value.trim(),

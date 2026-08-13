@@ -6,6 +6,7 @@ const NAV_LINKS = [
   { href: '/', label: 'Painel', icone: navIcon('<path d="M3 10.5 10 4l7 6.5"/><path d="M5 9v7h10V9"/>') },
   { href: '/clientes.html', label: 'Clientes', icone: navIcon('<circle cx="7.5" cy="6.5" r="2.5"/><path d="M2.5 16c0-2.8 2.2-5 5-5s5 2.2 5 5"/><circle cx="14.5" cy="7.5" r="2"/><path d="M13 11.2c1.9.4 3.5 2 3.5 4.3"/>') },
   { href: '/montagem.html', label: 'Montagem', icone: navIcon('<path d="M10 2.5 17 6.5 10 10.5 3 6.5z"/><path d="M3 10.5 10 14.5 17 10.5"/><path d="M3 14 10 18l7-4"/>') },
+  { href: '/notas-fiscais.html', label: 'Notas Fiscais', icone: navIcon('<path d="M5 2.5h7l3 3v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-14a1 1 0 0 1 1-1z"/><path d="M12 2.5v3h3"/><path d="M6.5 10h7M6.5 12.5h7M6.5 15h4"/>') },
   { href: '/consulta.html', label: 'Consulta', icone: navIcon('<circle cx="8.5" cy="8.5" r="5.5"/><path d="M16.5 16.5 12.5 12.5"/>') },
   { href: '/avarias.html', label: 'Avarias', icone: navIcon('<path d="M10 3 18 17H2z"/><path d="M10 8.3v3.4"/><circle cx="10" cy="13.8" r="0.15" fill="currentColor" stroke="none"/>') }
 ];

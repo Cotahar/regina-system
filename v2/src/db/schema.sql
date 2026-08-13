@@ -56,7 +56,8 @@ CREATE TABLE IF NOT EXISTS clientes (
   descarga_paga_direto INTEGER NOT NULL DEFAULT 0,
   precisa_agendamento INTEGER NOT NULL DEFAULT 0,
   resolve_com_representante INTEGER NOT NULL DEFAULT 0,
-  contato_extra TEXT
+  contato_extra TEXT,
+  cnpj TEXT
 );
 
 CREATE TABLE IF NOT EXISTS marcas (
@@ -142,8 +143,37 @@ CREATE TABLE IF NOT EXISTS avaria_fotos (
   nome_original TEXT
 );
 
+CREATE TABLE IF NOT EXISTS notas_fiscais_email (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  gmail_message_id TEXT NOT NULL UNIQUE,
+  gmail_thread_id TEXT,
+  remetente_email TEXT,
+  assunto TEXT,
+  data_recebimento TEXT,
+  extraction_source TEXT NOT NULL DEFAULT 'xml',
+  numero_nf TEXT,
+  chave_acesso TEXT,
+  cnpj_emitente TEXT,
+  nome_emitente TEXT,
+  cnpj_destinatario TEXT,
+  nome_destinatario TEXT,
+  peso_bruto REAL,
+  valor_total REAL,
+  data_emissao TEXT,
+  remetente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
+  cliente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
+  xml_arquivo TEXT,
+  pdf_arquivo TEXT,
+  status TEXT NOT NULL DEFAULT 'pendente',
+  precisa_revisao INTEGER NOT NULL DEFAULT 0,
+  entrega_id INTEGER REFERENCES entregas(id) ON DELETE SET NULL,
+  observacoes TEXT,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE INDEX IF NOT EXISTS idx_entregas_carga_id ON entregas(carga_id);
 CREATE INDEX IF NOT EXISTS idx_entregas_cliente_id ON entregas(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_entregas_remetente_id ON entregas(remetente_id);
 CREATE INDEX IF NOT EXISTS idx_avarias_entrega_id ON avarias(entrega_id);
+CREATE INDEX IF NOT EXISTS idx_notas_fiscais_email_status ON notas_fiscais_email(status);
 CREATE INDEX IF NOT EXISTS idx_cargas_status ON cargas(status);
