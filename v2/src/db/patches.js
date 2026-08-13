@@ -18,7 +18,9 @@ const colunasNovas = [
   ['entregas', 'valor_combinado', 'REAL'],
   ['entregas', 'repasse_destinatario', 'TEXT'],
   ['veiculos', 'is_frota', 'INTEGER NOT NULL DEFAULT 0'],
-  ['entregas', 'data_agendamento_descarga', 'TEXT']
+  ['entregas', 'data_agendamento_descarga', 'TEXT'],
+  ['veiculos', 'dados_pagamento', 'TEXT'],
+  ['cargas', 'saldo_motorista', 'REAL']
 ];
 
 export function aplicarPatches() {

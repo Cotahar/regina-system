@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS motoristas (
 CREATE TABLE IF NOT EXISTS veiculos (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   placa TEXT NOT NULL UNIQUE,
-  is_frota INTEGER NOT NULL DEFAULT 0
+  is_frota INTEGER NOT NULL DEFAULT 0,
+  dados_pagamento TEXT
 );
 
 CREATE TABLE IF NOT EXISTS tipos_cte (
@@ -82,7 +83,8 @@ CREATE TABLE IF NOT EXISTS cargas (
   vale_pedagio_rota TEXT,
   vale_pedagio_eixos INTEGER,
   adiantamento_percentual REAL DEFAULT 70.0,
-  adiantamento_valor REAL
+  adiantamento_valor REAL,
+  saldo_motorista REAL
 );
 
 CREATE TABLE IF NOT EXISTS entregas (

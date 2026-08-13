@@ -44,6 +44,10 @@ export function renderVeiculosPage() {
         <label class="mb-4 flex items-center gap-2 text-sm text-slate-300">
           <input type="checkbox" id="veiculo-frota" class="h-4 w-4"> Veiculo da frota (nao terceirizado)
         </label>
+        <div class="mb-4">
+          <label class="label">Dados de pagamento (banco/agencia/conta/PIX)</label>
+          <textarea id="veiculo-dados-pagamento" class="input-field" rows="4" placeholder="Banco, agencia, conta, titular, PIX..."></textarea>
+        </div>
         <p id="msg-modal" class="mb-3 hidden text-sm"></p>
         <div class="flex justify-end gap-2">
           <button type="button" id="btn-cancelar" class="btn-secondary">Cancelar</button>

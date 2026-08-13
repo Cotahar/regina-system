@@ -59,6 +59,7 @@ function abrirEdicao(id) {
   document.getElementById('veiculo-id').value = veiculo.id;
   document.getElementById('veiculo-placa').value = veiculo.placa;
   document.getElementById('veiculo-frota').checked = !!veiculo.is_frota;
+  document.getElementById('veiculo-dados-pagamento').value = veiculo.dados_pagamento || '';
   document.getElementById('modal-titulo').textContent = 'Editar veiculo';
   msgModal.classList.add('hidden');
   abrirModal(modal);
@@ -81,7 +82,8 @@ form.addEventListener('submit', async (event) => {
   const id = document.getElementById('veiculo-id').value;
   const payload = {
     placa: document.getElementById('veiculo-placa').value.trim(),
-    is_frota: document.getElementById('veiculo-frota').checked
+    is_frota: document.getElementById('veiculo-frota').checked,
+    dados_pagamento: document.getElementById('veiculo-dados-pagamento').value.trim() || null
   };
   try {
     if (id) await apiPut(`/api/veiculos/${id}`, payload);

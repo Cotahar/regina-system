@@ -239,6 +239,12 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       window.open(`/avarias.html?carga_id=${c.id}`, '_blank');
     }, icones.alerta));
 
+    if (['Agendada', 'Em Trânsito'].includes(c.status) && c.motorista_id && c.veiculo_id) {
+      ferramentas.appendChild(botao('Envio de Pagamento', 'btn-secondary', () => {
+        window.open(`/pagamento-carga.html?carga_id=${c.id}`, '_blank');
+      }, icones.mensagem));
+    }
+
     ferramentas.appendChild(botao('Duplicar Carga', 'btn-secondary', async () => {
       if (!confirm('Duplicar esta carga? Um novo rascunho sera criado com as mesmas entregas (remetente, destinatario, peso, valor), sem motorista, veiculo ou numero de nota.')) return;
       try {

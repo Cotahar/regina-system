@@ -12,6 +12,7 @@ import { renderDashboardPage } from '../views/dashboard.js';
 import { renderMontagemPage } from '../views/montagem.js';
 import { renderConsultaPage } from '../views/consulta.js';
 import { renderGerenciarCargaPage } from '../views/gerenciarCarga.js';
+import { renderPagamentoCargaPage } from '../views/pagamentoCarga.js';
 import { renderAvariasPage } from '../views/avarias.js';
 import { renderUsuariosPage } from '../views/usuarios.js';
 
@@ -129,5 +130,14 @@ pagesRouter.get('/gerenciar-carga.html', requireLogin, (req, res) => {
     user: req.session,
     bodyHtml: renderGerenciarCargaPage(),
     extraScripts: '<script type="module" src="/js/pages/gerenciar-carga.js"></script>'
+  }));
+});
+
+pagesRouter.get('/pagamento-carga.html', requireLogin, (req, res) => {
+  res.type('html').send(renderLayout({
+    title: 'Envio de Pagamento',
+    user: req.session,
+    bodyHtml: renderPagamentoCargaPage(),
+    extraScripts: '<script type="module" src="/js/pages/pagamento-carga.js"></script>'
   }));
 });

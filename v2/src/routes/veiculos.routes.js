@@ -13,11 +13,12 @@ veiculosRouter.get('/api/veiculos', requireLogin, (req, res) => {
 });
 
 veiculosRouter.post('/api/veiculos', requireLogin, requireAdmin, (req, res) => {
-  const { placa, is_frota: isFrota } = req.body || {};
+  const { placa, is_frota: isFrota, dados_pagamento: dadosPagamento } = req.body || {};
   const placaLimpa = (placa || '').trim().toUpperCase().replace(/-/g, '');
   if (!placaLimpa) return res.status(400).json({ error: 'Placa e obrigatoria' });
   try {
-    const info = db.prepare('INSERT INTO veiculos (placa, is_frota) VALUES (?, ?)').run(placaLimpa, isFrota ? 1 : 0);
+    const info = db.prepare('INSERT INTO veiculos (placa, is_frota, dados_pagamento) VALUES (?, ?, ?)')
+      .run(placaLimpa, isFrota ? 1 : 0, dadosPagamento || null);
     res.status(201).json({ message: 'Veiculo cadastrado!', id: Number(info.lastInsertRowid) });
   } catch {
     res.status(409).json({ error: 'Placa ja cadastrada' });
@@ -25,13 +26,14 @@ veiculosRouter.post('/api/veiculos', requireLogin, requireAdmin, (req, res) => {
 });
 
 veiculosRouter.put('/api/veiculos/:id', requireLogin, requireAdmin, (req, res) => {
-  const { placa, is_frota: isFrota } = req.body || {};
+  const { placa, is_frota: isFrota, dados_pagamento: dadosPagamento } = req.body || {};
   const placaLimpa = (placa || '').trim().toUpperCase().replace(/-/g, '');
   if (!placaLimpa) return res.status(400).json({ error: 'Placa e obrigatoria' });
   const existente = db.prepare('SELECT id FROM veiculos WHERE id = ?').get(req.params.id);
   if (!existente) return res.status(404).json({ error: 'Veiculo nao encontrado' });
   try {
-    db.prepare('UPDATE veiculos SET placa = ?, is_frota = ? WHERE id = ?').run(placaLimpa, isFrota ? 1 : 0, req.params.id);
+    db.prepare('UPDATE veiculos SET placa = ?, is_frota = ?, dados_pagamento = ? WHERE id = ?')
+      .run(placaLimpa, isFrota ? 1 : 0, dadosPagamento || null, req.params.id);
     res.json({ message: 'Veiculo atualizado!' });
   } catch {
     res.status(409).json({ error: 'Placa ja cadastrada em outro veiculo' });
