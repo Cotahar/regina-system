@@ -7,13 +7,7 @@ export function renderModalDetalhesCarga() {
           <h2 class="text-lg font-semibold"><span id="det-codigo"></span> <span id="det-status-badge" class="ml-2 rounded px-2 py-0.5 text-xs"></span></h2>
           <p class="text-sm text-slate-400">Origem: <span id="det-origem"></span></p>
         </div>
-        <div class="flex items-start gap-3">
-          <div class="rounded-lg border border-painel-border bg-painel-bg/40 px-3 py-1.5 text-right text-xs text-slate-400">
-            <p>Peso total: <span class="font-semibold text-slate-100" id="det-total-peso">0,00 kg</span></p>
-            <p>Frete total: <span class="font-semibold text-slate-100" id="det-total-frete">R$ 0,00</span></p>
-          </div>
-          <button type="button" id="btn-fechar-detalhes" class="text-slate-400 hover:text-slate-100">&#10005;</button>
-        </div>
+        <button type="button" id="btn-fechar-detalhes" class="text-slate-400 hover:text-slate-100">&#10005;</button>
       </div>
 
       <div class="rounded-lg border border-painel-border bg-painel-bg/40 p-4">
@@ -48,6 +42,14 @@ export function renderModalDetalhesCarga() {
           <div data-estagio="finalizacao">
             <label class="label">Data finalizacao</label>
             <input type="date" id="det-data-finalizacao" class="input-field">
+          </div>
+          <div>
+            <label class="label">Peso total</label>
+            <input type="text" id="det-total-peso" class="input-field" readonly>
+          </div>
+          <div>
+            <label class="label">Valor total</label>
+            <input type="text" id="det-total-frete" class="input-field" readonly>
           </div>
         </div>
 

@@ -328,8 +328,8 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
   function renderizarTotais() {
     const pesoTotal = entregasAtuais.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
     const freteTotal = entregasAtuais.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
-    document.getElementById('det-total-peso').textContent = formatarPeso(pesoTotal);
-    document.getElementById('det-total-frete').textContent = formatarMoeda(freteTotal);
+    document.getElementById('det-total-peso').value = formatarPeso(pesoTotal);
+    document.getElementById('det-total-frete').value = formatarMoeda(freteTotal);
   }
 
   function renderizarTabelaEntregas() {
