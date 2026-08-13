@@ -13,10 +13,13 @@ export default {
         'brand-black': '#111827',
         'brand-dark': '#1F2937',
         'brand-light': '#EEF1F6',
+        // Tema escuro: elevacao por camadas de luminosidade (nao por sombra,
+        // que some no escuro) - pesquisa de dark mode 2026. Nada de preto
+        // puro nem branco puro, pra nao cansar a vista.
         painel: {
-          bg: '#EEF1F6',
-          card: '#FFFFFF',
-          border: '#E2E8F0'
+          bg: '#0F1520',
+          card: '#1B2434',
+          border: '#334155'
         },
         destaque: '#FACC15'
       }

@@ -21,7 +21,7 @@ function renderizar() {
       <td class="py-2.5">${escapeHtml(m.nome)}</td>
       ${isAdmin ? `<td class="py-2.5 text-right">${iconeMenuAcoes()}</td>` : ''}
     </tr>
-  `).join('') || '<tr><td colspan="2" class="py-4 text-center text-slate-500">Nenhuma marca cadastrada.</td></tr>';
+  `).join('') || '<tr><td colspan="2" class="py-4 text-center text-slate-400">Nenhuma marca cadastrada.</td></tr>';
 
   if (!isAdmin) return;
   tabela.querySelectorAll('tr[data-id]').forEach((tr) => {

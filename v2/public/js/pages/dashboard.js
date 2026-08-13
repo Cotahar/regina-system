@@ -28,14 +28,14 @@ const BORDA_STATUS = {
 function renderizarCard(c) {
   const borda = BORDA_STATUS[c.status] || 'border-l-slate-400';
   return `
-    <div class="cursor-pointer rounded-md border border-painel-border border-l-4 ${borda} bg-white p-3 text-sm shadow-sm transition-colors" data-id="${c.id}" data-busca="${escapeHtml(`${c.codigo_carga} ${c.destino_principal} ${c.motorista_nome || ''} ${c.placa_veiculo || ''}`.toLowerCase())}">
+    <div class="cursor-pointer rounded-md border border-painel-border border-l-4 ${borda} bg-painel-card p-3 text-sm shadow-md shadow-black/20 transition-colors hover:bg-white/[0.03]" data-id="${c.id}" data-busca="${escapeHtml(`${c.codigo_carga} ${c.destino_principal} ${c.motorista_nome || ''} ${c.placa_veiculo || ''}`.toLowerCase())}">
       <div class="flex items-center justify-between">
-        <span class="font-semibold text-amber-700">${escapeHtml(c.codigo_carga)}</span>
-        <span class="text-xs text-slate-600">${c.num_entregas} entrega(s)</span>
+        <span class="font-semibold text-brand-yellow">${escapeHtml(c.codigo_carga)}</span>
+        <span class="text-xs text-slate-400">${c.num_entregas} entrega(s)</span>
       </div>
-      <p class="mt-1 text-slate-700">${escapeHtml(c.origem)} &rarr; ${escapeHtml(c.destino_principal)}</p>
-      <p class="mt-1 text-xs text-slate-600">${escapeHtml(c.motorista_nome || 'Sem motorista')} ${c.placa_veiculo ? '- ' + escapeHtml(c.placa_veiculo) : ''}</p>
-      <p class="mt-1 text-xs text-slate-600">${formatarPeso(c.peso_total)} - ${formatarMoeda(c.valor_frete_total)}</p>
+      <p class="mt-1 text-slate-300">${escapeHtml(c.origem)} &rarr; ${escapeHtml(c.destino_principal)}</p>
+      <p class="mt-1 text-xs text-slate-400">${escapeHtml(c.motorista_nome || 'Sem motorista')} ${c.placa_veiculo ? '- ' + escapeHtml(c.placa_veiculo) : ''}</p>
+      <p class="mt-1 text-xs text-slate-400">${formatarPeso(c.peso_total)} - ${formatarMoeda(c.valor_frete_total)}</p>
       ${linhaData(c)}
     </div>
   `;
@@ -46,12 +46,12 @@ function renderizarCard(c) {
 // transito, por exemplo.
 function linhaData(c) {
   if (c.status === 'Agendada' && c.data_agendamento) {
-    return `<p class="mt-1 text-xs text-slate-500">Agendado: ${formatarData(c.data_agendamento)}</p>`;
+    return `<p class="mt-1 text-xs text-slate-400">Agendado: ${formatarData(c.data_agendamento)}</p>`;
   }
   if (c.status === 'Em Trânsito') {
     return `
-      ${c.data_carregamento ? `<p class="mt-1 text-xs text-slate-500">Carregado: ${formatarData(c.data_carregamento)}</p>` : ''}
-      ${c.previsao_entrega ? `<p class="mt-1 text-xs text-slate-500">Previsao: ${formatarData(c.previsao_entrega)}</p>` : ''}
+      ${c.data_carregamento ? `<p class="mt-1 text-xs text-slate-400">Carregado: ${formatarData(c.data_carregamento)}</p>` : ''}
+      ${c.previsao_entrega ? `<p class="mt-1 text-xs text-slate-400">Previsao: ${formatarData(c.previsao_entrega)}</p>` : ''}
     `;
   }
   return '';
@@ -62,7 +62,7 @@ function renderizarColunas() {
     const status = container.dataset.coluna;
     const itens = ordenarColuna(status, cargas.filter((c) => c.status === status));
     container.innerHTML = itens.map(renderizarCard).join('') ||
-      '<p class="py-3 text-center text-xs text-slate-500">Nenhuma carga.</p>';
+      '<p class="py-3 text-center text-xs text-slate-400">Nenhuma carga.</p>';
 
     const contador = document.querySelector(`[data-contador="${status}"]`);
     if (contador) contador.textContent = itens.length;

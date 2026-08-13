@@ -16,7 +16,7 @@ let entregas = [];
 const selecionadas = new Set();
 
 if (!cargaId) {
-  document.body.innerHTML = '<p class="p-6 text-red-600">carga_id nao informado na URL.</p>';
+  document.body.innerHTML = '<p class="p-6 text-red-400">carga_id nao informado na URL.</p>';
   throw new Error('carga_id ausente');
 }
 
@@ -58,7 +58,7 @@ function linhaTabela(e) {
   return `
     <tr class="border-t border-painel-border ${classeGrupo}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
       <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
-      <td class="py-1 pr-2">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-100 px-1 text-[10px] text-amber-800">grupo</span>' : ''}</td>
+      <td class="py-1 pr-2">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}</td>
       <td class="py-1 pr-2">${escapeHtml(e.cliente_nome)}</td>
       <td class="py-1 pr-2"><input type="text" class="input-field campo-nf" value="${escapeHtml(e.nota_fiscal || '')}"></td>
       <td class="py-1 pr-2"><select class="input-field campo-unidade">${opcoes(unidades, unidadeId)}</select></td>
@@ -110,7 +110,7 @@ function ligarCalculoFreteLinha(tr) {
 function renderizarTabela() {
   const tbody = document.getElementById('ger-tabela');
   tbody.innerHTML = entregas.map(linhaTabela).join('') ||
-    '<tr><td colspan="14" class="py-3 text-center text-slate-500">Nenhuma entrega nesta carga.</td></tr>';
+    '<tr><td colspan="14" class="py-3 text-center text-slate-400">Nenhuma entrega nesta carga.</td></tr>';
 
   tbody.querySelectorAll('tr[data-id]').forEach((tr) => {
     ligarCalculoFreteLinha(tr);

@@ -47,29 +47,30 @@ export function renderLayout({ title, bodyHtml, user, activeHref = '', extraHead
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${escapeHtml(title)} - Regina System</title>
+  <title>${escapeHtml(title)} - Frottex - B. Nunes</title>
   <link rel="stylesheet" href="/css/output.css">
   ${extraHead}
 </head>
-<body class="bg-brand-light text-slate-900">
+<body>
   <div class="flex min-h-screen">
     <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 -translate-x-full transform overflow-y-auto border-r border-gray-800 bg-brand-black p-3 transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0">
-      <div class="mb-4 flex items-center gap-2 px-3 py-2">
-        <span class="text-lg font-bold leading-tight text-brand-yellow">Regina System</span>
+      <div class="mb-4 flex flex-col gap-0 px-3 py-2">
+        <span class="text-lg font-bold leading-tight text-brand-yellow">Frottex</span>
+        <span class="text-xs leading-tight text-gray-400">B. Nunes &middot; Gestao de Cargas</span>
       </div>
       <nav>${navHtml}${adminHtml}</nav>
     </aside>
     <div id="sidebar-overlay" class="fixed inset-0 z-20 hidden bg-slate-900/40 lg:hidden"></div>
     <div class="flex min-h-screen min-w-0 flex-1 flex-col">
-      <header class="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <button type="button" id="btn-abrir-menu" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden">
+      <header class="sticky top-0 z-10 flex items-center justify-between border-b border-painel-border bg-painel-card px-4 py-3 shadow-lg shadow-black/20">
+        <button type="button" id="btn-abrir-menu" class="rounded-lg p-2 text-slate-400 hover:bg-white/5 lg:hidden">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
         </button>
         <div class="ml-auto flex items-center gap-3">
           <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-black text-sm font-bold text-brand-yellow">${escapeHtml(iniciais)}</span>
           <div class="hidden text-right sm:block">
-            <p class="text-sm font-medium text-slate-900">${escapeHtml(user?.userName || '')}</p>
-            <p class="text-xs text-slate-500">${escapeHtml(user?.permissao || '')}</p>
+            <p class="text-sm font-medium text-slate-100">${escapeHtml(user?.userName || '')}</p>
+            <p class="text-xs text-slate-400">${escapeHtml(user?.permissao || '')}</p>
           </div>
           <a href="/logout" class="btn-secondary btn-sm">Sair</a>
         </div>

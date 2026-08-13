@@ -50,7 +50,7 @@ async function buscar(pagina = 1) {
 function renderizarResultados(lista) {
   const tbody = document.getElementById('tabela-resultados');
   tbody.innerHTML = lista.map((c) => `
-    <tr class="cursor-pointer border-t border-painel-border hover:bg-amber-50" data-id="${c.id}">
+    <tr class="cursor-pointer border-t border-painel-border hover:bg-brand-yellow/10" data-id="${c.id}">
       <td class="py-2 font-medium text-amber-700">${escapeHtml(c.codigo_carga)}</td>
       <td class="py-2.5">${escapeHtml(c.status)}</td>
       <td class="py-2.5">${escapeHtml(c.origem)}</td>
@@ -60,7 +60,7 @@ function renderizarResultados(lista) {
       <td class="py-2.5">${formatarPeso(c.peso_total)}</td>
       <td class="py-2.5">${c.data_finalizacao ? formatarData(c.data_finalizacao) : '-'}</td>
     </tr>
-  `).join('') || '<tr><td colspan="8" class="py-4 text-center text-slate-500">Nenhuma carga encontrada.</td></tr>';
+  `).join('') || '<tr><td colspan="8" class="py-4 text-center text-slate-400">Nenhuma carga encontrada.</td></tr>';
 
   tbody.querySelectorAll('tr[data-id]').forEach((tr) => {
     tr.addEventListener('click', () => modalDetalhes.abrir(Number(tr.dataset.id)));
@@ -70,12 +70,12 @@ function renderizarResultados(lista) {
 function renderizarPaginacao(paginaAtual, totalPaginas, totalResultados) {
   const container = document.getElementById('paginacao');
   if (totalPaginas <= 1) {
-    container.innerHTML = `<span class="text-xs text-slate-500">${totalResultados} resultado(s)</span>`;
+    container.innerHTML = `<span class="text-xs text-slate-400">${totalResultados} resultado(s)</span>`;
     return;
   }
   container.innerHTML = `
     <button type="button" id="btn-anterior" class="btn-secondary btn-sm" ${paginaAtual <= 1 ? 'disabled' : ''}>&larr; Anterior</button>
-    <span class="text-xs text-slate-600">Pagina ${paginaAtual} de ${totalPaginas} (${totalResultados} resultado(s))</span>
+    <span class="text-xs text-slate-400">Pagina ${paginaAtual} de ${totalPaginas} (${totalResultados} resultado(s))</span>
     <button type="button" id="btn-proxima" class="btn-secondary btn-sm" ${paginaAtual >= totalPaginas ? 'disabled' : ''}>Proxima &rarr;</button>
   `;
   document.getElementById('btn-anterior')?.addEventListener('click', () => buscar(paginaAtual - 1));

@@ -49,14 +49,14 @@ function agruparParaExibicao(entregas) {
 function linhaEntrega(e, indentada) {
   const agrupada = !!e.grupo_id;
   const classeGrupo = agrupada ? 'bg-destaque/5 border-l-2 border-l-destaque' : '';
-  const classeIndentada = indentada ? 'bg-blue-50/60 border-l-4 border-l-blue-200' : '';
+  const classeIndentada = indentada ? 'bg-blue-500/10 border-l-4 border-l-blue-500/40' : '';
   return `
     <tr class="border-t border-painel-border transition-colors ${classeGrupo} ${classeIndentada}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
       <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionados.has(e.id) ? 'checked' : ''}></td>
-      <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-100 px-1 text-[10px] text-amber-800">grupo</span>' : ''}</td>
+      <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}</td>
       <td class="py-1.5">${escapeHtml(e.destinatario_nome)}</td>
-      <td class="py-1.5">${escapeHtml(e.cidade_entrega || '')}-${escapeHtml(e.estado_entrega || '')}${e.local_coleta ? `<br><span class="text-[10px] text-slate-500">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
-      <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-100 px-1 text-[10px] text-emerald-800">cortesia</span>' : ''}</td>
+      <td class="py-1.5">${escapeHtml(e.cidade_entrega || '')}-${escapeHtml(e.estado_entrega || '')}${e.local_coleta ? `<br><span class="text-[10px] text-slate-400">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
+      <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-900/40 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
       <td class="py-1.5">${formatarPeso(e.peso_bruto)}</td>
       <td class="py-1.5">${formatarPeso(e.peso_cubado)}</td>
       <td class="py-1.5">${formatarMoeda(e.valor_frete)}</td>
@@ -67,31 +67,31 @@ function linhaEntrega(e, indentada) {
 
 function linhaResumoGrupo(chave, itens, expandido) {
   const remetentes = new Set(itens.map((e) => e.remetente_nome));
-  const remetenteTexto = remetentes.size === 1 ? escapeHtml([...remetentes][0]) : '<span class="italic text-slate-500">Varios</span>';
+  const remetenteTexto = remetentes.size === 1 ? escapeHtml([...remetentes][0]) : '<span class="italic text-slate-400">Varios</span>';
   const primeiro = itens[0];
   const pesoTotal = itens.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
   const cubadoTotal = itens.reduce((acc, e) => acc + (e.peso_cubado || 0), 0);
   const freteTotal = itens.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
   const todosSelecionados = itens.every((e) => selecionados.has(e.id));
   const corGrupo = expandido
-    ? 'bg-blue-100 border-l-4 border-l-blue-500'
-    : 'bg-blue-50/70 border-l-4 border-l-blue-300 hover:bg-blue-100/70';
+    ? 'bg-blue-500/15 border-l-4 border-l-blue-500'
+    : 'bg-blue-500/5 border-l-4 border-l-blue-500/40 hover:bg-blue-500/10';
   return `
     <tr class="border-t border-painel-border transition-colors ${corGrupo}" data-grupo-visual="${escapeHtml(chave)}">
       <td class="py-1.5"><input type="checkbox" class="chk-grupo-visual" data-chave="${escapeHtml(chave)}" ${todosSelecionados ? 'checked' : ''}></td>
       <td class="py-1.5">${remetenteTexto}</td>
       <td class="py-1.5">
-        <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-semibold text-blue-900 hover:text-blue-700" data-chave="${escapeHtml(chave)}">
+        <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-semibold text-blue-300 hover:text-blue-200" data-chave="${escapeHtml(chave)}">
           <svg viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3 shrink-0 transition-transform ${expandido ? 'rotate-90' : ''}"><path d="M7 4l7 6-7 6V4z"/></svg>
           ${escapeHtml(primeiro.destinatario_nome)}
         </button>
-        <span class="ml-1 rounded-full bg-blue-200 px-1.5 py-0.5 text-[10px] font-medium text-blue-900">${itens.length} notas</span>
+        <span class="ml-1 rounded-full bg-blue-500/25 px-1.5 py-0.5 text-[10px] font-medium text-blue-200">${itens.length} notas</span>
       </td>
       <td class="py-1.5">${escapeHtml(primeiro.cidade_entrega || '')}-${escapeHtml(primeiro.estado_entrega || '')}</td>
-      <td class="py-1.5 text-slate-500">-</td>
-      <td class="py-1.5 font-semibold text-blue-900">${formatarPeso(pesoTotal)}</td>
-      <td class="py-1.5 font-semibold text-blue-900">${formatarPeso(cubadoTotal)}</td>
-      <td class="py-1.5 font-semibold text-blue-900">${formatarMoeda(freteTotal)}</td>
+      <td class="py-1.5 text-slate-400">-</td>
+      <td class="py-1.5 font-semibold text-blue-300">${formatarPeso(pesoTotal)}</td>
+      <td class="py-1.5 font-semibold text-blue-300">${formatarPeso(cubadoTotal)}</td>
+      <td class="py-1.5 font-semibold text-blue-300">${formatarMoeda(freteTotal)}</td>
       <td class="py-1.5"></td>
     </tr>
   `;
@@ -111,7 +111,7 @@ function renderizarTabela() {
     if (itens.length === 1) return linhaEntrega(itens[0], false);
     const expandido = gruposExpandidos.has(chave);
     return linhaResumoGrupo(chave, itens, expandido) + (expandido ? itens.map((e) => linhaEntrega(e, true)).join('') : '');
-  }).join('') || '<tr><td colspan="9" class="py-3 text-center text-slate-500">Nenhuma entrega disponivel.</td></tr>';
+  }).join('') || '<tr><td colspan="9" class="py-3 text-center text-slate-400">Nenhuma entrega disponivel.</td></tr>';
 
   tabela.querySelectorAll('tr[data-id]').forEach((tr) => {
     const id = Number(tr.dataset.id);
@@ -173,7 +173,7 @@ function renderizarRascunhos() {
     <div class="flex items-center justify-between rounded border border-painel-border p-2" data-id="${r.id}">
       <div>
         <p class="font-medium">${escapeHtml(r.codigo_carga)}</p>
-        <p class="text-xs text-slate-600">${escapeHtml(r.origem)} - ${r.num_entregas} entrega(s)</p>
+        <p class="text-xs text-slate-400">${escapeHtml(r.origem)} - ${r.num_entregas} entrega(s)</p>
       </div>
       <div class="flex gap-1">
         <button type="button" class="btn-secondary btn-abrir btn-sm">Abrir</button>
@@ -181,7 +181,7 @@ function renderizarRascunhos() {
         <button type="button" class="btn-danger btn-excluir btn-sm">X</button>
       </div>
     </div>
-  `).join('') || '<p class="text-xs text-slate-500">Nenhum rascunho salvo.</p>';
+  `).join('') || '<p class="text-xs text-slate-400">Nenhum rascunho salvo.</p>';
 
   container.querySelectorAll('[data-id]').forEach((div) => {
     const id = Number(div.dataset.id);

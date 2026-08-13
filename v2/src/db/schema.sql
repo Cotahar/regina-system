@@ -1,4 +1,4 @@
--- Schema do Regina System (v2) - SQLite via node:sqlite
+-- Schema do Frottex - B. Nunes (v2) - SQLite via node:sqlite
 
 CREATE TABLE IF NOT EXISTS usuarios (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

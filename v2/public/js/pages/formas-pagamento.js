@@ -12,7 +12,7 @@ async function carregar() {
       <span>${escapeHtml(f.descricao)}</span>
       <button class="btn-danger btn-excluir btn-sm">Excluir</button>
     </li>
-  `).join('') || '<li class="py-4 text-center text-slate-500">Nenhuma forma de pagamento cadastrada.</li>';
+  `).join('') || '<li class="py-4 text-center text-slate-400">Nenhuma forma de pagamento cadastrada.</li>';
 
   lista.querySelectorAll('.btn-excluir').forEach((btn) => {
     btn.addEventListener('click', async () => {

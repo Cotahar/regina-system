@@ -33,7 +33,7 @@ function renderizarLinhas(lista) {
       <td class="py-2.5">${escapeHtml(v.placa)}</td>
       <td class="py-2.5 text-right">${iconeMenuAcoes()}</td>
     </tr>
-  `).join('') || '<tr><td colspan="2" class="py-4 text-center text-slate-500">Nenhum veiculo cadastrado.</td></tr>';
+  `).join('') || '<tr><td colspan="2" class="py-4 text-center text-slate-400">Nenhum veiculo cadastrado.</td></tr>';
 
   tabela.querySelectorAll('tr[data-id]').forEach((tr) => {
     const id = Number(tr.dataset.id);

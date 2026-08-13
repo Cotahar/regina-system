@@ -42,7 +42,7 @@ const BADGES_PERFIL = [
 function badgesPerfil(c) {
   return BADGES_PERFIL
     .filter(([campo]) => c[campo])
-    .map(([, rotulo]) => `<span class="mr-1 mb-1 inline-block rounded bg-painel-border px-1.5 py-0.5 text-xs text-slate-800">${rotulo}</span>`)
+    .map(([, rotulo]) => `<span class="mr-1 mb-1 inline-block rounded bg-painel-border px-1.5 py-0.5 text-xs text-slate-200">${rotulo}</span>`)
     .join('');
 }
 
@@ -58,13 +58,13 @@ function renderizarLinhas(lista) {
       <td class="py-2.5">${escapeHtml(c.cidade || '')}-${escapeHtml(c.estado || '')}</td>
       <td class="py-2.5">${escapeHtml(c.telefone_completo)}</td>
       <td class="py-2.5">${c.entregas_count}</td>
-      <td class="py-2.5">${c.is_remetente ? '<span class="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">Sim</span>' : ''}</td>
+      <td class="py-2.5">${c.is_remetente ? '<span class="rounded bg-amber-900/40 px-2 py-0.5 text-xs text-amber-300">Sim</span>' : ''}</td>
       <td class="py-2.5">${badgesPerfil(c)}</td>
       <td class="py-2 text-right">
         <button class="btn-secondary btn-editar btn-sm">Editar</button>
       </td>
     </tr>
-  `).join('') || '<tr><td colspan="8" class="py-4 text-center text-slate-500">Nenhum cliente cadastrado.</td></tr>';
+  `).join('') || '<tr><td colspan="8" class="py-4 text-center text-slate-400">Nenhum cliente cadastrado.</td></tr>';
 
   tabela.querySelectorAll('.btn-editar').forEach((btn) => {
     btn.addEventListener('click', () => abrirEdicao(Number(btn.closest('tr').dataset.id)));

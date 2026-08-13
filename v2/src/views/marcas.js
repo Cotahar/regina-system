@@ -8,7 +8,7 @@ export function renderMarcasPage({ isAdmin }) {
     <div class="card mt-4" data-admin="${isAdmin ? '1' : '0'}">
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
-          <thead class="text-slate-600">
+          <thead class="text-slate-400">
             <tr><th class="pb-2">Nome</th>${isAdmin ? '<th class="pb-2 text-right">Acoes</th>' : ''}</tr>
           </thead>
           <tbody id="tabela-marcas"></tbody>
@@ -22,7 +22,7 @@ export function renderMarcasPage({ isAdmin }) {
         <h2 class="mb-4 text-lg font-semibold" id="modal-titulo">Nova marca</h2>
         <input type="hidden" id="marca-id">
         <div class="mb-4">
-          <label class="mb-1 block text-xs text-slate-600">Nome</label>
+          <label class="mb-1 block text-xs text-slate-400">Nome</label>
           <input type="text" id="marca-nome" class="input-field" required>
         </div>
         <p id="msg-modal" class="mb-3 hidden text-sm"></p>

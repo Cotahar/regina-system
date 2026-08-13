@@ -16,7 +16,7 @@ async function carregarUsuarios() {
       <td class="py-2.5">${escapeHtml(u.nome_usuario)}</td>
       <td class="py-2.5">${escapeHtml(u.permissao)}</td>
       <td class="py-2.5 text-right">
-        ${u.id !== 1 ? iconeMenuAcoes() : '<span class="text-xs text-slate-500">admin principal</span>'}
+        ${u.id !== 1 ? iconeMenuAcoes() : '<span class="text-xs text-slate-400">admin principal</span>'}
       </td>
     </tr>
   `).join('');
@@ -168,7 +168,7 @@ async function carregarTiposCte() {
       <span>${escapeHtml(t.descricao)}</span>
       <button class="btn-danger btn-excluir btn-sm">Excluir</button>
     </li>
-  `).join('') || '<li class="py-3 text-center text-slate-500">Nenhum tipo cadastrado.</li>';
+  `).join('') || '<li class="py-3 text-center text-slate-400">Nenhum tipo cadastrado.</li>';
 
   lista.querySelectorAll('.btn-excluir').forEach((btn) => {
     btn.addEventListener('click', async () => {

@@ -79,5 +79,5 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Regina System (v2) rodando em http://localhost:${PORT}`);
+  console.log(`Frottex - B. Nunes (v2) rodando em http://localhost:${PORT}`);
 });

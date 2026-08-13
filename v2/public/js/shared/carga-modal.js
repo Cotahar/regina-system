@@ -7,10 +7,10 @@ import { icones } from './icons.js';
 import { iconeMenuAcoes, criarMenuAcoes } from './menuAcoes.js';
 
 const STATUS_CORES = {
-  Pendente: 'bg-slate-200 text-slate-800',
-  Agendada: 'bg-blue-100 text-blue-800',
-  'Em Trânsito': 'bg-amber-100 text-amber-800',
-  Finalizada: 'bg-emerald-100 text-emerald-800'
+  Pendente: 'bg-slate-500/20 text-slate-300',
+  Agendada: 'bg-blue-900/40 text-blue-300',
+  'Em Trânsito': 'bg-amber-900/40 text-amber-300',
+  Finalizada: 'bg-emerald-900/40 text-emerald-300'
 };
 
 export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
@@ -83,7 +83,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     document.getElementById('det-origem').textContent = c.origem;
     const badge = document.getElementById('det-status-badge');
     badge.textContent = c.status;
-    badge.className = `ml-2 rounded px-2 py-0.5 text-xs ${STATUS_CORES[c.status] || 'bg-slate-200 text-slate-800'}`;
+    badge.className = `ml-2 rounded px-2 py-0.5 text-xs ${STATUS_CORES[c.status] || 'bg-slate-500/20 text-slate-300'}`;
 
     document.getElementById('det-motorista-input').value = motoristaTexto(c.motorista_id);
     document.getElementById('det-motorista-id').value = c.motorista_id || '';
@@ -263,15 +263,15 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
   function linhaEntrega(e, indentada) {
     const agrupada = !!e.grupo_id;
     const classeGrupo = agrupada ? 'bg-destaque/5 border-l-2 border-l-destaque' : '';
-    const classeIndentada = indentada ? 'bg-blue-50/60 border-l-4 border-l-blue-200' : '';
+    const classeIndentada = indentada ? 'bg-blue-500/10 border-l-4 border-l-blue-500/40' : '';
     return `
       <tr class="border-t border-painel-border transition-colors ${classeGrupo} ${classeIndentada}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
         <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
         <td class="py-1 text-center"><input type="radio" name="ultima-entrega" class="radio-ultima" ${e.is_last_delivery ? 'checked' : ''}></td>
-        <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-100 px-1 text-[10px] text-amber-800">grupo</span>' : ''}</td>
+        <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}</td>
         <td class="py-1.5">${escapeHtml(e.razao_social)}</td>
-        <td class="py-1.5">${escapeHtml(e.cidade)}-${escapeHtml(e.estado)}${e.local_coleta ? `<br><span class="text-[10px] text-slate-500">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
-        <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-100 px-1 text-[10px] text-emerald-800">cortesia</span>' : ''}</td>
+        <td class="py-1.5">${escapeHtml(e.cidade)}-${escapeHtml(e.estado)}${e.local_coleta ? `<br><span class="text-[10px] text-slate-400">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
+        <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-900/40 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
         <td class="py-1.5">${formatarPeso(e.peso_bruto)}</td>
         <td class="py-1.5">${formatarMoeda(e.valor_frete)}</td>
         <td class="py-1.5 text-right">${iconeMenuAcoes()}</td>
@@ -281,30 +281,30 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
 
   function linhaResumoGrupo(chave, itens, expandido) {
     const remetentes = new Set(itens.map((e) => e.remetente_nome));
-    const remetenteTexto = remetentes.size === 1 ? escapeHtml([...remetentes][0]) : '<span class="italic text-slate-500">Varios</span>';
+    const remetenteTexto = remetentes.size === 1 ? escapeHtml([...remetentes][0]) : '<span class="italic text-slate-400">Varios</span>';
     const primeiro = itens[0];
     const pesoTotal = itens.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
     const freteTotal = itens.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
     const todosSelecionados = itens.every((e) => selecionadas.has(e.id));
     const corGrupo = expandido
-      ? 'bg-blue-100 border-l-4 border-l-blue-500'
-      : 'bg-blue-50/70 border-l-4 border-l-blue-300 hover:bg-blue-100/70';
+      ? 'bg-blue-500/15 border-l-4 border-l-blue-500'
+      : 'bg-blue-500/5 border-l-4 border-l-blue-500/40 hover:bg-blue-500/10';
     return `
       <tr class="border-t border-painel-border transition-colors ${corGrupo}" data-grupo-visual="${escapeHtml(chave)}">
         <td class="py-1.5"><input type="checkbox" class="chk-grupo-visual" data-chave="${escapeHtml(chave)}" ${todosSelecionados ? 'checked' : ''}></td>
         <td class="py-1.5"></td>
         <td class="py-1.5">${remetenteTexto}</td>
         <td class="py-1.5">
-          <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-semibold text-blue-900 hover:text-blue-700" data-chave="${escapeHtml(chave)}">
+          <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-semibold text-blue-300 hover:text-blue-200" data-chave="${escapeHtml(chave)}">
             <svg viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3 shrink-0 transition-transform ${expandido ? 'rotate-90' : ''}"><path d="M7 4l7 6-7 6V4z"/></svg>
             ${escapeHtml(primeiro.razao_social)}
           </button>
-          <span class="ml-1 rounded-full bg-blue-200 px-1.5 py-0.5 text-[10px] font-medium text-blue-900">${itens.length} notas</span>
+          <span class="ml-1 rounded-full bg-blue-500/25 px-1.5 py-0.5 text-[10px] font-medium text-blue-200">${itens.length} notas</span>
         </td>
         <td class="py-1.5">${escapeHtml(primeiro.cidade)}-${escapeHtml(primeiro.estado)}</td>
-        <td class="py-1.5 text-slate-500">-</td>
-        <td class="py-1.5 font-semibold text-blue-900">${formatarPeso(pesoTotal)}</td>
-        <td class="py-1.5 font-semibold text-blue-900">${formatarMoeda(freteTotal)}</td>
+        <td class="py-1.5 text-slate-400">-</td>
+        <td class="py-1.5 font-semibold text-blue-300">${formatarPeso(pesoTotal)}</td>
+        <td class="py-1.5 font-semibold text-blue-300">${formatarMoeda(freteTotal)}</td>
         <td class="py-1.5"></td>
       </tr>
     `;
@@ -325,7 +325,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       if (itens.length === 1) return linhaEntrega(itens[0], false);
       const expandido = gruposExpandidos.has(chave);
       return linhaResumoGrupo(chave, itens, expandido) + (expandido ? itens.map((e) => linhaEntrega(e, true)).join('') : '');
-    }).join('') || '<tr><td colspan="9" class="py-3 text-center text-slate-500">Nenhuma entrega nesta carga.</td></tr>';
+    }).join('') || '<tr><td colspan="9" class="py-3 text-center text-slate-400">Nenhuma entrega nesta carga.</td></tr>';
 
     tabelaEntregas.querySelectorAll('tr[data-id]').forEach((tr) => {
       const id = Number(tr.dataset.id);
