@@ -70,7 +70,7 @@ pagamentoCargaRouter.get('/api/cargas/:id/pagamento', requireLogin, (req, res) =
       frete_pago: carga.frete_pago,
       adiantamento_percentual: carga.adiantamento_percentual,
       adiantamento_valor: carga.adiantamento_valor,
-      vale_pedagio_rota: carga.vale_pedagio_rota,
+      vale_pedagio_valor: carga.vale_pedagio_valor,
       saldo_motorista: carga.saldo_motorista
     },
     resumo: {
@@ -87,10 +87,10 @@ pagamentoCargaRouter.put('/api/cargas/:id/pagamento', requireLogin, (req, res) =
   const carga = db.prepare('SELECT id, veiculo_id FROM cargas WHERE id = ?').get(req.params.id);
   if (!carga) return res.status(404).json({ error: 'Carga nao encontrada' });
 
-  const { saldo_motorista: saldoMotorista, vale_pedagio_rota: valePedagioRota, dados_pagamento: dadosPagamento } = req.body || {};
+  const { saldo_motorista: saldoMotorista, vale_pedagio_valor: valePedagioValor, dados_pagamento: dadosPagamento } = req.body || {};
 
-  db.prepare('UPDATE cargas SET saldo_motorista = ?, vale_pedagio_rota = ? WHERE id = ?')
-    .run(saldoMotorista ?? null, valePedagioRota || null, carga.id);
+  db.prepare('UPDATE cargas SET saldo_motorista = ?, vale_pedagio_valor = ? WHERE id = ?')
+    .run(saldoMotorista ?? null, valePedagioValor || null, carga.id);
 
   if (carga.veiculo_id) {
     db.prepare('UPDATE veiculos SET dados_pagamento = ? WHERE id = ?').run(dadosPagamento || null, carga.veiculo_id);

@@ -117,9 +117,10 @@ async function carregar() {
 
     const saldoSugerido = dados.carga.saldo_motorista ?? ((dados.carga.frete_pago || 0) - (dados.carga.adiantamento_valor || 0));
     document.getElementById('pag-saldo').value = formatarDecimalParaInput(saldoSugerido);
-    // vale_pedagio_rota e texto livre (digitado sem mascara em Gerenciar Faturamento),
-    // entao mostra o valor salvo como esta em vez de tentar reformatar um numero.
-    document.getElementById('pag-vale-pedagio').value = dados.carga.vale_pedagio_rota || '';
+    // Vale pedagio aqui e um campo proprio da tela de pagamento (nao o campo
+    // "rota" do Gerenciar Faturamento, que e outra coisa) - sempre digitado
+    // pelo usuario, sem sugestao automatica.
+    document.getElementById('pag-vale-pedagio').value = dados.carga.vale_pedagio_valor || '';
     document.getElementById('pag-dados-pagamento').value = dados.veiculo_dados_pagamento || '';
   }
 
@@ -138,7 +139,7 @@ document.getElementById('btn-pag-salvar').addEventListener('click', async () => 
   try {
     await apiPut(`/api/cargas/${cargaId}/pagamento`, {
       saldo_motorista: parseDecimal(document.getElementById('pag-saldo').value),
-      vale_pedagio_rota: document.getElementById('pag-vale-pedagio').value.trim() || null,
+      vale_pedagio_valor: document.getElementById('pag-vale-pedagio').value.trim() || null,
       dados_pagamento: document.getElementById('pag-dados-pagamento').value.trim() || null
     });
     exibirMensagem(msg, 'Dados salvos!', 'sucesso');
@@ -154,6 +155,17 @@ document.getElementById('btn-pag-copiar').addEventListener('click', async () => 
   } catch {
     exibirMensagem(msg, 'Nao foi possivel copiar automaticamente. Selecione o texto da mensagem manualmente.', 'erro');
   }
+});
+
+// Sem numero de telefone cadastrado (motorista/veiculo nao tem esse campo),
+// entao abre o seletor de conversa do proprio WhatsApp com o texto pronto.
+document.getElementById('btn-pag-whatsapp').addEventListener('click', () => {
+  const texto = document.getElementById('pag-preview').value;
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank');
+});
+
+document.getElementById('btn-pag-fechar').addEventListener('click', () => {
+  window.close();
 });
 
 carregar();

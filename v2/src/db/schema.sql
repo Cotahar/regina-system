@@ -84,7 +84,8 @@ CREATE TABLE IF NOT EXISTS cargas (
   vale_pedagio_eixos INTEGER,
   adiantamento_percentual REAL DEFAULT 70.0,
   adiantamento_valor REAL,
-  saldo_motorista REAL
+  saldo_motorista REAL,
+  vale_pedagio_valor TEXT
 );
 
 CREATE TABLE IF NOT EXISTS entregas (

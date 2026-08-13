@@ -78,7 +78,9 @@ export function renderPagamentoCargaPage() {
       <textarea id="pag-preview" class="input-field whitespace-pre-wrap font-mono text-xs" rows="16" readonly></textarea>
       <div class="mt-3 flex flex-wrap gap-2">
         <button type="button" id="btn-pag-salvar" class="btn-success">Salvar</button>
+        <button type="button" id="btn-pag-whatsapp" class="btn-primary">Enviar no WhatsApp</button>
         <button type="button" id="btn-pag-copiar" class="btn-secondary">Copiar mensagem</button>
+        <button type="button" id="btn-pag-fechar" class="btn-secondary">Fechar</button>
       </div>
       <p id="pag-msg" class="mt-3 hidden text-sm"></p>
     </div>
