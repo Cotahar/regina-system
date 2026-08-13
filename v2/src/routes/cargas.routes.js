@@ -143,7 +143,7 @@ cargasRouter.get('/api/cargas/:id', requireLogin, (req, res) => {
     SELECT e.*,
       cl.razao_social as cliente_razao_social, cl.cidade as cliente_cidade, cl.estado as cliente_estado,
       cl.ddd as cliente_ddd, cl.telefone as cliente_telefone, cl.observacoes as cliente_observacoes,
-      rem.razao_social as remetente_razao_social, rem.cidade as remetente_cidade
+      rem.razao_social as remetente_razao_social, rem.cidade as remetente_cidade, rem.estado as remetente_estado
     FROM entregas e
     LEFT JOIN clientes cl ON cl.id = e.cliente_id
     LEFT JOIN clientes rem ON rem.id = e.remetente_id
@@ -168,6 +168,7 @@ cargasRouter.get('/api/cargas/:id', requireLogin, (req, res) => {
     cliente_id: e.cliente_id,
     remetente_nome: e.remetente_razao_social || 'N/A',
     remetente_cidade: e.remetente_cidade || 'N/A',
+    remetente_uf: e.remetente_estado || '',
     razao_social: e.cliente_razao_social || 'N/A',
     cidade: e.cidade_entrega || e.cliente_cidade || '',
     estado: e.estado_entrega || e.cliente_estado || '',
@@ -265,6 +266,37 @@ cargasRouter.delete('/api/cargas/:id', requireLogin, requireAdmin, (req, res) =>
   db.prepare('DELETE FROM cargas WHERE id = ?').run(req.params.id);
 
   res.json({ message: 'Carga excluida com sucesso.' });
+});
+
+// --- DUPLICAR (modelo de carga recorrente) ---
+// Cria um rascunho novo com as mesmas entregas (remetente, destinatario, peso,
+// valor, cidade/UF, local de coleta) da carga original, mas sem motorista,
+// veiculo e sem numero de nota fiscal - pensado pra cargas que se repetem
+// quase identicas, sem precisar recadastrar tudo do zero.
+cargasRouter.post('/api/cargas/:id/duplicar', requireLogin, (req, res) => {
+  const original = db.prepare('SELECT * FROM cargas WHERE id = ?').get(req.params.id);
+  if (!original) return res.status(404).json({ error: 'Carga nao encontrada' });
+
+  const entregas = db.prepare('SELECT * FROM entregas WHERE carga_id = ?').all(req.params.id);
+  if (!entregas.length) return res.status(400).json({ error: 'Esta carga nao tem entregas para duplicar.' });
+
+  const codigo = `RASC-${Date.now()}`;
+  const info = db.prepare("INSERT INTO cargas (codigo_carga, origem, status) VALUES (?, ?, 'Rascunho')")
+    .run(codigo, original.origem);
+
+  const novaCargaId = info.lastInsertRowid;
+  const inserirEntrega = db.prepare(`
+    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, peso_cubado, valor_tonelada, cidade_entrega, estado_entrega, local_coleta, is_cortesia)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  for (const e of entregas) {
+    inserirEntrega.run(
+      novaCargaId, e.cliente_id, e.remetente_id, e.peso_bruto, e.valor_frete, e.peso_cubado,
+      e.valor_tonelada, e.cidade_entrega, e.estado_entrega, e.local_coleta, e.is_cortesia
+    );
+  }
+
+  res.status(201).json({ message: `Carga duplicada como rascunho ${codigo}!`, carga_id: Number(novaCargaId) });
 });
 
 // --- MONTAGEM (RASCUNHOS) ---

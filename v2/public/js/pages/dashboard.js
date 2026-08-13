@@ -25,17 +25,38 @@ const BORDA_STATUS = {
   'Em Trânsito': 'border-l-amber-400 hover:border-l-amber-600'
 };
 
+// Cada string do array "destinos" (que a API ja calcula) vem como
+// "CIDADE-UF" - separa em { cidade, uf } pra poder estilizar cada parte
+// diferente (cidade normal, UF como badge) em vez do hifen cru.
+function destinosCidadeUf(c) {
+  const lista = (c.destinos || []).map((d) => {
+    const idx = d.lastIndexOf('-');
+    return idx === -1 ? { cidade: d, uf: '' } : { cidade: d.slice(0, idx), uf: d.slice(idx + 1) };
+  }).filter((d) => d.cidade || d.uf);
+  return lista.length ? lista : [{ cidade: 'N/A', uf: '' }];
+}
+
 function renderizarCard(c) {
   const borda = BORDA_STATUS[c.status] || 'border-l-slate-400';
+  const destinos = destinosCidadeUf(c).map(({ cidade, uf }) => `
+    <span class="inline-flex items-center gap-1">
+      <span class="capitalize">${escapeHtml(cidade.toLowerCase())}</span>
+      ${uf ? `<span class="rounded bg-painel-bg px-1.5 py-0.5 text-[11px] font-bold text-slate-200">${escapeHtml(uf)}</span>` : ''}
+    </span>
+  `).join('<span class="text-slate-600">,</span>');
   return `
     <div class="cursor-pointer rounded-md border border-painel-border border-l-4 ${borda} bg-painel-card p-3 text-sm shadow-md shadow-black/20 transition-colors hover:bg-white/[0.03]" data-id="${c.id}" data-busca="${escapeHtml(`${c.codigo_carga} ${c.destino_principal} ${c.motorista_nome || ''} ${c.placa_veiculo || ''}`.toLowerCase())}">
       <div class="flex items-center justify-between">
         <span class="font-semibold text-brand-yellow">${escapeHtml(c.codigo_carga)}</span>
         <span class="text-xs text-slate-400">${c.num_entregas} entrega(s)</span>
       </div>
-      <p class="mt-1 text-slate-300">${escapeHtml(c.origem)} &rarr; ${escapeHtml(c.destino_principal)}</p>
-      <p class="mt-1 text-xs text-slate-400">${escapeHtml(c.motorista_nome || 'Sem motorista')} ${c.placa_veiculo ? '- ' + escapeHtml(c.placa_veiculo) : ''}</p>
-      <p class="mt-1 text-xs text-slate-400">${formatarPeso(c.peso_total)} - ${formatarMoeda(c.valor_frete_total)}</p>
+      <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-slate-300">
+        <span class="capitalize">${escapeHtml(c.origem.toLowerCase())}</span>
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0 text-slate-500"><path d="M4 10h12M11 5l5 5-5 5"/></svg>
+        <span class="flex flex-wrap items-center gap-1">${destinos}</span>
+      </div>
+      <p class="mt-1.5 text-xs font-semibold text-slate-200">${escapeHtml(c.motorista_nome || 'Sem motorista')}${c.placa_veiculo ? ' - ' + escapeHtml(c.placa_veiculo) : ''}</p>
+      <p class="mt-1 text-xs font-semibold text-slate-200">${formatarPeso(c.peso_total)} &middot; ${formatarMoeda(c.valor_frete_total)}</p>
       ${linhaData(c)}
     </div>
   `;

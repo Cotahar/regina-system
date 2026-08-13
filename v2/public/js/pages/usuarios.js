@@ -13,11 +13,9 @@ async function carregarUsuarios() {
   const tbody = document.getElementById('tabela-usuarios');
   tbody.innerHTML = usuarios.map((u) => `
     <tr class="border-t border-painel-border" data-id="${u.id}">
-      <td class="py-2.5">${escapeHtml(u.nome_usuario)}</td>
+      <td class="py-2.5">${escapeHtml(u.nome_usuario)}${!u.senha_configurada ? ' <span class="rounded bg-amber-900/40 px-1.5 py-0.5 text-[10px] text-amber-300">aguardando 1o acesso</span>' : ''}</td>
       <td class="py-2.5">${escapeHtml(u.permissao)}</td>
-      <td class="py-2.5 text-right">
-        ${u.id !== 1 ? iconeMenuAcoes() : '<span class="text-xs text-slate-400">admin principal</span>'}
-      </td>
+      <td class="py-2.5 text-right">${iconeMenuAcoes()}</td>
     </tr>
   `).join('');
 
@@ -25,8 +23,9 @@ async function carregarUsuarios() {
     const id = Number(tr.dataset.id);
     const trigger = tr.querySelector('.btn-menu-acoes');
     if (!trigger) return;
-    criarMenuAcoes(trigger, [
-      {
+    const itensMenu = [];
+    if (id !== 1) {
+      itensMenu.push({
         label: 'Editar',
         onClick: () => {
           const u = usuarios.find((it) => it.id === id);
@@ -36,8 +35,23 @@ async function carregarUsuarios() {
           document.getElementById('usuario-permissao').value = u.permissao;
           document.getElementById('btn-cancelar-edicao').classList.remove('hidden');
         }
-      },
-      {
+      });
+    }
+    itensMenu.push({
+      label: 'Redefinir Senha',
+      onClick: async () => {
+        const u = usuarios.find((it) => it.id === id);
+        if (!confirm(`Remover a senha de "${u.nome_usuario}"? Ele(a) tera que criar uma nova senha no proximo login.`)) return;
+        try {
+          await apiPost(`/api/usuarios/${id}/resetar-senha`, {});
+          await carregarUsuarios();
+        } catch (err) {
+          alert(err.message);
+        }
+      }
+    });
+    if (id !== 1) {
+      itensMenu.push({
         label: 'Excluir',
         perigo: true,
         onClick: async () => {
@@ -50,8 +64,9 @@ async function carregarUsuarios() {
             alert(err.message);
           }
         }
-      }
-    ]);
+      });
+    }
+    criarMenuAcoes(trigger, itensMenu);
   });
 }
 

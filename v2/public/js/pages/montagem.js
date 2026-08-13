@@ -4,8 +4,12 @@ import { formatarMoeda, formatarPeso, parseDecimal } from '../shared/format.js';
 import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
 import { ouvirMudancas } from '../shared/live.js';
 import { criarCombobox } from '../shared/combobox.js';
+import { criarComboboxMunicipio } from '../shared/municipio.js';
+import { criarFiltroMultiSelect } from '../shared/multiSelect.js';
 import { iconeMenuAcoes, criarMenuAcoes } from '../shared/menuAcoes.js';
 import { aplicarMascaraDecimal, ligarCalculadoraFretePorTonelada } from '../shared/mask.js';
+
+criarComboboxMunicipio({ inputCidade: document.getElementById('nova-cidade'), inputUf: document.getElementById('nova-estado') });
 
 ['nova-peso', 'nova-cubado', 'nova-frete', 'nova-tonelada', 'edit-peso', 'edit-cubado', 'edit-frete', 'edit-tonelada']
   .forEach((id) => aplicarMascaraDecimal(document.getElementById(id)));
@@ -46,6 +50,33 @@ function linhasCombinadas() {
   const doDraft = draftAtual ? draftAtual.entregas : [];
   return [...poolDisponiveis, ...doDraft];
 }
+
+// Opcoes dos filtros vem so do pool de disponiveis (nao do rascunho aberto)
+// - pedido explicito: nao repetir valores e nao considerar rascunhos.
+function valoresUnicos(campo) {
+  return [...new Set(poolDisponiveis.map((e) => (e[campo] || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+}
+
+const filtroRemetente = criarFiltroMultiSelect({
+  botao: document.getElementById('filtro-remetente'),
+  getOpcoes: () => valoresUnicos('remetente_nome'),
+  onChange: renderizarTabela
+});
+const filtroUfOrigem = criarFiltroMultiSelect({
+  botao: document.getElementById('filtro-uf-origem'),
+  getOpcoes: () => valoresUnicos('remetente_uf'),
+  onChange: renderizarTabela
+});
+const filtroCidadeDestino = criarFiltroMultiSelect({
+  botao: document.getElementById('filtro-cidade-destino'),
+  getOpcoes: () => valoresUnicos('cidade_entrega'),
+  onChange: renderizarTabela
+});
+const filtroUfDestino = criarFiltroMultiSelect({
+  botao: document.getElementById('filtro-uf-destino'),
+  getOpcoes: () => valoresUnicos('estado_entrega'),
+  onChange: renderizarTabela
+});
 
 const gruposExpandidos = new Set();
 
@@ -117,9 +148,15 @@ function linhaResumoGrupo(chave, itens, expandido) {
 function renderizarTabela() {
   const termo = filtro.value.trim().toLowerCase();
   const linhas = linhasCombinadas().filter((e) => {
-    if (!termo) return true;
-    const texto = `${e.remetente_nome} ${e.destinatario_nome} ${e.cidade_entrega} ${e.nota_fiscal || ''}`.toLowerCase();
-    return texto.includes(termo);
+    if (termo) {
+      const texto = `${e.remetente_nome} ${e.destinatario_nome} ${e.cidade_entrega} ${e.nota_fiscal || ''}`.toLowerCase();
+      if (!texto.includes(termo)) return false;
+    }
+    if (filtroRemetente.selecionados.size && !filtroRemetente.selecionados.has((e.remetente_nome || '').trim())) return false;
+    if (filtroUfOrigem.selecionados.size && !filtroUfOrigem.selecionados.has((e.remetente_uf || '').trim())) return false;
+    if (filtroCidadeDestino.selecionados.size && !filtroCidadeDestino.selecionados.has((e.cidade_entrega || '').trim())) return false;
+    if (filtroUfDestino.selecionados.size && !filtroUfDestino.selecionados.has((e.estado_entrega || '').trim())) return false;
+    return true;
   });
 
   const grupos = agruparParaExibicao(linhas);
@@ -187,14 +224,14 @@ async function carregarPool() {
 function renderizarRascunhos() {
   const container = document.getElementById('lista-rascunhos');
   container.innerHTML = rascunhos.map((r) => `
-    <div class="flex items-center justify-between rounded border border-painel-border p-2" data-id="${r.id}">
-      <div>
-        <p class="font-medium">${escapeHtml(r.codigo_carga)}</p>
-        <p class="text-xs text-slate-400">${escapeHtml(r.origem)} - ${r.num_entregas} entrega(s)</p>
+    <div class="flex w-64 items-center justify-between gap-2 rounded border border-painel-border bg-painel-bg/40 px-2 py-1.5" data-id="${r.id}">
+      <div class="min-w-0">
+        <p class="truncate text-xs font-medium">${escapeHtml(r.codigo_carga)}</p>
+        <p class="truncate text-[11px] text-slate-400">${escapeHtml(r.origem)} &middot; ${r.num_entregas} nota(s)</p>
       </div>
-      <div class="flex gap-1">
+      <div class="flex shrink-0 gap-1">
         <button type="button" class="btn-secondary btn-abrir btn-sm">Abrir</button>
-        <button type="button" class="btn-primary btn-confirmar btn-sm">Confirmar</button>
+        <button type="button" class="btn-primary btn-confirmar btn-sm">OK</button>
         <button type="button" class="btn-danger btn-excluir btn-sm">X</button>
       </div>
     </div>
@@ -231,6 +268,7 @@ async function abrirRascunho(id) {
         valor_frete: e.valor_frete,
         valor_tonelada: e.valor_tonelada,
         remetente_id: e.remetente_id,
+        remetente_uf: e.remetente_uf,
         is_cortesia: e.is_cortesia,
         grupo_id: e.grupo_id,
         local_coleta: e.local_coleta

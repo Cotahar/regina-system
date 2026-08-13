@@ -11,5 +11,6 @@ export const icones = {
   impressora: svg('<path d="M6 3h8v4H6z"/><path d="M4 7h12a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1h-2v3H6v-3H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"/><rect x="6" y="12" width="8" height="5"/>'),
   cifrao: svg('<circle cx="10" cy="10" r="7.5"/><path d="M10 6v8M12.2 7.8c-.4-.6-1.2-1-2.2-1-1.3 0-2.3.7-2.3 1.7 0 2.3 4.6 1 4.6 3.2 0 1-1 1.7-2.3 1.7-1 0-1.8-.4-2.2-1"/>'),
   alerta: svg('<path d="M10 3l8.5 14.5H1.5L10 3z"/><path d="M10 8.5v3.2"/><circle cx="10" cy="14.2" r="0.15" fill="currentColor" stroke="none"/>'),
-  lixeira: svg('<path d="M4 6h12M8 6V4h4v2M6 6l.7 10a1 1 0 0 0 1 1h4.6a1 1 0 0 0 1-1L14 6"/><path d="M8.5 9v5M11.5 9v5"/>')
+  lixeira: svg('<path d="M4 6h12M8 6V4h4v2M6 6l.7 10a1 1 0 0 0 1 1h4.6a1 1 0 0 0 1-1L14 6"/><path d="M8.5 9v5M11.5 9v5"/>'),
+  duplicar: svg('<rect x="3" y="3" width="10" height="10" rx="1.2"/><path d="M7 13v2.8a1.2 1.2 0 0 0 1.2 1.2H16a1.2 1.2 0 0 0 1.2-1.2V8.2A1.2 1.2 0 0 0 16 7h-3"/>')
 };

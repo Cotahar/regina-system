@@ -15,7 +15,13 @@ form.addEventListener('submit', async (event) => {
       body: JSON.stringify({ nome_usuario, senha })
     });
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || 'Erro ao entrar');
+    if (!resp.ok) {
+      if (data.primeiro_acesso) {
+        window.location.href = `/primeiro-acesso?usuario=${encodeURIComponent(nome_usuario)}`;
+        return;
+      }
+      throw new Error(data.error || 'Erro ao entrar');
+    }
     window.location.href = '/';
   } catch (err) {
     erroEl.textContent = err.message;

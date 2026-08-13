@@ -6,8 +6,11 @@ import { hashPassword } from '../services/password.js';
 export const usuariosRouter = Router();
 
 usuariosRouter.get('/api/usuarios', requireLogin, requireAdmin, (req, res) => {
-  const usuarios = db.prepare('SELECT id, nome_usuario, permissao FROM usuarios ORDER BY id').all();
-  res.json(usuarios);
+  const usuarios = db.prepare(`
+    SELECT id, nome_usuario, permissao, (senha_hash IS NOT NULL AND senha_hash != '') as senha_configurada
+    FROM usuarios ORDER BY id
+  `).all();
+  res.json(usuarios.map((u) => ({ ...u, senha_configurada: !!u.senha_configurada })));
 });
 
 usuariosRouter.post('/api/usuarios', requireLogin, requireAdmin, (req, res) => {
@@ -47,6 +50,15 @@ usuariosRouter.put('/api/usuarios/:id', requireLogin, requireAdmin, (req, res) =
   }
 
   res.json({ message: 'Usuario atualizado com sucesso!' });
+});
+
+usuariosRouter.post('/api/usuarios/:id/resetar-senha', requireLogin, requireAdmin, (req, res) => {
+  const userId = Number(req.params.id);
+  const usuario = db.prepare('SELECT id FROM usuarios WHERE id = ?').get(userId);
+  if (!usuario) return res.status(404).json({ error: 'Usuario nao encontrado' });
+
+  db.prepare("UPDATE usuarios SET senha_hash = '' WHERE id = ?").run(userId);
+  res.json({ message: 'Senha removida - o usuario precisara criar uma nova no proximo acesso.' });
 });
 
 usuariosRouter.delete('/api/usuarios/:id', requireLogin, requireAdmin, (req, res) => {

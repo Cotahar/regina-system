@@ -231,6 +231,17 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       window.open(`/avarias.html?carga_id=${c.id}`, '_blank');
     }, icones.alerta));
 
+    ferramentas.appendChild(botao('Duplicar Carga', 'btn-secondary', async () => {
+      if (!confirm('Duplicar esta carga? Um novo rascunho sera criado com as mesmas entregas (remetente, destinatario, peso, valor), sem motorista, veiculo ou numero de nota.')) return;
+      try {
+        const resp = await apiPost(`/api/cargas/${c.id}/duplicar`, {});
+        mostrarMensagem(resp.message, 'sucesso');
+        setTimeout(() => { window.location.href = '/montagem.html'; }, 900);
+      } catch (err) {
+        mostrarMensagem(err.message, 'erro');
+      }
+    }, icones.duplicar));
+
     if (isAdmin) {
       perigo.appendChild(botao('Excluir Carga', 'btn-danger', async () => {
         const acao = confirm(

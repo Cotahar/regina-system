@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireLogin, requireAdmin } from '../middleware/auth.js';
 import { renderLoginPage } from '../views/login.js';
+import { renderPrimeiroAcessoPage } from '../views/primeiroAcesso.js';
 import { renderLayout } from '../views/layout.js';
 import { renderMotoristasPage } from '../views/motoristas.js';
 import { renderVeiculosPage } from '../views/veiculos.js';
@@ -19,6 +20,11 @@ export const pagesRouter = Router();
 pagesRouter.get('/login', (req, res) => {
   if (req.session) return res.redirect('/');
   res.type('html').send(renderLoginPage());
+});
+
+pagesRouter.get('/primeiro-acesso', (req, res) => {
+  if (req.session) return res.redirect('/');
+  res.type('html').send(renderPrimeiroAcessoPage());
 });
 
 pagesRouter.get('/', requireLogin, (req, res) => {

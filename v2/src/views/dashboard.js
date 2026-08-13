@@ -11,8 +11,8 @@ export function renderDashboardPage() {
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold">Painel de Cargas</h1>
       <form id="form-nova-carga" class="flex gap-2">
-        <input type="text" id="nova-origem" class="input-field" placeholder="Origem da nova carga" required>
-        <button type="submit" class="btn-primary">+ Nova carga</button>
+        <input type="text" id="nova-origem" class="input-field input-field-sm w-48" placeholder="Origem da nova carga" required>
+        <button type="submit" class="btn-primary btn-sm">+ Nova carga</button>
       </form>
     </div>
 

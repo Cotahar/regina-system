@@ -68,7 +68,7 @@ entregasRouter.delete('/api/cargas/:id/entregas', requireLogin, (req, res) => {
 entregasRouter.get('/api/entregas/disponiveis', requireLogin, (req, res) => {
   const entregas = db.prepare(`
     SELECT e.*,
-      rem.razao_social as remetente_razao_social,
+      rem.razao_social as remetente_razao_social, rem.estado as remetente_estado,
       cli.razao_social as cliente_razao_social, cli.cidade as cliente_cidade, cli.estado as cliente_estado
     FROM entregas e
     LEFT JOIN clientes rem ON rem.id = e.remetente_id
@@ -82,6 +82,7 @@ entregasRouter.get('/api/entregas/disponiveis', requireLogin, (req, res) => {
     remetente_id: e.remetente_id,
     cliente_id: e.cliente_id,
     remetente_nome: e.remetente_razao_social || 'N/A',
+    remetente_uf: e.remetente_estado || '',
     destinatario_nome: e.cliente_razao_social || 'N/A',
     cidade_entrega: e.cidade_entrega || e.cliente_cidade || '',
     estado_entrega: e.estado_entrega || e.cliente_estado || '',

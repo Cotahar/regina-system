@@ -25,7 +25,10 @@
     @apply rounded-xl border border-painel-border bg-painel-card p-4 shadow-lg shadow-black/20;
   }
   .input-field {
-    @apply block w-full rounded-lg border border-slate-600 bg-painel-bg p-2.5 text-sm text-slate-100 placeholder-slate-500 focus:border-brand-yellow focus:outline-none focus:ring-1 focus:ring-brand-yellow;
+    @apply block w-full rounded-lg border border-slate-600 bg-painel-bg px-3 py-1.5 text-sm text-slate-100 placeholder-slate-500 focus:border-brand-yellow focus:outline-none focus:ring-1 focus:ring-brand-yellow;
+  }
+  .input-field-sm {
+    @apply px-2.5 py-1 text-xs;
   }
   .label {
     @apply mb-1 block text-xs font-medium text-slate-400;

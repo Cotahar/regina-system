@@ -25,6 +25,11 @@ load_dotenv('.env.railway')
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'chave-apenas-para-desenvolvimento-local')
 
+# Sistema antigo aposentado - todo acesso redireciona pro sistema novo.
+@app.before_request
+def redirecionar_para_novo_sistema():
+    return redirect('https://bnunes.frottex.com.br/', code=301)
+
 # --- CONFIGURAÇÃO GOOGLE DRIVE (MÓDULO 8 - OAUTH PESSOAL) ---
 # ID da pasta onde as fotos serão salvas
 PARENT_FOLDER_ID = '1AhCs57ZYuVjJrEPBycaBtuElc-exkZEF' 
