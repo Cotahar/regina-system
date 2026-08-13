@@ -25,7 +25,7 @@ export function renderVeiculosPage() {
       <div class="overflow-x-auto">
         <table class="w-full text-left text-sm">
           <thead class="text-slate-400">
-            <tr><th class="pb-2">Placa</th><th class="pb-2 text-right">Acoes</th></tr>
+            <tr><th class="pb-2">Placa</th><th class="pb-2">Frota</th><th class="pb-2 text-right">Acoes</th></tr>
           </thead>
           <tbody id="tabela-veiculos"></tbody>
         </table>
@@ -41,6 +41,9 @@ export function renderVeiculosPage() {
           <label class="label">Placa</label>
           <input type="text" id="veiculo-placa" class="input-field" required>
         </div>
+        <label class="mb-4 flex items-center gap-2 text-sm text-slate-300">
+          <input type="checkbox" id="veiculo-frota" class="h-4 w-4"> Veiculo da frota (nao terceirizado)
+        </label>
         <p id="msg-modal" class="mb-3 hidden text-sm"></p>
         <div class="flex justify-end gap-2">
           <button type="button" id="btn-cancelar" class="btn-secondary">Cancelar</button>

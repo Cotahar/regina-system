@@ -31,9 +31,10 @@ function renderizarLinhas(lista) {
   tabela.innerHTML = lista.map((v) => `
     <tr class="border-t border-painel-border" data-id="${v.id}">
       <td class="py-2.5">${escapeHtml(v.placa)}</td>
+      <td class="py-2.5">${v.is_frota ? '<span class="rounded bg-emerald-900/40 px-1.5 py-0.5 text-xs font-semibold text-emerald-300">Frota</span>' : '<span class="text-xs text-slate-500">Terceirizado</span>'}</td>
       <td class="py-2.5 text-right">${iconeMenuAcoes()}</td>
     </tr>
-  `).join('') || '<tr><td colspan="2" class="py-4 text-center text-slate-400">Nenhum veiculo cadastrado.</td></tr>';
+  `).join('') || '<tr><td colspan="3" class="py-4 text-center text-slate-400">Nenhum veiculo cadastrado.</td></tr>';
 
   tabela.querySelectorAll('tr[data-id]').forEach((tr) => {
     const id = Number(tr.dataset.id);
@@ -57,6 +58,7 @@ function abrirEdicao(id) {
   if (!veiculo) return;
   document.getElementById('veiculo-id').value = veiculo.id;
   document.getElementById('veiculo-placa').value = veiculo.placa;
+  document.getElementById('veiculo-frota').checked = !!veiculo.is_frota;
   document.getElementById('modal-titulo').textContent = 'Editar veiculo';
   msgModal.classList.add('hidden');
   abrirModal(modal);
@@ -77,7 +79,10 @@ async function excluir(id) {
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   const id = document.getElementById('veiculo-id').value;
-  const payload = { placa: document.getElementById('veiculo-placa').value.trim() };
+  const payload = {
+    placa: document.getElementById('veiculo-placa').value.trim(),
+    is_frota: document.getElementById('veiculo-frota').checked
+  };
   try {
     if (id) await apiPut(`/api/veiculos/${id}`, payload);
     else await apiPost('/api/veiculos', payload);

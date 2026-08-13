@@ -47,7 +47,10 @@ function renderizarCard(c) {
   return `
     <div class="cursor-pointer rounded-md border border-painel-border border-l-4 ${borda} bg-painel-card p-3 text-sm shadow-md shadow-black/20 transition-colors hover:bg-white/[0.03]" data-id="${c.id}" data-busca="${escapeHtml(`${c.codigo_carga} ${c.destino_principal} ${c.motorista_nome || ''} ${c.placa_veiculo || ''}`.toLowerCase())}">
       <div class="flex items-center justify-between">
-        <span class="font-semibold text-brand-yellow">${escapeHtml(c.codigo_carga)}</span>
+        <span class="flex items-center gap-1.5">
+          <span class="font-semibold text-brand-yellow">${escapeHtml(c.codigo_carga)}</span>
+          ${c.veiculo_frota ? '<span class="rounded bg-violet-900/40 px-1.5 py-0.5 text-[10px] font-bold text-violet-300">FROTA</span>' : ''}
+        </span>
         <span class="text-xs text-slate-400">${c.num_entregas} entrega(s)</span>
       </div>
       <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-slate-300">

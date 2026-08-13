@@ -88,6 +88,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     const badge = document.getElementById('det-status-badge');
     badge.textContent = c.status;
     badge.className = `ml-2 rounded px-2 py-0.5 text-xs ${STATUS_CORES[c.status] || 'bg-slate-500/20 text-slate-300'}`;
+    document.getElementById('det-frota-badge').classList.toggle('hidden', !c.veiculo_frota);
 
     document.getElementById('det-motorista-input').value = motoristaTexto(c.motorista_id);
     document.getElementById('det-motorista-id').value = c.motorista_id || '';
@@ -275,21 +276,43 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     return ordem.map((chave) => ({ chave, itens: mapa.get(chave) }));
   }
 
-  function linhaEntrega(e, indentada) {
+  // Icone compacto com tooltip nativo (title) resumindo o perfil do cliente -
+  // acesso rapido sem precisar abrir o cadastro pra ver se precisa agendar,
+  // se faz autodescarga, se precisa de ajudantes, etc.
+  function infoClienteIcone(e) {
+    const partes = [];
+    if (e.cliente_precisa_agendamento) partes.push('Precisa agendar entrega');
+    if (e.cliente_autodescarga) partes.push('Faz autodescarga');
+    if (e.cliente_precisa_ajudantes) partes.push('Precisa de ajudantes (chapas)');
+    if (e.cliente_descarga_paga_direto) partes.push('Descarga paga direto');
+    if (e.cliente_resolve_com_representante) partes.push('Resolver com representante');
+    if (e.cliente_contato_extra) partes.push(`Contato extra: ${e.cliente_contato_extra}`);
+    if (e.obs_cliente) partes.push(`Obs: ${e.obs_cliente}`);
+    if (!partes.length) return '';
+    return `<span class="ml-1 inline-flex h-4 w-4 shrink-0 cursor-help items-center justify-center rounded-full bg-sky-900/40 text-[10px] font-bold text-sky-300" title="${escapeHtml(partes.join(' • '))}">i</span>`;
+  }
+
+  function formatarContato(ddd, telefone) {
+    if (ddd && telefone) return `(${escapeHtml(ddd)}) ${escapeHtml(telefone)}`;
+    return telefone ? escapeHtml(telefone) : '<span class="text-slate-500">-</span>';
+  }
+
+  function linhaEntrega(e, indentada, ultimoDoGrupo) {
     const agrupada = !!e.grupo_id;
     const classeGrupo = agrupada ? 'bg-destaque/5 border-l-2 border-l-destaque' : '';
-    const classeIndentada = indentada ? 'bg-blue-500/10 border-l-4 border-l-blue-500/40' : '';
+    const classeIndentada = indentada ? `bg-blue-500/10 border-l-4 border-l-blue-500/40 ${ultimoDoGrupo ? 'border-b-2 border-b-blue-500/30' : ''}` : '';
+    const py = indentada ? 'py-2' : 'py-1.5';
     return `
       <tr class="border-t border-painel-border transition-colors ${classeGrupo} ${classeIndentada}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
-        <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
-        <td class="py-1 text-center"><input type="radio" name="ultima-entrega" class="radio-ultima" ${e.is_last_delivery ? 'checked' : ''}></td>
-        <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}</td>
-        <td class="py-1.5">${escapeHtml(e.razao_social)}</td>
-        <td class="py-1.5">${escapeHtml(e.cidade)}-${escapeHtml(e.estado)}${e.local_coleta ? `<br><span class="text-[10px] text-slate-400">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
-        <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-900/40 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
-        <td class="py-1.5">${formatarPeso(e.peso_bruto)}</td>
-        <td class="py-1.5">${formatarMoeda(e.valor_frete)}</td>
-        <td class="py-1.5 text-right">${iconeMenuAcoes()}</td>
+        <td class="${py}"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
+        <td class="${py}">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}</td>
+        <td class="${py}">${escapeHtml(e.razao_social)}${infoClienteIcone(e)}</td>
+        <td class="${py}">${formatarContato(e.ddd, e.telefone)}</td>
+        <td class="${py}">${escapeHtml(e.cidade)}-${escapeHtml(e.estado)}${e.local_coleta ? `<br><span class="text-[10px] text-slate-400">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
+        <td class="${py}">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-900/40 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
+        <td class="${py}">${formatarPeso(e.peso_bruto)}</td>
+        <td class="${py}">${formatarMoeda(e.valor_frete)}</td>
+        <td class="${py} text-right">${iconeMenuAcoes()}</td>
       </tr>
     `;
   }
@@ -307,7 +330,6 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     return `
       <tr class="border-t border-painel-border transition-colors ${corGrupo}" data-grupo-visual="${escapeHtml(chave)}">
         <td class="py-1.5"><input type="checkbox" class="chk-grupo-visual" data-chave="${escapeHtml(chave)}" ${todosSelecionados ? 'checked' : ''}></td>
-        <td class="py-1.5"></td>
         <td class="py-1.5">${remetenteTexto}</td>
         <td class="py-1.5">
           <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-semibold text-blue-300 hover:text-blue-200" data-chave="${escapeHtml(chave)}">
@@ -316,6 +338,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
           </button>
           <span class="ml-1 rounded-full bg-blue-500/25 px-1.5 py-0.5 text-[10px] font-medium text-blue-200">${itens.length} notas</span>
         </td>
+        <td class="py-1.5">${formatarContato(primeiro.ddd, primeiro.telefone)}</td>
         <td class="py-1.5">${escapeHtml(primeiro.cidade)}-${escapeHtml(primeiro.estado)}</td>
         <td class="py-1.5 text-slate-400">-</td>
         <td class="py-1.5 font-semibold text-blue-300">${formatarPeso(pesoTotal)}</td>
@@ -339,7 +362,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     tabelaEntregas.innerHTML = grupos.map(({ chave, itens }) => {
       if (itens.length === 1) return linhaEntrega(itens[0], false);
       const expandido = gruposExpandidos.has(chave);
-      return linhaResumoGrupo(chave, itens, expandido) + (expandido ? itens.map((e) => linhaEntrega(e, true)).join('') : '');
+      return linhaResumoGrupo(chave, itens, expandido) + (expandido ? itens.map((e, i) => linhaEntrega(e, true, i === itens.length - 1)).join('') : '');
     }).join('') || '<tr><td colspan="9" class="py-3 text-center text-slate-400">Nenhuma entrega nesta carga.</td></tr>';
 
     tabelaEntregas.querySelectorAll('tr[data-id]').forEach((tr) => {
@@ -350,14 +373,6 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
         document.getElementById('btn-agrupar-entregas').classList.toggle('hidden', selecionadas.size < 2);
         document.getElementById('btn-desagrupar-entregas').classList.toggle('hidden', selecionadas.size < 1);
         document.getElementById('btn-excluir-entregas-selecionadas').classList.toggle('hidden', selecionadas.size < 1);
-      });
-      tr.querySelector('.radio-ultima').addEventListener('change', async () => {
-        try {
-          await apiPut(`/api/entregas/${id}`, { is_last_delivery: 1 });
-          await abrir(cargaAtual.id);
-        } catch (err) {
-          mostrarMensagem(err.message, 'erro');
-        }
       });
       criarMenuAcoes(tr.querySelector('.btn-menu-acoes'), [
         { label: 'Editar', onClick: () => abrirEdicaoEntrega(id) },

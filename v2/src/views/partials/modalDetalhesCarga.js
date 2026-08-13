@@ -4,7 +4,7 @@ export function renderModalDetalhesCarga() {
     <div class="card w-full max-w-6xl">
       <div class="mb-4 flex items-start justify-between gap-3">
         <div>
-          <h2 class="text-lg font-semibold"><span id="det-codigo"></span> <span id="det-status-badge" class="ml-2 rounded px-2 py-0.5 text-xs"></span></h2>
+          <h2 class="text-lg font-semibold"><span id="det-codigo"></span> <span id="det-status-badge" class="ml-2 rounded px-2 py-0.5 text-xs"></span> <span id="det-frota-badge" class="ml-1 hidden rounded bg-violet-900/40 px-2 py-0.5 text-xs font-bold text-violet-300">FROTA</span></h2>
           <p class="text-sm text-slate-400">Origem: <span id="det-origem"></span></p>
         </div>
         <button type="button" id="btn-fechar-detalhes" class="text-slate-400 hover:text-slate-100">&#10005;</button>
@@ -101,9 +101,9 @@ export function renderModalDetalhesCarga() {
             <thead class="text-slate-400">
               <tr>
                 <th class="pb-2"><input type="checkbox" id="chk-todas"></th>
-                <th class="pb-2">Ultima</th>
                 <th class="pb-2">Remetente</th>
                 <th class="pb-2">Destinatario</th>
+                <th class="pb-2">Contato</th>
                 <th class="pb-2">Cidade/UF</th>
                 <th class="pb-2">NF</th>
                 <th class="pb-2">Peso</th>

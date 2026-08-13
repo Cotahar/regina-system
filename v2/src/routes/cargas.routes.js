@@ -8,7 +8,7 @@ export const cargasRouter = Router();
 
 function carregarCargaComJoins(id) {
   return db.prepare(`
-    SELECT c.*, m.nome as motorista_nome, v.placa as placa_veiculo
+    SELECT c.*, m.nome as motorista_nome, v.placa as placa_veiculo, v.is_frota as veiculo_frota
     FROM cargas c
     LEFT JOIN motoristas m ON m.id = c.motorista_id
     LEFT JOIN veiculos v ON v.id = c.veiculo_id
@@ -19,7 +19,7 @@ function carregarCargaComJoins(id) {
 // --- PAINEL PRINCIPAL ---
 cargasRouter.get('/api/cargas', requireLogin, (req, res) => {
   let sql = `
-    SELECT c.*, m.nome as motorista_nome, v.placa as placa_veiculo
+    SELECT c.*, m.nome as motorista_nome, v.placa as placa_veiculo, v.is_frota as veiculo_frota
     FROM cargas c
     LEFT JOIN motoristas m ON m.id = c.motorista_id
     LEFT JOIN veiculos v ON v.id = c.veiculo_id
@@ -39,6 +39,7 @@ cargasRouter.get('/api/cargas', requireLogin, (req, res) => {
       ...toDictCarga(c),
       motorista_nome: c.motorista_nome,
       placa_veiculo: c.placa_veiculo,
+      veiculo_frota: !!c.veiculo_frota,
       entregas: entregas.map(toDictEntrega),
       ...resumoCarga(entregas)
     };
@@ -143,6 +144,9 @@ cargasRouter.get('/api/cargas/:id', requireLogin, (req, res) => {
     SELECT e.*,
       cl.razao_social as cliente_razao_social, cl.cidade as cliente_cidade, cl.estado as cliente_estado,
       cl.ddd as cliente_ddd, cl.telefone as cliente_telefone, cl.observacoes as cliente_observacoes,
+      cl.precisa_agendamento as cliente_precisa_agendamento, cl.autodescarga as cliente_autodescarga,
+      cl.precisa_ajudantes as cliente_precisa_ajudantes, cl.descarga_paga_direto as cliente_descarga_paga_direto,
+      cl.resolve_com_representante as cliente_resolve_com_representante, cl.contato_extra as cliente_contato_extra,
       rem.razao_social as remetente_razao_social, rem.cidade as remetente_cidade, rem.estado as remetente_estado
     FROM entregas e
     LEFT JOIN clientes cl ON cl.id = e.cliente_id
@@ -159,6 +163,7 @@ cargasRouter.get('/api/cargas/:id', requireLogin, (req, res) => {
     ...toDictCarga(carga),
     motorista_nome: carga.motorista_nome,
     placa_veiculo: carga.placa_veiculo,
+    veiculo_frota: !!carga.veiculo_frota,
     tem_avaria: temAvaria
   };
 
@@ -175,6 +180,12 @@ cargasRouter.get('/api/cargas/:id', requireLogin, (req, res) => {
     ddd: e.cliente_ddd || '',
     telefone: e.cliente_telefone || '',
     obs_cliente: e.cliente_observacoes || '',
+    cliente_precisa_agendamento: !!e.cliente_precisa_agendamento,
+    cliente_autodescarga: !!e.cliente_autodescarga,
+    cliente_precisa_ajudantes: !!e.cliente_precisa_ajudantes,
+    cliente_descarga_paga_direto: !!e.cliente_descarga_paga_direto,
+    cliente_resolve_com_representante: !!e.cliente_resolve_com_representante,
+    cliente_contato_extra: e.cliente_contato_extra || '',
     cidade_entrega_override: e.cidade_entrega,
     estado_entrega_override: e.estado_entrega,
     peso_bruto: e.peso_bruto,
@@ -376,12 +387,30 @@ cargasRouter.get('/cargas/:id/espelho_impressao', requireLogin, (req, res) => {
 
   const entregas = db.prepare(`
     SELECT e.*, cl.razao_social as cliente_razao_social, cl.cidade as cliente_cidade, cl.estado as cliente_estado,
+      cl.ddd as cliente_ddd, cl.telefone as cliente_telefone, cl.observacoes as cliente_observacoes,
+      cl.precisa_agendamento as cliente_precisa_agendamento, cl.autodescarga as cliente_autodescarga,
+      cl.precisa_ajudantes as cliente_precisa_ajudantes, cl.descarga_paga_direto as cliente_descarga_paga_direto,
+      cl.resolve_com_representante as cliente_resolve_com_representante, cl.contato_extra as cliente_contato_extra,
       rem.razao_social as remetente_razao_social
     FROM entregas e
     LEFT JOIN clientes cl ON cl.id = e.cliente_id
     LEFT JOIN clientes rem ON rem.id = e.remetente_id
     WHERE e.carga_id = ?
   `).all(req.params.id);
+
+  function perfilCliente(e) {
+    return {
+      ddd: e.cliente_ddd || '',
+      telefone: e.cliente_telefone || '',
+      observacoes: e.cliente_observacoes || '',
+      precisaAgendamento: !!e.cliente_precisa_agendamento,
+      autodescarga: !!e.cliente_autodescarga,
+      precisaAjudantes: !!e.cliente_precisa_ajudantes,
+      descargaPagaDireto: !!e.cliente_descarga_paga_direto,
+      resolveComRepresentante: !!e.cliente_resolve_com_representante,
+      contatoExtra: e.cliente_contato_extra || ''
+    };
+  }
 
   const entregasAgrupadasMap = new Map();
   const coletasMap = new Map();
@@ -396,7 +425,7 @@ cargasRouter.get('/cargas/:id/espelho_impressao', requireLogin, (req, res) => {
     const chave = `${clienteNome}_${cidade}_${estado}`;
 
     if (!entregasAgrupadasMap.has(chave)) {
-      entregasAgrupadasMap.set(chave, { cliente: clienteNome, cidadeUf: `${cidade}-${estado}`, peso: 0 });
+      entregasAgrupadasMap.set(chave, { cliente: clienteNome, cidadeUf: `${cidade}-${estado}`, peso: 0, perfil: perfilCliente(e) });
     }
     entregasAgrupadasMap.get(chave).peso += peso;
 
@@ -404,7 +433,7 @@ cargasRouter.get('/cargas/:id/espelho_impressao', requireLogin, (req, res) => {
     if (!coletasMap.has(remetenteNome)) coletasMap.set(remetenteNome, { entregas: new Map(), totalPeso: 0 });
     const coleta = coletasMap.get(remetenteNome);
     coleta.totalPeso += peso;
-    if (!coleta.entregas.has(chave)) coleta.entregas.set(chave, { cliente: clienteNome, cidadeUf: `${cidade}-${estado}`, peso: 0 });
+    if (!coleta.entregas.has(chave)) coleta.entregas.set(chave, { cliente: clienteNome, cidadeUf: `${cidade}-${estado}`, peso: 0, perfil: perfilCliente(e) });
     coleta.entregas.get(chave).peso += peso;
   }
 
@@ -414,7 +443,14 @@ cargasRouter.get('/cargas/:id/espelho_impressao', requireLogin, (req, res) => {
     .map(([nome, dados]) => [nome, { totalPeso: dados.totalPeso, entregas: [...dados.entregas.values()].sort((a, b) => a.cliente.localeCompare(b.cliente)) }]);
 
   res.type('html').send(renderEspelhoCarga({
-    carga: { codigo_carga: carga.codigo_carga, origem: carga.origem, motorista_nome: carga.motorista_nome, placa_veiculo: carga.placa_veiculo },
+    carga: {
+      codigo_carga: carga.codigo_carga,
+      origem: carga.origem,
+      motorista_nome: carga.motorista_nome,
+      placa_veiculo: carga.placa_veiculo,
+      veiculo_frota: !!carga.veiculo_frota,
+      observacoes: carga.observacoes
+    },
     entregasAgrupadas,
     coletasPorRemetente,
     pesoTotal
