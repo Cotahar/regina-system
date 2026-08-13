@@ -1,8 +1,12 @@
 import { apiGet, apiPost, apiPut, apiDelete } from '../shared/api.js';
 import { escapeHtml } from '../shared/escape.js';
-import { formatarMoeda } from '../shared/format.js';
+import { formatarMoeda, parseDecimal } from '../shared/format.js';
 import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
 import { criarCombobox } from '../shared/combobox.js';
+import { aplicarMascaraDecimal } from '../shared/mask.js';
+
+const finalizarValorInput = document.getElementById('finalizar-valor');
+if (finalizarValorInput) aplicarMascaraDecimal(finalizarValorInput);
 
 const isAdmin = window.__SESSAO__?.permissao === 'admin';
 const params = new URLSearchParams(window.location.search);
@@ -120,7 +124,7 @@ document.getElementById('form-finalizar')?.addEventListener('submit', async (eve
     await apiPut(`/api/avarias/${id}`, {
       acao: 'finalizar',
       retorno_fabrica: document.getElementById('finalizar-retorno').value.trim(),
-      valor_cobranca: document.getElementById('finalizar-valor').value.replace(',', '.') || 0
+      valor_cobranca: parseDecimal(document.getElementById('finalizar-valor').value) || 0
     });
     fecharModal(document.getElementById('modal-finalizar'));
     await carregarLista();

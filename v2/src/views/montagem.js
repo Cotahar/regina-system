@@ -43,7 +43,7 @@ export function renderMontagemPage() {
         <div class="card">
           <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
             <div class="flex-1 min-w-[200px]">
-              <label class="mb-1 block text-xs text-slate-400">Origem do rascunho</label>
+              <label class="label">Origem do rascunho</label>
               <input type="text" id="origem-rascunho" class="input-field" placeholder="Ex: CRICIUMA SC">
             </div>
             <div class="flex gap-2">
@@ -107,28 +107,28 @@ export function renderMontagemPage() {
         <h3 class="mb-3 text-base font-semibold">Editar entrega</h3>
         <input type="hidden" id="edit-id">
         <div class="relative mb-2">
-          <label class="mb-1 block text-xs text-slate-400">Remetente</label>
+          <label class="label">Remetente</label>
           <input id="edit-remetente-input" class="input-field">
           <input type="hidden" id="edit-remetente-id">
         </div>
         <div class="mb-2 grid grid-cols-2 gap-2">
-          <div><label class="mb-1 block text-xs text-slate-400">Cidade</label><input type="text" id="edit-cidade" class="input-field"></div>
-          <div><label class="mb-1 block text-xs text-slate-400">UF</label><input type="text" id="edit-estado" class="input-field" maxlength="2"></div>
+          <div><label class="label">Cidade</label><input type="text" id="edit-cidade" class="input-field"></div>
+          <div><label class="label">UF</label><input type="text" id="edit-estado" class="input-field" maxlength="2"></div>
         </div>
         <div class="mb-2 grid grid-cols-2 gap-2">
-          <div><label class="mb-1 block text-xs text-slate-400">Peso bruto</label><input type="text" id="edit-peso" class="input-field"></div>
-          <div><label class="mb-1 block text-xs text-slate-400">Peso cubado</label><input type="text" id="edit-cubado" class="input-field"></div>
+          <div><label class="label">Peso bruto</label><input type="text" id="edit-peso" class="input-field"></div>
+          <div><label class="label">Peso cubado</label><input type="text" id="edit-cubado" class="input-field"></div>
         </div>
         <div class="mb-2 grid grid-cols-2 gap-2">
-          <div><label class="mb-1 block text-xs text-slate-400">Valor frete</label><input type="text" id="edit-frete" class="input-field"></div>
-          <div><label class="mb-1 block text-xs text-slate-400">Valor/tonelada</label><input type="text" id="edit-tonelada" class="input-field"></div>
+          <div><label class="label">Valor frete</label><input type="text" id="edit-frete" class="input-field"></div>
+          <div><label class="label">Valor/tonelada</label><input type="text" id="edit-tonelada" class="input-field"></div>
         </div>
         <div class="mb-2">
-          <label class="mb-1 block text-xs text-slate-400">Nota fiscal</label>
+          <label class="label">Nota fiscal</label>
           <input type="text" id="edit-nf" class="input-field">
         </div>
         <div class="mb-2">
-          <label class="mb-1 block text-xs text-slate-400">Local de coleta (se diferente do remetente)</label>
+          <label class="label">Local de coleta (se diferente do remetente)</label>
           <input type="text" id="edit-local-coleta" class="input-field">
         </div>
         <label class="mb-2 flex items-center gap-2 text-sm text-slate-300">

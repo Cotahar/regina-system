@@ -5,6 +5,10 @@ import { abrirModal, fecharModal, exibirMensagem } from './ui.js';
 import { criarCombobox } from './combobox.js';
 import { icones } from './icons.js';
 import { iconeMenuAcoes, criarMenuAcoes } from './menuAcoes.js';
+import { aplicarMascaraDecimal } from './mask.js';
+
+['det-frete-pago', 'add-peso', 'add-frete', 'edit-peso', 'edit-peso-cubado', 'edit-frete']
+  .forEach((id) => aplicarMascaraDecimal(document.getElementById(id)));
 
 const STATUS_CORES = {
   Pendente: 'bg-slate-500/20 text-slate-300',

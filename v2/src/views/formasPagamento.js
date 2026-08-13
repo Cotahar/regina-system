@@ -5,7 +5,7 @@ export function renderFormasPagamentoPage() {
     <div class="card mt-4">
       <form id="form-nova" class="flex flex-wrap items-end gap-3">
         <div class="flex-1 min-w-[200px]">
-          <label class="mb-1 block text-xs text-slate-400">Descricao</label>
+          <label class="label">Descricao</label>
           <input type="text" id="nova-descricao" class="input-field" placeholder="Ex: 30 DIAS" required>
         </div>
         <button type="submit" class="btn-primary">Adicionar</button>

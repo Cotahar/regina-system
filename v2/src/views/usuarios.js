@@ -7,15 +7,15 @@ export function renderUsuariosPage() {
       <form id="form-usuario" class="flex flex-wrap items-end gap-3">
         <input type="hidden" id="usuario-id">
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Usuario</label>
+          <label class="label">Usuario</label>
           <input type="text" id="usuario-nome" class="input-field" required>
         </div>
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Senha</label>
+          <label class="label">Senha</label>
           <input type="password" id="usuario-senha" class="input-field" placeholder="Deixe em branco para nao alterar">
         </div>
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Permissao</label>
+          <label class="label">Permissao</label>
           <select id="usuario-permissao" class="input-field">
             <option value="usuario">Usuario</option>
             <option value="admin">Admin</option>

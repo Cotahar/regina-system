@@ -38,11 +38,11 @@ export function renderMotoristasPage() {
         <h2 class="mb-4 text-lg font-semibold" id="modal-titulo">Novo motorista</h2>
         <input type="hidden" id="motorista-id">
         <div class="mb-3">
-          <label class="mb-1 block text-xs text-slate-400">Codigo</label>
+          <label class="label">Codigo</label>
           <input type="text" id="motorista-codigo" class="input-field">
         </div>
         <div class="mb-4">
-          <label class="mb-1 block text-xs text-slate-400">Nome</label>
+          <label class="label">Nome</label>
           <input type="text" id="motorista-nome" class="input-field" required>
         </div>
         <p id="msg-modal" class="mb-3 hidden text-sm"></p>

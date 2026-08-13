@@ -5,6 +5,23 @@ import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
 import { ouvirMudancas } from '../shared/live.js';
 import { criarCombobox } from '../shared/combobox.js';
 import { iconeMenuAcoes, criarMenuAcoes } from '../shared/menuAcoes.js';
+import { aplicarMascaraDecimal, ligarCalculadoraFretePorTonelada } from '../shared/mask.js';
+
+['nova-peso', 'nova-cubado', 'nova-frete', 'nova-tonelada', 'edit-peso', 'edit-cubado', 'edit-frete', 'edit-tonelada']
+  .forEach((id) => aplicarMascaraDecimal(document.getElementById(id)));
+
+ligarCalculadoraFretePorTonelada({
+  pesoBrutoInput: document.getElementById('nova-peso'),
+  pesoCubadoInput: document.getElementById('nova-cubado'),
+  valorTonInput: document.getElementById('nova-tonelada'),
+  valorFreteInput: document.getElementById('nova-frete')
+});
+ligarCalculadoraFretePorTonelada({
+  pesoBrutoInput: document.getElementById('edit-peso'),
+  pesoCubadoInput: document.getElementById('edit-cubado'),
+  valorTonInput: document.getElementById('edit-tonelada'),
+  valorFreteInput: document.getElementById('edit-frete')
+});
 
 let clientes = [];
 let poolDisponiveis = [];

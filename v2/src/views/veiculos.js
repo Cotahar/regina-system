@@ -38,7 +38,7 @@ export function renderVeiculosPage() {
         <h2 class="mb-4 text-lg font-semibold" id="modal-titulo">Novo veiculo</h2>
         <input type="hidden" id="veiculo-id">
         <div class="mb-4">
-          <label class="mb-1 block text-xs text-slate-400">Placa</label>
+          <label class="label">Placa</label>
           <input type="text" id="veiculo-placa" class="input-field" required>
         </div>
         <p id="msg-modal" class="mb-3 hidden text-sm"></p>

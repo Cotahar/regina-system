@@ -20,33 +20,33 @@ export function renderModalDetalhesCarga() {
         <h3 class="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Dados da carga</h3>
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div class="relative">
-            <label class="mb-1 block text-xs text-slate-400">Motorista</label>
+            <label class="label">Motorista</label>
             <input id="det-motorista-input" class="input-field" placeholder="Buscar motorista...">
             <input type="hidden" id="det-motorista-id">
           </div>
           <div class="relative">
-            <label class="mb-1 block text-xs text-slate-400">Veiculo</label>
+            <label class="label">Veiculo</label>
             <input id="det-veiculo-input" class="input-field" placeholder="Buscar placa...">
             <input type="hidden" id="det-veiculo-id">
           </div>
           <div>
-            <label class="mb-1 block text-xs text-slate-400">Data agendamento</label>
+            <label class="label">Data agendamento</label>
             <input type="date" id="det-data-agendamento" class="input-field">
           </div>
           <div>
-            <label class="mb-1 block text-xs text-slate-400">Frete pago (R$)</label>
+            <label class="label">Frete pago (R$)</label>
             <input type="text" id="det-frete-pago" class="input-field">
           </div>
           <div data-estagio="carregamento">
-            <label class="mb-1 block text-xs text-slate-400">Data carregamento</label>
+            <label class="label">Data carregamento</label>
             <input type="date" id="det-data-carregamento" class="input-field">
           </div>
           <div data-estagio="carregamento">
-            <label class="mb-1 block text-xs text-slate-400">Previsao de entrega</label>
+            <label class="label">Previsao de entrega</label>
             <input type="date" id="det-previsao-entrega" class="input-field">
           </div>
           <div data-estagio="finalizacao">
-            <label class="mb-1 block text-xs text-slate-400">Data finalizacao</label>
+            <label class="label">Data finalizacao</label>
             <input type="date" id="det-data-finalizacao" class="input-field">
           </div>
         </div>
@@ -123,42 +123,42 @@ export function renderModalDetalhesCarga() {
       <h3 class="mb-3 text-base font-semibold">Editar entrega</h3>
       <input type="hidden" id="edit-entrega-id">
       <div class="relative mb-2">
-        <label class="mb-1 block text-xs text-slate-400">Remetente</label>
+        <label class="label">Remetente</label>
         <input id="edit-remetente-input" class="input-field">
         <input type="hidden" id="edit-remetente-id">
       </div>
       <div class="mb-2 grid grid-cols-2 gap-2">
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Cidade (override)</label>
+          <label class="label">Cidade (override)</label>
           <input type="text" id="edit-cidade" class="input-field">
         </div>
         <div>
-          <label class="mb-1 block text-xs text-slate-400">UF (override)</label>
+          <label class="label">UF (override)</label>
           <input type="text" id="edit-estado" class="input-field" maxlength="2">
         </div>
       </div>
       <div class="mb-2 grid grid-cols-2 gap-2">
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Peso bruto (kg)</label>
+          <label class="label">Peso bruto (kg)</label>
           <input type="text" id="edit-peso" class="input-field">
         </div>
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Peso cubado (kg)</label>
+          <label class="label">Peso cubado (kg)</label>
           <input type="text" id="edit-peso-cubado" class="input-field">
         </div>
       </div>
       <div class="mb-2 grid grid-cols-2 gap-2">
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Valor frete (R$)</label>
+          <label class="label">Valor frete (R$)</label>
           <input type="text" id="edit-frete" class="input-field">
         </div>
         <div>
-          <label class="mb-1 block text-xs text-slate-400">Nota fiscal</label>
+          <label class="label">Nota fiscal</label>
           <input type="text" id="edit-nf" class="input-field">
         </div>
       </div>
       <div class="mb-2">
-        <label class="mb-1 block text-xs text-slate-400">Local de coleta (se diferente do remetente)</label>
+        <label class="label">Local de coleta (se diferente do remetente)</label>
         <input type="text" id="edit-local-coleta" class="input-field">
       </div>
       <label class="mb-2 flex items-center gap-2 text-sm text-slate-300">

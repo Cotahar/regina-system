@@ -1,3 +1,5 @@
+import { parseDecimal } from './format.js';
+
 // Mascara de input decimal (pt-BR: virgula como separador). Implementacao unica
 // que substitui as 3 versoes divergentes que existiam no sistema antigo
 // (script.js, consulta.js e gerenciar_carga.js).
@@ -25,9 +27,11 @@ export function aplicarMascaraDecimal(input) {
 // Valor/Tonelada, preferindo o peso cubado quando informado.
 export function ligarCalculadoraFretePorTonelada({ pesoBrutoInput, pesoCubadoInput, valorTonInput, valorFreteInput }) {
   const recalcular = () => {
-    const pesoBruto = parseFloat((pesoBrutoInput.value || '0').replace(',', '.')) || 0;
-    const pesoCubado = parseFloat((pesoCubadoInput.value || '0').replace(',', '.')) || 0;
-    const valorTon = parseFloat((valorTonInput.value || '0').replace(',', '.')) || 0;
+    // parseDecimal (nao um replace ingenuo) porque aplicarMascaraDecimal formata
+    // o valor com separador de milhar pt-BR (ex: "1.234,56") no blur.
+    const pesoBruto = parseDecimal(pesoBrutoInput.value) || 0;
+    const pesoCubado = parseDecimal(pesoCubadoInput.value) || 0;
+    const valorTon = parseDecimal(valorTonInput.value) || 0;
 
     const pesoConsiderado = pesoCubado > pesoBruto ? pesoCubado : pesoBruto;
     if (pesoConsiderado > 0 && valorTon > 0) {

@@ -10,45 +10,45 @@ export function renderGerenciarCargaPage() {
 
     <div class="card mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div class="relative">
-        <label class="mb-1 block text-xs text-slate-400">Motorista</label>
+        <label class="label">Motorista</label>
         <input id="ger-motorista-input" class="input-field">
         <input type="hidden" id="ger-motorista-id">
       </div>
       <div class="relative">
-        <label class="mb-1 block text-xs text-slate-400">Veiculo</label>
+        <label class="label">Veiculo</label>
         <input id="ger-veiculo-input" class="input-field">
         <input type="hidden" id="ger-veiculo-id">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Rota manifesto</label>
+        <label class="label">Rota manifesto</label>
         <input type="text" id="ger-rota" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Vale pedagio (marca)</label>
+        <label class="label">Vale pedagio (marca)</label>
         <input type="text" id="ger-vp-marca" class="input-field" placeholder="Sem Parar / Move Mais">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Vale pedagio (rota)</label>
+        <label class="label">Vale pedagio (rota)</label>
         <input type="text" id="ger-vp-rota" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Vale pedagio (eixos)</label>
+        <label class="label">Vale pedagio (eixos)</label>
         <input type="number" id="ger-vp-eixos" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Frete pago (motorista)</label>
+        <label class="label">Frete pago (motorista)</label>
         <input type="text" id="ger-frete-pago" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Adiantamento (%)</label>
+        <label class="label">Adiantamento (%)</label>
         <input type="number" id="ger-adiant-percentual" class="input-field" value="70">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Valor do adiantamento</label>
+        <label class="label">Valor do adiantamento</label>
         <input type="text" id="ger-adiant-valor" class="input-field" readonly>
       </div>
       <div class="sm:col-span-2 lg:col-span-4">
-        <label class="mb-1 block text-xs text-slate-400">Observacoes de faturamento</label>
+        <label class="label">Observacoes de faturamento</label>
         <textarea id="ger-observacoes" class="input-field" rows="2"></textarea>
       </div>
     </div>
@@ -120,11 +120,11 @@ export function renderGerenciarCargaPage() {
         <h3 class="mb-3 text-base font-semibold">Repasse / comissao</h3>
         <input type="hidden" id="repasse-entrega-id">
         <div class="mb-3">
-          <label class="mb-1 block text-xs text-slate-400">Valor combinado (o que fica para a empresa)</label>
+          <label class="label">Valor combinado (o que fica para a empresa)</label>
           <input type="text" id="repasse-valor-combinado" class="input-field" placeholder="Ex: 750,00 por ton, ou valor cheio">
         </div>
         <div class="mb-3">
-          <label class="mb-1 block text-xs text-slate-400">Repasse para (nome do representante/parceiro)</label>
+          <label class="label">Repasse para (nome do representante/parceiro)</label>
           <input type="text" id="repasse-destinatario" class="input-field">
         </div>
         <p class="mb-3 text-xs text-slate-400">A diferenca entre o valor do frete cobrado no CT-e e o valor combinado e o que deve ser repassado.</p>

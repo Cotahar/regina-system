@@ -48,39 +48,39 @@ export function renderClientesPage() {
         <input type="hidden" id="cliente-id">
 
         <div class="mb-3">
-          <label class="mb-1 block text-xs text-slate-400">Codigo do cliente</label>
+          <label class="label">Codigo do cliente</label>
           <input type="text" id="cliente-codigo" class="input-field" placeholder="Deixe em branco para gerar automaticamente">
         </div>
 
         <div class="mb-3">
-          <label class="mb-1 block text-xs text-slate-400">Razao social</label>
+          <label class="label">Razao social</label>
           <input type="text" id="cliente-razao" class="input-field" required>
         </div>
 
         <div class="mb-3 grid grid-cols-2 gap-3">
           <div>
-            <label class="mb-1 block text-xs text-slate-400">Cidade</label>
+            <label class="label">Cidade</label>
             <input type="text" id="cliente-cidade" class="input-field">
           </div>
           <div>
-            <label class="mb-1 block text-xs text-slate-400">Estado (UF)</label>
+            <label class="label">Estado (UF)</label>
             <input type="text" id="cliente-estado" class="input-field" maxlength="2">
           </div>
         </div>
 
         <div class="mb-3 grid grid-cols-2 gap-3">
           <div>
-            <label class="mb-1 block text-xs text-slate-400">DDD</label>
+            <label class="label">DDD</label>
             <input type="text" id="cliente-ddd" class="input-field" maxlength="2">
           </div>
           <div>
-            <label class="mb-1 block text-xs text-slate-400">Telefone</label>
+            <label class="label">Telefone</label>
             <input type="text" id="cliente-telefone" class="input-field">
           </div>
         </div>
 
         <div class="mb-3">
-          <label class="mb-1 block text-xs text-slate-400">Observacoes</label>
+          <label class="label">Observacoes</label>
           <textarea id="cliente-observacoes" class="input-field" rows="2"></textarea>
         </div>
 
@@ -90,7 +90,7 @@ export function renderClientesPage() {
         </label>
 
         <div class="mb-3">
-          <label class="mb-1 block text-xs text-slate-400">Contato adicional (se houver mais de um)</label>
+          <label class="label">Contato adicional (se houver mais de um)</label>
           <input type="text" id="cliente-contato-extra" class="input-field" placeholder="Nome / telefone do segundo contato">
         </div>
 
@@ -117,13 +117,13 @@ export function renderClientesPage() {
 
         <div class="mb-4 grid grid-cols-2 gap-3">
           <div>
-            <label class="mb-1 block text-xs text-slate-400">Forma de pagamento padrao</label>
+            <label class="label">Forma de pagamento padrao</label>
             <select id="cliente-forma-pagamento" class="input-field">
               <option value="">-</option>
             </select>
           </div>
           <div>
-            <label class="mb-1 block text-xs text-slate-400">Tipo de pagamento padrao</label>
+            <label class="label">Tipo de pagamento padrao</label>
             <select id="cliente-tipo-pagamento" class="input-field">
               <option value="">-</option>
               <option value="Boleto">Boleto</option>

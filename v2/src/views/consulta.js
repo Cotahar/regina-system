@@ -19,19 +19,19 @@ export function renderConsultaPage() {
       <div class="relative"><input id="f-cliente-input" class="input-field" placeholder="Cliente..."></div>
       <input type="hidden" id="f-cliente-id">
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Carregamento de</label>
+        <label class="label">Carregamento de</label>
         <input type="date" id="f-carreg-inicio" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Carregamento ate</label>
+        <label class="label">Carregamento ate</label>
         <input type="date" id="f-carreg-fim" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Finalizacao de</label>
+        <label class="label">Finalizacao de</label>
         <input type="date" id="f-final-inicio" class="input-field">
       </div>
       <div>
-        <label class="mb-1 block text-xs text-slate-400">Finalizacao ate</label>
+        <label class="label">Finalizacao ate</label>
         <input type="date" id="f-final-fim" class="input-field">
       </div>
       <div class="flex items-end gap-2 sm:col-span-3 lg:col-span-4">

@@ -3,6 +3,7 @@ import { escapeHtml } from '../shared/escape.js';
 import { formatarMoeda, formatarPeso, parseDecimal } from '../shared/format.js';
 import { exibirMensagem } from '../shared/ui.js';
 import { criarCombobox } from '../shared/combobox.js';
+import { aplicarMascaraDecimal } from '../shared/mask.js';
 
 const cargaId = new URLSearchParams(window.location.search).get('carga_id');
 const msg = document.getElementById('ger-msg');
@@ -22,6 +23,9 @@ if (!cargaId) {
 
 criarCombobox({ input: document.getElementById('ger-motorista-input'), hidden: document.getElementById('ger-motorista-id'), getItens: () => motoristas });
 criarCombobox({ input: document.getElementById('ger-veiculo-input'), hidden: document.getElementById('ger-veiculo-id'), getItens: () => veiculos });
+
+aplicarMascaraDecimal(document.getElementById('ger-frete-pago'));
+aplicarMascaraDecimal(document.getElementById('repasse-valor-combinado'));
 
 // --- PREENCHIMENTO AUTOMATICO (baseado no REMETENTE + cadastro de Unidades) ---
 function autoUnidadeTipoCte(entrega) {
@@ -87,6 +91,8 @@ function ligarCalculoFreteLinha(tr) {
   const tonInput = tr.querySelector('.campo-ton');
   const freteInput = tr.querySelector('.campo-frete');
   const cortesiaChk = tr.querySelector('.campo-cortesia');
+
+  [pesoInput, cubadoInput, tonInput, freteInput].forEach(aplicarMascaraDecimal);
 
   const recalcular = () => {
     if (cortesiaChk.checked) return;
