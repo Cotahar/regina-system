@@ -182,6 +182,10 @@ entregasRouter.put('/api/entregas/:id', requireLogin, (req, res) => {
 });
 
 function validarAgrupamento(entregas) {
+  const cargas = new Set(entregas.map((e) => e.carga_id));
+  if (cargas.size > 1) {
+    return 'So e possivel agrupar entregas que estejam na mesma carga (ou todas ainda soltas em Disponiveis).';
+  }
   const remetentes = new Set(entregas.map((e) => e.remetente_id));
   const destinatarios = new Set(entregas.map((e) => e.cliente_id));
   if (remetentes.size > 1 || destinatarios.size > 1) {

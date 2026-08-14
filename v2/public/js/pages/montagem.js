@@ -96,13 +96,19 @@ function agruparParaExibicao(entregas) {
 
 function linhaEntrega(e, indentada) {
   const agrupada = !!e.grupo_id;
-  const classeGrupo = agrupada ? 'bg-destaque/5 border-l-2 border-l-destaque' : '';
-  const classeIndentada = indentada ? 'bg-blue-500/10 border-l-4 border-l-blue-500/40' : '';
-  // Linhas que ja fazem parte do rascunho aberto ganham um tom diferente pra
-  // separar visualmente do que ainda esta so disponivel na pool.
-  const classeRascunho = e._rascunho ? 'bg-violet-500/10 border-l-4 border-l-violet-500/50' : '';
+  // So uma cor de fundo por linha - concatenar as 3 classes ao mesmo tempo
+  // deixava a cor final a mercer da ordem que o Tailwind gera o CSS, em vez
+  // de uma prioridade escolhida. Rascunho (o que ja esta no rascunho aberto)
+  // vem primeiro por ser o estado mais "acionavel" pra quem esta montando;
+  // depois grupo de faturamento (informacao financeira); por ultimo o
+  // indentado (so indica que a linha esta dentro de um cluster expandido).
+  let classeCor;
+  if (e._rascunho) classeCor = 'bg-violet-500/10 border-l-4 border-l-violet-500/50';
+  else if (agrupada) classeCor = 'bg-destaque/5 border-l-2 border-l-destaque';
+  else if (indentada) classeCor = 'bg-blue-500/10 border-l-4 border-l-blue-500/40';
+  else classeCor = '';
   return `
-    <tr class="border-t border-painel-border transition-colors ${classeGrupo} ${classeIndentada} ${classeRascunho}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
+    <tr class="border-t border-painel-border transition-colors ${classeCor}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
       <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionados.has(e.id) ? 'checked' : ''}></td>
       <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}${e._rascunho ? ' <span class="rounded bg-violet-900/40 px-1 text-[10px] text-violet-300">rascunho</span>' : ''}</td>
       <td class="py-1.5">${escapeHtml(e.destinatario_nome)}</td>
@@ -121,7 +127,13 @@ function linhaResumoGrupo(chave, itens, expandido) {
   const remetenteTexto = remetentes.size === 1 ? escapeHtml([...remetentes][0]) : '<span class="italic text-slate-400">Varios</span>';
   const primeiro = itens[0];
   const pesoTotal = itens.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
-  const cubadoTotal = itens.reduce((acc, e) => acc + (e.peso_cubado || 0), 0);
+  // Mesma regra do rodape: usa o cubado por nota so quando ele for maior
+  // que o peso real, senao conta o peso bruto normalmente.
+  const cubadoTotal = itens.reduce((acc, e) => {
+    const bruto = e.peso_bruto || 0;
+    const cubado = e.peso_cubado || 0;
+    return acc + (cubado > bruto ? cubado : bruto);
+  }, 0);
   const freteTotal = itens.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
   const todosSelecionados = itens.every((e) => selecionados.has(e.id));
   const todosRascunho = itens.every((e) => e._rascunho);
@@ -152,9 +164,12 @@ function linhaResumoGrupo(chave, itens, expandido) {
   `;
 }
 
-function renderizarTabela() {
+// Mesmo filtro (busca + combos) aplicado na tabela - extraido pra ser
+// reaproveitado pelo "selecionar tudo", que precisa operar so sobre o que
+// esta filtrado no momento, nao a lista inteira.
+function linhasFiltradas() {
   const termo = filtro.value.trim().toLowerCase();
-  const linhas = linhasCombinadas().filter((e) => {
+  return linhasCombinadas().filter((e) => {
     if (termo) {
       const texto = `${e.remetente_nome} ${e.destinatario_nome} ${e.cidade_entrega} ${e.nota_fiscal || ''}`.toLowerCase();
       if (!texto.includes(termo)) return false;
@@ -165,6 +180,10 @@ function renderizarTabela() {
     if (filtroUfDestino.selecionados.size && !filtroUfDestino.selecionados.has((e.estado_entrega || '').trim())) return false;
     return true;
   });
+}
+
+function renderizarTabela() {
+  const linhas = linhasFiltradas();
 
   const grupos = agruparParaExibicao(linhas);
 
@@ -179,6 +198,13 @@ function renderizarTabela() {
     tr.querySelector('.chk-linha').addEventListener('change', (e) => {
       if (e.target.checked) selecionados.add(id); else selecionados.delete(id);
       atualizarTotais();
+      // Mantem o checkbox "selecionar tudo" do grupo (quando expandido) em
+      // sincronia sem precisar redesenhar a tabela inteira.
+      const grupo = grupos.find((g) => g.itens.length > 1 && g.itens.some((it) => it.id === id));
+      if (grupo) {
+        const chkGrupo = [...tabela.querySelectorAll('.chk-grupo-visual')].find((c) => c.dataset.chave === grupo.chave);
+        if (chkGrupo) chkGrupo.checked = grupo.itens.every((it) => selecionados.has(it.id));
+      }
     });
     const entrega = linhasCombinadas().find((it) => it.id === id);
     const itensMenu = [{ label: 'Editar', onClick: () => abrirEdicao(id) }];
@@ -211,10 +237,18 @@ function renderizarTabela() {
 function atualizarTotais() {
   const linhas = linhasCombinadas().filter((e) => selecionados.has(e.id));
   const peso = linhas.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
-  const cubado = linhas.reduce((acc, e) => acc + (e.peso_cubado || 0), 0);
+  // "Considerado" nao e a soma bruta da coluna Cubado - por nota, usa o
+  // cubado so quando ele for maior que o peso real (mesma regra ja usada em
+  // ligarCalculadoraFretePorTonelada pra calcular o frete); sem cubado, essa
+  // nota entra com o proprio peso bruto, igual as demais.
+  const considerado = linhas.reduce((acc, e) => {
+    const bruto = e.peso_bruto || 0;
+    const cubado = e.peso_cubado || 0;
+    return acc + (cubado > bruto ? cubado : bruto);
+  }, 0);
   const frete = linhas.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
   document.getElementById('total-peso').textContent = formatarPeso(peso);
-  document.getElementById('total-cubado').textContent = formatarPeso(cubado);
+  document.getElementById('total-cubado').textContent = formatarPeso(considerado);
   document.getElementById('total-frete').textContent = formatarMoeda(frete);
 }
 
@@ -397,7 +431,17 @@ document.getElementById('form-nova-entrega').addEventListener('submit', async (e
       local_coleta: document.getElementById('nova-local-coleta').value.trim() || null,
       is_cortesia: document.getElementById('nova-cortesia').checked
     });
-    document.getElementById('form-nova-entrega').reset();
+    // So limpa os campos que mudam nota a nota - mantem Remetente/Destinatario
+    // preenchidos pra lancar varias notas seguidas do mesmo par rapido (so
+    // trocando peso/valor/NF). form.reset() nao serve aqui: pra <input
+    // type="hidden">, atribuir .value via JS tambem reescreve o atributo
+    // value (vira o novo "default" do campo), entao o proprio reset() ja
+    // volta pro ultimo remetente/destinatario escolhido - so nao atualizava
+    // o texto visivel, que ficava com a aparencia de vazio por engano.
+    ['nova-peso', 'nova-cubado', 'nova-tonelada', 'nova-frete', 'nova-nf', 'nova-cidade', 'nova-estado', 'nova-local-coleta']
+      .forEach((id) => { document.getElementById(id).value = ''; });
+    document.getElementById('nova-cortesia').checked = false;
+    document.getElementById('nova-peso').focus();
     await carregarPool();
   } catch (err) {
     exibirMensagem(msgNova, err.message, 'erro');
@@ -426,10 +470,12 @@ document.getElementById('btn-salvar-rascunho').addEventListener('click', async (
 document.getElementById('btn-novo-rascunho').addEventListener('click', novoRascunho);
 
 document.getElementById('chk-todas').addEventListener('change', (e) => {
-  // Opera direto sobre a lista completa (nao so as linhas visiveis no DOM)
-  // porque entregas dentro de um grupo visual recolhido nao tem checkbox
-  // proprio na tela ate serem expandidas.
-  for (const entrega of linhasCombinadas()) {
+  // Opera sobre a lista filtrada (nao a pool inteira) - senao "selecionar
+  // tudo" com um filtro ativo selecionava entregas que nem estao visiveis.
+  // Ainda precisa ser a lista de entregas, nao as linhas do DOM, porque
+  // entregas dentro de um grupo visual recolhido nao tem checkbox proprio
+  // na tela ate serem expandidas.
+  for (const entrega of linhasFiltradas()) {
     if (e.target.checked) selecionados.add(entrega.id); else selecionados.delete(entrega.id);
   }
   renderizarTabela();
@@ -463,6 +509,10 @@ document.getElementById('form-lote-remetente').addEventListener('submit', async 
 document.getElementById('btn-agrupar').addEventListener('click', async () => {
   if (selecionados.size < 2) return alert('Selecione pelo menos 2 entregas para agrupar.');
   const linhas = linhasCombinadas().filter((e) => selecionados.has(e.id));
+  const cargaIds = new Set(linhas.map((e) => e.carga_id || null));
+  if (cargaIds.size > 1) {
+    return alert('So e possivel agrupar entregas que estejam na mesma carga (ou todas ainda soltas em Disponiveis) - misture uma nota do rascunho aberto com uma ainda solta so depois de salvar o rascunho.');
+  }
   const remetenteIds = new Set(linhas.map((e) => e.remetente_id));
   const clienteIds = new Set(linhas.map((e) => e.cliente_id));
   if (remetenteIds.size > 1 || clienteIds.size > 1) {
