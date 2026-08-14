@@ -67,6 +67,8 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       renderizarCabecalho();
       renderizarAcoes();
       renderizarTabelaEntregas();
+      renderizarColetas();
+      aplicarEstadoColetas();
       formAdd.classList.add('hidden');
       formLote.classList.add('hidden');
       msg.classList.add('hidden');
@@ -374,6 +376,45 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     document.getElementById('det-total-peso').value = formatarPeso(pesoTotal);
     document.getElementById('det-total-frete').value = formatarMoeda(freteTotal);
   }
+
+  // Um remetente por coleta (mesmo agrupamento usado no Espelho de Carga,
+  // so que resumido - so nome do remetente + peso total dele nesta carga).
+  function coletasPorRemetente() {
+    const mapa = new Map();
+    const ordem = [];
+    for (const e of entregasAtuais) {
+      const nome = e.remetente_nome || 'N/A';
+      if (!mapa.has(nome)) { mapa.set(nome, 0); ordem.push(nome); }
+      mapa.set(nome, mapa.get(nome) + (e.peso_bruto || 0));
+    }
+    return ordem.map((nome) => ({ nome, peso: mapa.get(nome) }));
+  }
+
+  function renderizarColetas() {
+    const coletas = coletasPorRemetente();
+    document.getElementById('det-coletas-conteudo').innerHTML = coletas.length
+      ? `<ul class="space-y-1 text-xs text-slate-300">${coletas.map((c) => `
+          <li class="flex items-center justify-between gap-3">
+            <span>${escapeHtml(c.nome)}</span>
+            <span class="font-semibold text-slate-200">${formatarPeso(c.peso)}</span>
+          </li>
+        `).join('')}</ul>`
+      : '<p class="text-xs text-slate-400">Nenhuma coleta ainda.</p>';
+  }
+
+  // Estado aberto/fechado da secao Coletas persiste no navegador (por
+  // usuario/maquina) - pedido explicito pra nao ter que reabrir toda vez.
+  const CHAVE_COLETAS_ABERTA = 'frottex-coletas-aberta';
+  function aplicarEstadoColetas() {
+    const aberta = localStorage.getItem(CHAVE_COLETAS_ABERTA) === '1';
+    document.getElementById('det-coletas-conteudo').classList.toggle('hidden', !aberta);
+    document.getElementById('icone-toggle-coletas').classList.toggle('rotate-90', aberta);
+  }
+  document.getElementById('btn-toggle-coletas').addEventListener('click', () => {
+    const aberta = !document.getElementById('det-coletas-conteudo').classList.contains('hidden');
+    localStorage.setItem(CHAVE_COLETAS_ABERTA, aberta ? '0' : '1');
+    aplicarEstadoColetas();
+  });
 
   function renderizarTabelaEntregas() {
     renderizarTotais();
