@@ -43,6 +43,15 @@ function normalizarDatasEmissaoExistentes() {
   }
 }
 
+// Limpeza pontual: antes da importacao de planilha aceitar Excel de verdade
+// (o parser de CSV lia o binario do .xls como texto), um upload de .xls
+// gerava motoristas com nome vazio/ilegivel. Idempotente - so tem efeito
+// enquanto sobrar alguma linha assim.
+function removerMotoristasSemNome() {
+  const info = db.prepare("DELETE FROM motoristas WHERE TRIM(nome) = ''").run();
+  if (info.changes) console.log(`Patch: ${info.changes} motorista(s) sem nome removido(s).`);
+}
+
 export function aplicarPatches() {
   for (const [tabela, coluna, definicao] of colunasNovas) {
     try {
@@ -56,4 +65,5 @@ export function aplicarPatches() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_clientes_cnpj ON clientes(cnpj)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_notas_fiscais_email_status ON notas_fiscais_email(status)');
   normalizarDatasEmissaoExistentes();
+  removerMotoristasSemNome();
 }

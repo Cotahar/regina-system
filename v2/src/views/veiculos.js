@@ -6,9 +6,9 @@ export function renderVeiculosPage() {
     </div>
 
     <div class="card mt-4">
-      <h2 class="mb-3 text-sm font-semibold text-slate-300">Importar planilha (CSV: placa)</h2>
+      <h2 class="mb-3 text-sm font-semibold text-slate-300">Importar planilha (CSV ou Excel: placa)</h2>
       <form id="form-import" class="flex flex-wrap items-end gap-3">
-        <input type="file" id="arquivo-import" accept=".csv" class="input-field max-w-xs" required>
+        <input type="file" id="arquivo-import" accept=".csv,.xls,.xlsx" class="input-field max-w-xs" required>
         <button type="submit" class="btn-secondary">Importar</button>
       </form>
       <p id="msg-import" class="mt-2 hidden text-sm"></p>

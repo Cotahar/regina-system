@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { db } from '../db/connection.js';
 import { requireLogin, requireAdmin } from '../middleware/auth.js';
-import { decodeUploadedText, parseCsv } from '../utils/csv.js';
+import { parseArquivoImportado } from '../utils/csv.js';
 
 const upload = multer({ storage: multer.memoryStorage() });
 export const motoristasRouter = Router();
@@ -47,7 +47,7 @@ motoristasRouter.delete('/api/motoristas/:id', requireLogin, requireAdmin, (req,
 
 motoristasRouter.post('/api/motoristas/import', requireLogin, requireAdmin, upload.single('arquivo'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
-  const linhas = parseCsv(decodeUploadedText(req.file.buffer));
+  const linhas = parseArquivoImportado(req.file.buffer);
 
   const existentes = new Set(
     db.prepare('SELECT codigo FROM motoristas WHERE codigo IS NOT NULL').all().map((r) => r.codigo)

@@ -20,6 +20,7 @@
     "googleapis": "^174.0.1",
     "multer": "^2.0.0",
     "pdf-parse": "^2.4.5",
-    "tailwindcss": "^3.4.14"
+    "tailwindcss": "^3.4.14",
+    "xlsx": "^0.18.5"
   }
 }
