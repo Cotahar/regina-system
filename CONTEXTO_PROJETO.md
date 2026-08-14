@@ -1,112 +1,95 @@
-# Contexto do projeto Regina System — para retomar em outra máquina
+# Contexto do projeto Regina System / Frottex - B. Nunes — para retomar em outra máquina
 
-> Leia este arquivo inteiro antes de fazer qualquer alteração. Ele resume tudo que foi decidido e feito até agora numa sessão anterior com o Claude, para que o trabalho continue sem perder contexto.
+> Leia este arquivo inteiro antes de fazer qualquer alteração. Ele resume tudo que foi decidido e feito até agora em várias sessões anteriores com o Claude, para que o trabalho continue sem perder contexto. Última atualização: **13/08/2026**.
+
+## 0. Resumo rápido (se só tiver 30 segundos)
+
+- Sistema: **Frottex - B. Nunes**, gestão de cargas/fretes pra uma transportadora. Node.js/Express/SQLite puro, front vanilla JS, Tailwind.
+- Repo: `C:\regina-site` → `https://github.com/Cotahar/regina-system.git`, branch `main`. Sistema novo mora todo em `v2/`.
+- **Em produção, no ar**: `https://bnunes.frottex.com.br` (Railway, serviço `regina-node`, projeto `sunny-caring`).
+- Está **tudo funcionando e testado** — dashboard, montagem, gerenciar faturamento, avarias, **envio de pagamento por WhatsApp** e **importação automática de NF-e por email** (as duas features mais recentes, ambas em produção).
+- **Regra de trabalho combinada com o usuário**: não fazer `git commit`/`push`/deploy sem ele pedir explicitamente — trabalhar local, testar no navegador, e só mandar pra produção quando ele confirmar. (Na prática, ultimamente ele tem aprovado o push assim que confirma que testou e gostou — mas o padrão é sempre perguntar antes.)
+- Arquivo `.env` (segredos locais, incluindo credenciais do Gmail) **não está no Git** — não vem junto ao clonar o repo nessa máquina nova. Ver seção 10.
 
 ## 1. Quem é o usuário e o que ele quer
 
-O usuário (Ruan) trabalha numa transportadora e é dono/mantenedor de um sistema interno de gestão de cargas, feito originalmente com ajuda do Gemini (Google), sem ele ser programador. Ele está **migrando de função dentro da empresa**: vai passar a cuidar só da parte **comercial** (fechar cargas com clientes, cadastrar no sistema), enquanto outro funcionário vai cuidar da parte **operacional** (atribuir motorista/veículo, acompanhar a carga na estrada, avarias, etc). Ele pediu para usar o Claude Code para analisar, corrigir bugs e modernizar o sistema, e depois reescrever a stack inteira.
+O usuário (Ruan) trabalha na B. Nunes Logística (transportadora) e é dono/mantenedor do sistema interno de gestão de cargas. Pediu pra reescrever o sistema antigo (Python/Flask, feito com ajuda do Gemini) numa stack nova, e desde então tem pedido uma sequência grande de melhorias, correções e features novas.
 
-Stack **exigida** pelo usuário para o sistema novo (já usada em outro projeto dele):
+Stack **exigida** pelo usuário (já usada em outro projeto dele):
 - **JavaScript** em tudo — backend em **Node.js puro + Express**, frontend em **JS vanilla com ES modules** (sem framework tipo React/Vue)
 - **SQL** — SQLite via **`node:sqlite`** (módulo nativo do Node, sem ORM)
 - **HTML/CSS** — HTML gerado via **template strings no JS** (sem Jinja2/EJS/etc), CSS com **TailwindCSS compilado via CLI** (sem CDN)
-- **JSON** — configs (`package.json`, `railway.json`)
 
 ## 2. Repositório e estrutura
 
-- Repo: `C:\regina-site` no PC atual, remoto `https://github.com/Cotahar/regina-system.git`, branch `main`, **repositório público**.
-- **Sistema antigo (Python/Flask)**: fica na raiz do repo (`app.py`, `models.py`, `database.py`, templates HTML soltos na raiz, etc). **Ainda está rodando em produção no Railway** (serviço `regina-system`), mas o plano é aposentá-lo em breve.
-- **Sistema novo (Node.js)**: fica inteiro dentro da pasta **`v2/`**. É autocontido (`v2/package.json` próprio, não depende de nada da raiz).
-- `exportar_para_node.py` (raiz) + `v2/src/db/import-from-python.js`: par de scripts para migrar dados do banco Python antigo pro SQLite novo. **O usuário disse que isso não é necessário** — o sistema novo vai começar com dados zerados, sem migrar histórico.
+- Repo: `C:\regina-site` no PC atual, remoto `https://github.com/Cotahar/regina-system.git`, branch `main`, repositório público.
+- **Sistema antigo (Python/Flask)**: fica na raiz do repo (`app.py`, `models.py`, etc). Estava rodando em produção no Railway (serviço `regina-system`) — status atual de aposentadoria não confirmado nesta sessão, mas o sistema novo já é o usado no dia a dia.
+- **Sistema novo (Node.js)**: fica inteiro dentro da pasta **`v2/`**. Autocontido (`v2/package.json` próprio).
 
-## 3. O que foi feito com o sistema Python antigo (ainda em produção)
+## 3. Decisões de escopo e padrões estabelecidos
 
-Antes de começar a reescrita, foi feita uma auditoria do `app.py` (Flask + SQLAlchemy + Postgres no Railway) e do frontend (HTML/CSS/JS vanilla + jQuery/Select2). Foram encontrados e **corrigidos** (commit `f948bfe "Corrige falhas de seguranca criticas"`, já commitado e enviado ao GitHub):
+- Papéis/permissões: modelo binário `admin` / `usuario`.
+- Fotos de avarias: guardadas localmente no servidor (`uploads/avarias/`, volume persistente).
+- Importação de planilhas: CSV (clientes/motoristas/veículos), mais opção de **colar direto do Excel** (sem precisar salvar arquivo).
+- Combobox nativo (sem Select2/jQuery), busca por substring num dropdown customizado (`public/js/shared/combobox.js`).
+- Tema visual: **dark theme**, marca "Frottex - B. Nunes" (preto/amarelo), não o tema claro do rascunho inicial.
+- Notificação em tempo real entre usuários via **Server-Sent Events** (`/api/eventos`) — qualquer mutação (POST/PUT/DELETE) dispara `notificarMudanca()` automaticamente (middleware `notificarAposMutacao`), outras telas abertas recarregam sozinhas.
+- Padrão "auto-save": ações em lote (agrupar, aplicar em massa, etc.) salvam sozinhas, sem esperar clique manual em "Salvar" separado — foi um pedido explícito do usuário depois de um bug onde agrupamento não persistia.
 
-1. **Rota `/fix-db-emergency` sem nenhuma autenticação** que rodava `ALTER TABLE` arbitrário no banco de produção — **removida**.
-2. **`app.secret_key` do Flask hardcoded no código** — movida para variável de ambiente `FLASK_SECRET_KEY` (com fallback de dev). *(O usuário decidiu não configurar essa variável no Railway porque vai aposentar o Python logo — não é mais prioridade.)*
-3. **Segredos versionados no Git**: `client_secret.json` (credencial OAuth real do Google, usada para upload de fotos de avarias no Google Drive) e `.env.railway` estavam commitados. Foram removidos do rastreamento do Git (`git rm --cached`) e adicionados ao `.gitignore` corrigido (estava malformado, com duas entradas coladas na mesma linha por falta de quebra de linha).
-4. **Credencial do Google já revogada pelo usuário** diretamente no Google Cloud Console (confirmado por ele). O token completo (incluindo `refresh_token`) ainda está salvo como variável de ambiente `GOOGLE_TOKEN_CONTENT` no serviço Railway do Python — está morto (credencial revogada), mas vale apagar essa variável quando o Python for desligado, por higiene.
+## 4. O que já foi construído em `v2/` — módulos principais (todos testados e em produção)
 
-Bugs identificados na auditoria do frontend antigo (script.js, consulta.js, montagem.js, gerenciar_carga.js, avarias.js, marcas.js, usuarios.js, clientes.js) que **foram corrigidos na reescrita** (não no Python, só no sistema novo):
-- Calculadora de frete por tonelada com argumentos trocados (`script.js`)
-- `ReferenceError` ao salvar edição de entrega na tela de Consulta (variável não declarada)
-- XSS armazenado sistêmico (uso de `innerHTML` sem escapar em quase toda página) e um `|safe` explícito no Jinja2 do relatório de faturamento que desabilitava autoescaping num campo de texto livre (nota fiscal)
-- Atualização de rascunho na Montagem fazia "apaga tudo e recria" (`DELETE` + `POST`) em vez de update real — risco de perda de dados se a segunda chamada falhasse
-- HTML inválido (`<table>` aninhada duplicada na Montagem, `id` duplicado no nav de Clientes)
-- `onclick` com nome interpolado sem escapar aspas (`marcas.js`, `usuarios.js`) — quebrava ou injetava HTML se o nome tivesse aspas
-- Lógica duplicada e divergente entre `script.js` e `consulta.js` (o "modal de detalhes da carga" era ~90% copiado e colado, com pequenas divergências que causaram os bugs acima)
+1. **Autenticação/sessão** — login, logout, sessão em memória (cookie httpOnly + Map no servidor; **reiniciar o servidor derruba sessões ativas**, todo mundo precisa logar de novo — isso é esperado, não é bug).
+2. **Clientes** — CRUD completo, importação CSV/colar, e agora também **campo CNPJ** (usado para casar automaticamente com notas fiscais importadas).
+3. **Motoristas / Veículos** — CRUD + importação. Veículos tem flag **`is_frota`** (frota própria vs terceirizado) e campo **`dados_pagamento`** (texto livre com dados bancários/PIX, usado no Envio de Pagamento).
+4. **Marcas, Formas de pagamento, Unidades, Tipos de CT-e** — CRUD.
+5. **Usuários** — CRUD admin/usuario, usuário `id=1` protegido.
+6. **Painel de Cargas** (dashboard kanban: Pendente / Agendada / Em Trânsito) — cards mostram badge **FROTA** quando o veículo é da frota. Fluxo completo de status, "Devolver para Rascunho", exclusão admin, impressão de espelho.
+7. **Montagem** — criar entregas avulsas ("disponíveis"), montar/editar rascunho, confirmar → vira carga Pendente. Linhas do rascunho aberto ficam destacadas visualmente (cor diferente) das demais.
+8. **Consulta** — busca com filtros + paginação, reaproveita o mesmo modal de detalhes do Painel.
+9. **Gerenciar Carga / Faturamento** — tabela estilo Excel editável inline. **Agrupamento de notas** (mesmo remetente+destinatário) mescla visualmente numa linha só (NFs concatenadas "123 / 456", peso e frete somados) — isso alimenta o Relatório de Faturamento (que também agrupa por `grupo_id`, uma linha por grupo pra emissão de CT-e). Cortesia não agrupa com nota normal. Todas as ações (agrupar, desagrupar, excluir em massa, aplicar em massa) salvam sozinhas (auto-save).
+10. **Avarias** — fluxo Pendente → Enviado → Finalizada, upload de foto local.
+11. **Relatórios de impressão** — Espelho de Carga e Relatório de Faturamento, visual redesenhado (cabeçalho enxuto, observações de faturamento separadas de observações de carga, seção "Manifesto e Pagamento ao Motorista" no rodapé com Rota/Vale Pedágio/Frete/Adiantamento).
+12. **Modal de detalhes de carga** — informações do cliente (precisa agendamento? faz autodescarga? etc.) sempre visíveis (não escondidas atrás de tooltip), aviso destacado quando falta agendar descarga. Textarea de observações com altura automática. Permite mover Pendente→Agendada sem motorista/veículo definidos ainda.
 
-## 4. Decisões de escopo tomadas com o usuário (perguntas feitas e respostas)
+## 5. Feature: Envio de Pagamento (WhatsApp) — completa, em produção
 
-- **Papéis/permissões**: manter o modelo binário atual (`admin` / `usuario`), sem criar papéis novos "comercial"/"operacional" — só ajustar o que cada tela permite conforme necessário no futuro.
-- **Fotos de avarias**: sair do Google Drive, guardar **localmente no servidor** (pasta `uploads/avarias/` dentro do volume persistente).
-- **Abordagem de reescrita**: tudo de uma vez (não módulo por módulo com pausas pra revisão) — o usuário testaria tudo no final.
-- **Migração de dados históricos**: **não necessária** — sistema novo começa zerado.
-- **Importação de planilhas**: o sistema novo aceita apenas **CSV** para clientes/motoristas/veículos (não `.xlsx` binário — evita dependência pesada tipo `xlsx`/`exceljs`; Excel exporta CSV nativamente).
-- **Select2/jQuery**: substituído por combobox nativo usando `<input list="..."> + <datalist>` (sem biblioteca externa, mantendo "vanilla JS puro").
+Botão **"Envio de Pagamento"** no modal de detalhes da carga (só aparece se status Agendada/Em Trânsito **e** motorista+veículo definidos). Abre `/pagamento-carga.html?carga_id=X` numa aba nova (mesmo padrão do "Gerenciar/Fat.").
 
-## 5. O que já foi construído em `v2/` (sistema novo) — está tudo pronto e testado
+- **Frota**: tudo automático (motorista, origem, frete empresa, peso, frete motorista) — só pede pra escolher o **destino final** quando a carga tem entregas em mais de uma cidade (não existe mais flag de "última entrega" pra adivinhar sozinho).
+- **Terceiro**: Nosso Frete/Frete Motorista/Adiantamento vêm do sistema; **Saldo** e **Vale Pedágio** são digitados manualmente (nunca calculados automaticamente — o usuário explicou que descontos de impostos/taxas fazem a conta não fechar exato); **Dados de pagamento** salvos **por placa** no cadastro do veículo, reaproveitados nas próximas cargas do mesmo caminhão.
+- Botões: **Salvar**, **Enviar no WhatsApp** (abre `wa.me/?text=...` com a mensagem pronta, deixa escolher a conversa — não há telefone cadastrado em motorista/veículo, então não dá pra pré-selecionar o contato), **Copiar mensagem**, **Fechar** (fecha a aba).
+- Campo `cargas.vale_pedagio_valor` é **separado** de `cargas.vale_pedagio_rota` (que é outro campo, usado no Gerenciar Faturamento — não confundir os dois).
 
-Estrutura: `v2/src/routes` (rotas Express), `v2/src/views` (geração de HTML via template strings), `v2/src/db` (schema SQL + migrate/seed), `v2/src/middleware` (sessão + auth), `v2/src/services`, `v2/src/utils`, `v2/public/js/pages` e `v2/public/js/shared` (JS do navegador, ES modules), `v2/src/styles/input.css` + `v2/tailwind.config.js` (Tailwind).
+## 6. Feature: Notas Fiscais — importação automática por email (a mais nova, completa e em produção)
 
-**Todos os módulos abaixo estão implementados, com rotas de API + página + JS do cliente, e foram testados no navegador (login, CRUD completo, casos de borda) e via chamadas diretas de API quando o teste dependia de diálogo nativo (`confirm()`/`prompt()`, que o ambiente de automação de browser bloqueia sempre):**
+**Objetivo**: parar de digitar manualmente NF/peso no Gerenciar Faturamento consultando o sistema da fábrica — as notas chegam por email e o sistema lê sozinho.
 
-1. **Autenticação/sessão** — login, logout, sessão em memória (cookie httpOnly + Map no servidor; reiniciar o servidor derruba sessões ativas — aceitável pro tamanho da equipe). Hash de senha via `crypto.scrypt` nativo do Node (sem bcrypt).
-2. **Clientes** — CRUD completo + importação CSV + **cadastro manual avulso (não existia no sistema antigo, foi adicionado pensando no novo papel comercial do usuário)**.
-3. **Motoristas / Veículos** — CRUD (o antigo só tinha import + listagem, sem editar; **edição foi adicionada**) + importação CSV.
-4. **Marcas** — CRUD (usado nas avarias).
-5. **Formas de pagamento, Unidades, Tipos de CT-e** — CRUD (unidades e tipos de CT-e ficam dentro da página de Usuários, como no sistema antigo).
-6. **Usuários** — CRUD com permissão `admin`/`usuario`, usuário `id=1` (admin principal) protegido contra edição/exclusão.
-7. **Painel de Cargas** (dashboard kanban: Pendente / Agendada / Em Trânsito) — criar carga, modal de detalhes com transições de status completas (Agendar → Iniciar Trânsito → Finalizar, com confirmação de senha), "Devolver para Rascunho", exclusão (admin, com opção de devolver entregas pro pool ou excluir junto), coleta rápida, edição/exclusão de entrega, seleção em lote + alterar remetente em lote, impressão de espelho.
-8. **Montagem** — criar entregas avulsas, montar rascunho de carga a partir de entregas selecionadas, reabrir/editar rascunho existente (**update real agora, não "apaga e recria"**), confirmar rascunho → vira carga Pendente, agrupar entregas (soma peso/frete, concatena NFs), alterar remetente em lote.
-9. **Consulta** — busca com filtros (código, origem, status, motorista, placa, cliente, datas) + paginação, reaproveitando o **mesmo componente de modal de detalhes** do Painel (`public/js/shared/carga-modal.js`) — elimina a duplicação de código que causava bugs divergentes no sistema antigo.
-10. **Gerenciar Carga / Faturamento** — tabela estilo Excel editável inline (unidade, tipo CT-e, NF, peso, cubado, R$/ton com cálculo automático de frete, forma/tipo de pagamento), com **automação**: sugere a unidade com base na UF do cliente remetente (ou a unidade "matriz" como padrão) e herda forma/tipo de pagamento padrão do cliente. Cálculo automático do valor de adiantamento ao motorista. Relatório de impressão de faturamento.
-11. **Avarias** — fluxo completo Pendente → Enviado → Finalizada, itens de produto avariado, geração automática de texto de laudo, **upload de foto local** (multer, salva em `uploads/avarias/`, protegido por login), exclusão remove as fotos do disco também.
-12. **Relatórios de impressão** — espelho de carga (agrupamento por destino e por remetente) e relatório de faturamento (com o bug do `|safe`/XSS corrigido: NF com `/` quebra em `<br>` mas cada pedaço é escapado individualmente antes).
+### Infraestrutura (fora do código, já configurada)
+- **Cloudflare Email Routing**: `notas@frottex.com.br` → encaminha pra `frottex.notasfiscais@gmail.com` (conta Gmail dedicada, criada só pra isso).
+- Sistema lê essa caixa via **API oficial do Gmail com OAuth** (nunca senha — Gmail bloqueia login por senha pra apps mesmo).
+- Credenciais (`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`) **já configuradas como variável de ambiente no Railway** (serviço `regina-node`, produção) — a importação automática já está rodando ao vivo, confirmado no log: `[notas-fiscais] importacao automatica ativa (a cada 180s)`.
+- **Atenção**: o app OAuth no Google Cloud Console fica em modo "Testing" — se ele ficar assim, o refresh token expira sozinho em **7 dias**. Foi orientado o usuário a clicar em "PUBLICAR APLICATIVO" (Publish App) na Tela de permissão OAuth pra tirar essa expiração — **confirmar se ele já fez isso**; se não, a importação vai parar de funcionar sozinha depois de uma semana e vai precisar rodar `npm run gmail:oauth-setup` de novo pra gerar um token novo.
 
-### Correções de caminho de armazenamento (para produção)
+### Como funciona
+- `src/services/nfe.service.js`: parser de **XML da NF-e** (schema padrão, confiável — número, chave de acesso, CNPJ emitente/destinatário, peso, valor, data de emissão, placa do veículo quando presente no campo estruturado, motorista via busca em texto livre nas informações complementares) e parser de **PDF/DANFE** (melhor esforço via `pdf-parse` + regex, sempre marcado como "conferir manualmente").
+- `src/services/gmailImport.service.js`: a cada 3 minutos, busca email não lido com anexo, baixa XML/PDF, extrai dados, casa remetente/destinatário por **CNPJ** com a tabela `clientes` (por isso o campo CNPJ foi adicionado lá), grava em `notas_fiscais_email`, marca o email como lido.
+- **Data de emissão sempre normalizada** pra `AAAA-MM-DD` na gravação (independente de vir com hora/fuso do XML ou "dd/mm/aaaa" do PDF) — evita mostrar formatos diferentes na listagem.
+- Tela `/notas-fiscais.html`: lista as notas (número, emitente/destinatário com selo "casado"/"sem cliente", peso, valor, emissão, **placa**, **motorista**, origem XML/PDF, status). Duas ações em massa:
+  - **Vincular a uma carga**: escolhe a carga (busca por código, origem, **motorista** ou **placa**, inclui Pendente/Agendada/Rascunho) → escolhe em qual linha (entrega) cada nota entra → preenche **NF + peso** nessa linha (nunca o frete — valor da NF é valor da mercadoria, não do frete, são coisas diferentes).
+  - **Criar entrega disponível**: cria entrega solta (aparece na Montagem), pede pra escolher cliente manualmente quando não casou por CNPJ.
+- `src/scripts/gmail-oauth-setup.mjs`: script de autorização única (`npm run gmail:oauth-setup`), abre um servidor local temporário pra capturar o retorno do Google automaticamente.
 
-`DATABASE_PATH` (caminho do arquivo SQLite) e `UPLOADS_DIR` (pasta raiz de uploads) agora são configuráveis via variável de ambiente (commit `1710bcc`), para apontar pra um volume persistente em produção sem perder dados a cada deploy.
+## 7. Deploy — status atual
 
-### Bugs reais encontrados e corrigidos durante os próprios testes do sistema novo (não existiam no antigo, foram introduzidos e pegos na hora)
+- **Workspace Railway**: "cotahar's Projects", projeto **"sunny-caring"**.
+- **Serviço**: `regina-node` (Node.js, produção) — `rootDirectory: v2`, build `npm install && npm run css:build`, start `npm run db:migrate && npm start`.
+- **Domínio**: **https://bnunes.frottex.com.br** (domínio próprio, não é mais o `*.up.railway.app` genérico).
+- **Volume persistente** em `/data` (banco SQLite + uploads de avarias + uploads de notas fiscais sobrevivem a redeploys).
+- **Variáveis de ambiente em produção** (Railway): `NODE_ENV`, `SESSION_SECRET`, `DATABASE_PATH=/data/cargas.db`, `UPLOADS_DIR=/data/uploads`, e agora também `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`.
+- Workflow de deploy usado nas sessões: `git push` → `railway deployment list --service regina-node --environment production --json` (polling até `SUCCESS`) → `curl` na URL pública pra confirmar que voltou 200.
+- Pra configurar variável de ambiente sensível via `railway variable set` pelo terminal: **o classificador de segurança do Claude Code bloqueia automaticamente** comandos com "SECRET" no texto — nesses casos, o usuário precisa rodar o comando ele mesmo (ou usar o painel do Railway).
 
-- 2× rotas do Express "engolidas" por rota genérica `:id` por causa da ordem de registro (`/api/cargas/rascunhos` e `/api/entregas/bulk-update-remetente` precisavam vir **antes** de `/api/cargas/:id` e `/api/entregas/:id`)
-- Campo de "Destinatário" sem o listener de busca-por-id ligado no formulário de nova entrega da Montagem
-- Valor do adiantamento não persistia (o campo somente-leitura já formatado em "R$ 1.050,00" era relido e o parser de decimal não reconhecia o prefixo "R$") — corrigido recalculando o valor bruto direto em vez de reler o campo formatado; `parseDecimal` também foi endurecido pra aceitar strings com símbolo de moeda.
-
-## 6. Testes realizados (bateria completa antes do deploy)
-
-Boot limpo do zero (schema + seed), importação de CSV real (não só via API simulada) para clientes/motoristas/veículos, upload real de foto de avaria (PNG de teste, verificado no disco e servido corretamente com proteção de login), edição de entrega dentro do modal da carga, agrupar entregas + alterar remetente em lote na Montagem, exclusão de carga/avaria/usuário/motorista/veículo/marca (incluindo bloqueio de FK quando em uso), relatórios de impressão com carga de múltiplos remetentes/destinos, reteste do payload `<script>` real pra confirmar o fix de XSS, varredura de console em todas as páginas como admin e como usuário comum, e verificação de controle de acesso (admin-only bloqueado tanto por URL direta quanto por chamada de API direta).
-
-**Nota sobre o ambiente de testes**: diálogos nativos do navegador (`confirm()`, `prompt()`) são sempre bloqueados/cancelados automaticamente pela ferramenta de automação de browser usada nas sessões do Claude Code — não é bug do app. Sempre que um teste dependia disso, foi validado via chamada direta à API (curl com cookie de sessão) em vez de clicar o botão na tela.
-
-## 7. Deploy — status atual (feito e verificado)
-
-Projeto Railway existente (workspace "cotahar's Projects", projeto **"sunny-caring"**, id `91b32010-ee95-4acc-9221-e1892297644f`) já tinha os serviços `regina-system` (Python, produção) e `Postgres`. Foi criado um **serviço novo, separado**, sem tocar nos outros dois:
-
-- **Serviço**: `regina-node` (id `01b9e15a-ae00-4ba9-9ef7-3cb495873df4`)
-- **Fonte**: mesmo repo GitHub (`Cotahar/regina-system`), branch `main`, **`rootDirectory: v2`**
-- **Build**: `npm install && npm run css:build`
-- **Start**: `npm run db:migrate && npm start`
-- **Variáveis**: `NODE_ENV=production`, `SESSION_SECRET` (gerado aleatório), `DATABASE_PATH=/data/cargas.db`, `UPLOADS_DIR=/data/uploads`
-- **Volume persistente**: montado em `/data` (banco SQLite + fotos de avarias sobrevivem a redeploys)
-- **Domínio público**: **https://regina-node-production.up.railway.app**
-- **Status do último deploy**: `SUCCESS`, verificado via login real na URL pública (não só localhost)
-
-### Pegadinha de ambiente encontrada durante o deploy (caso precise mexer de novo)
-
-No Git Bash do Windows, variáveis de ambiente com valor começando em `/` (tipo `/data/cargas.db`) são **auto-convertidas** para caminho Windows (`C:/Program Files/Git/data/cargas.db`) pelo MSYS — precisa prefixar o comando com `MSYS_NO_PATHCONV=1` pra evitar isso. Também: o comando `railway environment edit --service-config <nome> ...` (dot-path) não funcionou pra configurar a fonte de um serviço vazio recém-criado (sempre retornava "No changes to apply", mesmo usando o ID do serviço) — o que funcionou foi o **patch JSON completo** via `railway environment edit --json <<'JSON' ... JSON`. E `railway volume add --service <nome>` **crashava** (panic no Rust) quando usando nome/ambiente por nome — só funcionou passando **IDs explícitos** de projeto/ambiente/serviço.
-
-## 8. Pendências / próximos passos (nada urgente, mas bom ter registrado)
-
-1. **Trocar a senha do usuário `admin`** no sistema novo (está com a senha padrão do seed, `admin123`).
-2. **Aposentar o serviço Python** (`regina-system`) no Railway quando o novo sistema estiver validado em uso real — e nessa hora, apagar a variável `GOOGLE_TOKEN_CONTENT` dele.
-3. O serviço Python está sem `rootDirectory` configurado, então ele faz rebuild a cada push no repo (mesmo em commits que só tocam `v2/`) — inofensivo, só desperdiça minuto de build. Só vale a pena mexer nisso se o Python for ficar em produção por muito mais tempo.
-4. Nenhuma migração de dados históricos foi feita (decisão do usuário) — o sistema novo está com o banco zerado (só dados de seed: marcas, unidades, tipos de CT-e, formas de pagamento padrão, usuário admin).
-5. O par de scripts `exportar_para_node.py` + `v2/src/db/import-from-python.js` existe e foi testado (com dados fake) caso decidam migrar dados reais depois — não usado ainda.
-
-## 9. Como rodar localmente
+## 8. Como rodar localmente
 
 ```bash
 cd v2
@@ -115,4 +98,19 @@ npm run db:migrate
 npm run css:build
 npm start
 ```
-Acessa em `http://localhost:3000`. Requer Node >= 22.5 (usa `node:sqlite` nativo, ainda experimental mas funcional).
+Acessa em `http://localhost:3000`. Requer Node >= 22.5 (`node:sqlite` nativo). Login padrão do seed: `admin` / `admin123`.
+
+**Importante sobre o servidor local**: usar `npm start` (não `npm run dev`) quando for testar login/sessão — o `--watch` do `dev` reinicia o processo a cada mudança de arquivo em `src/`, e como a sessão é em memória, isso derruba o login no meio do teste. Depois de editar `src/views/*.js` ou `src/routes/*.js`, precisa reiniciar o servidor manualmente (cache de módulo do Node) — editar `public/js/*.js` não precisa (servido direto via `express.static`). Depois de editar `src/db/schema.sql` ou `src/db/patches.js`, rodar `npm run db:migrate` de novo antes de testar.
+
+## 9. Regras de colaboração combinadas com o usuário
+
+- **Nunca commitar/dar push/fazer deploy sem pedir antes** — trabalhar local, testar de verdade no navegador (não só confiar na leitura do código), e só mandar pra produção quando o usuário confirmar explicitamente ("manda bala", "pode ir", etc.).
+- Quando o usuário pede uma feature grande/ambígua, vale entrar em modo de planejamento (pesquisar o código, propor um plano concreto, alinhar antes de implementar) — isso já rendeu bons resultados nas últimas duas features grandes.
+- **Nunca inserir senha em campo nenhum**, mesmo que o usuário mande explicitamente e insista — nem em formulário, nem em script. Client ID/secret de OAuth pode ser guardado em `.env` local normalmente (não é senha, é config de app). Se o usuário mandar uma senha em texto no chat, orientar a trocar.
+- Testar com dados reais sempre que possível (o usuário já autorizou puxar dados de produção via SSH pro banco local, só leitura, pra testar em cima de casos reais em vez de dados fake).
+
+## 10. Pegadinhas específicas dessa máquina nova (importante!)
+
+- **`.env` não está no Git** (por segurança, correto) — então ao clonar o repo aqui, esse arquivo **não vem junto**. Sem ele, a importação automática de Gmail fica desligada localmente (o resto do sistema funciona normal, só loga um aviso). Pra reativar localmente nessa máquina: ou copiar o `.env` da máquina antiga por um canal privado (pendrive, etc — nunca colar os valores em texto no chat), ou gerar um refresh token novo rodando `npm run gmail:oauth-setup` de novo (os valores de `GMAIL_CLIENT_ID`/`GMAIL_CLIENT_SECRET` estão salvos no painel do Railway, em Variables, se precisar consultar).
+- **A memória de longo prazo do Claude Code é por máquina** (fica em `~/.claude/`, local) — o que foi aprendido/registrado na sessão da máquina antiga (preferências do usuário, decisões, etc.) não aparece automaticamente aqui. Esse arquivo (`CONTEXTO_PROJETO.md`) existe justamente pra compensar isso — vale a pena o Claude, ao começar a trabalhar nessa máquina, também recriar as memórias mais importantes (principalmente a regra de "não fazer push sem pedir" da seção 9).
+- `.claude/launch.json` (config do preview local, se existir) também não vem no clone — é só recriar apontando pro `npm run dev`/`npm start` na pasta `v2`, porta 3000, se for usar as ferramentas de preview de navegador.
