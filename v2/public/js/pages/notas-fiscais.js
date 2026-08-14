@@ -176,6 +176,21 @@ document.getElementById('btn-nf-vincular-continuar').addEventListener('click', a
     </div>
   `).join('');
 
+  // Impede escolher a mesma linha pra duas notas diferentes - desabilita nos
+  // outros selects a opcao que ja foi escolhida em algum deles.
+  const todosSelects = [...document.querySelectorAll('.nf-select-entrega')];
+  function atualizarOpcoesDisponiveis() {
+    const escolhidos = new Set(todosSelects.map((s) => s.value).filter(Boolean));
+    todosSelects.forEach((select) => {
+      [...select.options].forEach((opt) => {
+        if (!opt.value) return;
+        opt.disabled = escolhidos.has(opt.value) && opt.value !== select.value;
+      });
+    });
+  }
+  todosSelects.forEach((select) => select.addEventListener('change', atualizarOpcoesDisponiveis));
+  atualizarOpcoesDisponiveis();
+
   passo1.classList.add('hidden');
   passo2.classList.remove('hidden');
 });

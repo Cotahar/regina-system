@@ -106,12 +106,12 @@ cargasRouter.get('/api/cargas/consulta', requireLogin, (req, res) => {
       codigo_carga: c.codigo_carga,
       status: c.status,
       origem: c.origem,
-      destino_principal: resumo.destinos[0] || 'N/A',
+      destino_principal: resumo.destino_principal,
       motorista_nome: c.motorista_nome || 'N/A',
       num_entregas: resumo.num_entregas,
       peso_total_bruto: pesoTotalBruto,
       data_finalizacao: c.data_finalizacao,
-      destino: resumo.destinos[0] || 'N/A',
+      destino: resumo.destino_principal,
       motorista: c.motorista_nome || 'N/A',
       peso_total: pesoTotalBruto
     };
@@ -239,6 +239,16 @@ cargasRouter.put('/api/cargas/:id/status', requireLogin, (req, res) => {
   if ('origem' in data) {
     campos.push('origem = ?');
     valores.push((data.origem || carga.origem).toUpperCase());
+  }
+
+  // Frete pago tambem pode ser editado por aqui (modal de detalhes da carga),
+  // fora do Gerenciar Carga - recalcula o adiantamento pra nao deixar
+  // desatualizado, igual o Gerenciar Carga ja faz toda vez que salva.
+  if ('frete_pago' in data && !('adiantamento_valor' in data)) {
+    const percentual = carga.adiantamento_percentual ?? 70.0;
+    const fretePago = data.frete_pago;
+    campos.push('adiantamento_valor = ?');
+    valores.push(fretePago && percentual ? (fretePago * percentual) / 100 : null);
   }
 
   if (campos.length) {

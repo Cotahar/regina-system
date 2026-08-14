@@ -47,6 +47,11 @@ notasFiscaisRouter.put('/api/notas-fiscais/vincular', requireLogin, (req, res) =
     return res.status(400).json({ error: 'Nenhuma atribuicao informada.' });
   }
 
+  const entregaIds = atribuicoes.map((a) => a.entrega_id);
+  if (new Set(entregaIds).size !== entregaIds.length) {
+    return res.status(400).json({ error: 'Duas notas nao podem ser vinculadas a mesma linha. Escolha uma linha diferente pra cada uma.' });
+  }
+
   db.exec('BEGIN');
   try {
     for (const { nota_fiscal_email_id: notaId, entrega_id: entregaId } of atribuicoes) {

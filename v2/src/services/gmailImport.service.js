@@ -61,43 +61,7 @@ async function salvarAnexo(gmail, messageId, part, prefixoArquivo) {
   return { buffer, nomeArquivo };
 }
 
-async function processarMensagem(gmail, messageId) {
-  const jaExiste = db.prepare('SELECT id FROM notas_fiscais_email WHERE gmail_message_id = ?').get(messageId);
-  if (jaExiste) return false;
-
-  const { data: mensagem } = await gmail.users.messages.get({ userId: 'me', id: messageId, format: 'full' });
-  const anexos = coletarAnexos(mensagem.payload);
-  const anexoXml = anexos.find((a) => a.filename.toLowerCase().endsWith('.xml'));
-  const anexoPdf = anexos.find((a) => a.filename.toLowerCase().endsWith('.pdf'));
-
-  if (!anexoXml && !anexoPdf) {
-    // sem XML/PDF (ex: so imagem, ou email sem anexo relevante) - marca lido e ignora, sem gerar linha
-    await marcarComoLido(gmail, messageId);
-    return false;
-  }
-
-  let campos;
-  let extractionSource;
-  let xmlArquivo = null;
-  let pdfArquivo = null;
-
-  if (anexoXml) {
-    const { buffer, nomeArquivo } = await salvarAnexo(gmail, messageId, anexoXml, messageId);
-    xmlArquivo = nomeArquivo;
-    campos = parseNFeXml(buffer.toString('utf-8'));
-    extractionSource = 'xml';
-    if (anexoPdf) {
-      const salvo = await salvarAnexo(gmail, messageId, anexoPdf, messageId);
-      pdfArquivo = salvo.nomeArquivo;
-    }
-  } else {
-    const { buffer, nomeArquivo } = await salvarAnexo(gmail, messageId, anexoPdf, messageId);
-    pdfArquivo = nomeArquivo;
-    const texto = await extrairTextoPdf(buffer);
-    campos = extractFromPdfText(texto);
-    extractionSource = 'pdf';
-  }
-
+function inserirNota(gmailIdParaLinha, mensagem, campos, extractionSource, xmlArquivo, pdfArquivo) {
   const cnpjEmitente = normalizarCnpj(campos.cnpjEmitente);
   const cnpjDestinatario = normalizarCnpj(campos.cnpjDestinatario);
 
@@ -117,7 +81,7 @@ async function processarMensagem(gmail, messageId) {
       status, precisa_revisao
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', ?)
   `).run(
-    messageId,
+    gmailIdParaLinha,
     mensagem.threadId || null,
     cabecalho(mensagem.payload.headers, 'From'),
     cabecalho(mensagem.payload.headers, 'Subject'),
@@ -140,6 +104,61 @@ async function processarMensagem(gmail, messageId) {
     pdfArquivo,
     extractionSource === 'pdf' ? 1 : 0
   );
+}
+
+// Um e-mail pode trazer mais de uma NF-e junto (comum quando a fabrica manda
+// varias notas no mesmo lote) - cada XML vira sua propria nota, pra nao
+// perder as extras. So pareia um PDF (DANFE) de bonus na mesma linha do XML
+// quando a correspondencia e inequivoca (exatamente 1 de cada no e-mail);
+// fora desse caso cada PDF tambem vira sua propria nota (fallback), em vez
+// de ser descartado silenciosamente.
+async function processarMensagem(gmail, messageId) {
+  const jaExiste = db.prepare('SELECT id FROM notas_fiscais_email WHERE gmail_message_id = ?').get(messageId);
+  if (jaExiste) return false;
+
+  const { data: mensagem } = await gmail.users.messages.get({ userId: 'me', id: messageId, format: 'full' });
+  const anexos = coletarAnexos(mensagem.payload);
+  const anexosXml = anexos.filter((a) => a.filename.toLowerCase().endsWith('.xml'));
+  const anexosPdf = anexos.filter((a) => a.filename.toLowerCase().endsWith('.pdf'));
+
+  if (!anexosXml.length && !anexosPdf.length) {
+    // sem XML/PDF (ex: so imagem, ou email sem anexo relevante) - marca lido e ignora, sem gerar linha
+    await marcarComoLido(gmail, messageId);
+    return false;
+  }
+
+  const parPerfeito = anexosXml.length === 1 && anexosPdf.length === 1;
+  let indice = 0;
+  // A primeira nota extraida do e-mail usa o proprio messageId (mantendo
+  // compatibilidade com o dedup existente); as demais ganham um sufixo -
+  // messageId sozinho so pode bater com uma linha, entao o dedup no topo
+  // continua funcionando (se a primeira ja foi gravada, o email inteiro ja
+  // foi processado).
+  function proximoGmailId() {
+    indice++;
+    return indice === 1 ? messageId : `${messageId}#${indice}`;
+  }
+
+  for (const anexoXml of anexosXml) {
+    const prefixo = `${messageId}_${indice + 1}`;
+    const { buffer, nomeArquivo } = await salvarAnexo(gmail, messageId, anexoXml, prefixo);
+    let pdfArquivo = null;
+    if (parPerfeito) {
+      pdfArquivo = (await salvarAnexo(gmail, messageId, anexosPdf[0], prefixo)).nomeArquivo;
+    }
+    const campos = parseNFeXml(buffer.toString('utf-8'));
+    inserirNota(proximoGmailId(), mensagem, campos, 'xml', nomeArquivo, pdfArquivo);
+  }
+
+  if (!parPerfeito) {
+    for (const anexoPdf of anexosPdf) {
+      const prefixo = `${messageId}_${indice + 1}`;
+      const { buffer, nomeArquivo } = await salvarAnexo(gmail, messageId, anexoPdf, prefixo);
+      const texto = await extrairTextoPdf(buffer);
+      const campos = extractFromPdfText(texto);
+      inserirNota(proximoGmailId(), mensagem, campos, 'pdf', null, nomeArquivo);
+    }
+  }
 
   await marcarComoLido(gmail, messageId);
   return true;

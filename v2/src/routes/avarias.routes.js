@@ -82,11 +82,7 @@ avariasRouter.get('/api/avarias', requireLogin, (req, res) => {
   const fotosStmt = db.prepare('SELECT * FROM avaria_fotos WHERE avaria_id = ?');
 
   res.json(avarias.map((a) => {
-    let clienteNome = 'N/A';
-    if (a.cliente_razao_social) {
-      const raw = a.cliente_razao_social;
-      clienteNome = raw.includes('-') ? raw.split('-').slice(1).join('-').trim() : raw;
-    }
+    const clienteNome = a.cliente_razao_social || 'N/A';
     return {
       id: a.id,
       data: a.data_criacao ? a.data_criacao.slice(0, 10).split('-').reverse().join('/') : '',
@@ -133,11 +129,7 @@ avariasRouter.post('/api/avarias', requireLogin, (req, res) => {
     insertItem.run(avariaId, item.produto, item.quantidade, item.unidade);
   }
 
-  let clienteNome = 'CLIENTE';
-  if (entrega.cliente_razao_social) {
-    const raw = entrega.cliente_razao_social;
-    clienteNome = raw.includes('-') ? raw.split('-').slice(1).join('-').trim() : raw;
-  }
+  const clienteNome = entrega.cliente_razao_social || 'CLIENTE';
 
   let descargaTxt = tipoDescarga;
   if (['Empilhadeira', 'Munck', 'Grua'].includes(tipoDescarga)) descargaTxt = `com ${tipoDescarga}`;
