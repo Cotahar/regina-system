@@ -43,6 +43,16 @@ function normalizarDatasEmissaoExistentes() {
   }
 }
 
+// Regra do usuario: toda entrega precisa de uma forma de descarga definida -
+// ou o cliente descarrega sozinho (autodescarga) ou a gente leva ajudante
+// (precisa_ajudantes). Cadastros antigos podiam ter os dois desmarcados;
+// corrige de uma vez so. Idempotente - so afeta quem ainda esta com os dois
+// desmarcados.
+function corrigirClientesSemFormaDeDescarga() {
+  const info = db.prepare('UPDATE clientes SET precisa_ajudantes = 1 WHERE autodescarga = 0 AND precisa_ajudantes = 0').run();
+  if (info.changes) console.log(`Patch: ${info.changes} cliente(s) sem forma de descarga definida - marcado "precisa de ajudantes".`);
+}
+
 // Limpeza pontual: antes da importacao de planilha aceitar Excel de verdade
 // (o parser de CSV lia o binario do .xls como texto), um upload de .xls
 // gerava motoristas com nome vazio/ilegivel. Idempotente - so tem efeito
@@ -66,4 +76,5 @@ export function aplicarPatches() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_notas_fiscais_email_status ON notas_fiscais_email(status)');
   normalizarDatasEmissaoExistentes();
   removerMotoristasSemNome();
+  corrigirClientesSemFormaDeDescarga();
 }

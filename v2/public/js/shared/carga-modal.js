@@ -313,6 +313,14 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     return `<div class="mt-1 flex flex-wrap gap-1">${badges.join('')}</div>${obs}${contatoExtra}`;
   }
 
+  // Atalho pra editar o cadastro do cliente sem sair da carga - abre em nova
+  // aba (mesmo padrao de "Gerenciar/Fat." e "Envio de Pagamento") pra dar pra
+  // ir clicando em varios clientes seguidos sem perder o modal aberto.
+  function linkEditarCliente(clienteId) {
+    if (!clienteId) return '';
+    return ` <a href="/clientes.html?editar=${clienteId}" target="_blank" class="inline-flex align-middle text-slate-500 hover:text-brand-yellow" title="Editar cadastro do cliente">${icones.editar}</a>`;
+  }
+
   function formatarContato(ddd, telefone) {
     if (ddd && telefone) return `(${escapeHtml(ddd)}) ${escapeHtml(telefone)}`;
     return telefone ? escapeHtml(telefone) : '<span class="text-slate-500">-</span>';
@@ -327,7 +335,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       <tr class="border-t border-painel-border transition-colors ${classeGrupo} ${classeIndentada}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
         <td class="${py}"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
         <td class="${py}">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}</td>
-        <td class="${py}">${escapeHtml(e.razao_social)}${perfilClienteLinha(e)}</td>
+        <td class="${py}">${escapeHtml(e.razao_social)}${linkEditarCliente(e.cliente_id)}${perfilClienteLinha(e)}</td>
         <td class="${py}">${formatarContato(e.ddd, e.telefone)}</td>
         <td class="${py}">${escapeHtml(e.cidade)}-${escapeHtml(e.estado)}${e.local_coleta ? `<br><span class="text-[10px] text-slate-400">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
         <td class="${py}">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-900/40 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
@@ -340,8 +348,10 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
 
   function linhaResumoGrupo(chave, itens, expandido) {
     const remetentes = new Set(itens.map((e) => e.remetente_nome));
-    const remetenteTexto = remetentes.size === 1 ? escapeHtml([...remetentes][0]) : '<span class="italic text-slate-400">Varios</span>';
     const primeiro = itens[0];
+    const remetenteTexto = remetentes.size === 1
+      ? escapeHtml([...remetentes][0])
+      : '<span class="italic text-slate-400">Varios</span>';
     const pesoTotal = itens.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
     const freteTotal = itens.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
     const todosSelecionados = itens.every((e) => selecionadas.has(e.id));
@@ -358,6 +368,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
             ${escapeHtml(primeiro.razao_social)}
           </button>
           <span class="ml-1 rounded-full bg-blue-500/25 px-1.5 py-0.5 text-[10px] font-medium text-blue-200">${itens.length} notas</span>
+          ${linkEditarCliente(primeiro.cliente_id)}
           ${perfilClienteLinha(primeiro)}
         </td>
         <td class="py-1.5">${formatarContato(primeiro.ddd, primeiro.telefone)}</td>

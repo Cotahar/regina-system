@@ -16,6 +16,16 @@ function normalizarCnpj(valor) {
   return digitos || null;
 }
 
+// Regra do usuario: toda entrega tem que ter uma forma de descarga definida -
+// ou o cliente descarrega sozinho, ou a gente leva ajudante. Nunca os dois
+// desmarcados ao mesmo tempo.
+function validarDescarga(data) {
+  if (!data.autodescarga && !data.precisa_ajudantes) {
+    return 'Marque "Faz autodescarga" ou "Precisa de ajudantes (chapas)" - a entrega sempre precisa de uma forma de descarga definida.';
+  }
+  return null;
+}
+
 clientesRouter.get('/api/clientes/detalhes', requireLogin, (req, res) => {
   const clientes = db.prepare(`
     SELECT c.*, COUNT(e.id) as entregas_count
@@ -75,6 +85,9 @@ clientesRouter.post('/api/clientes', requireLogin, (req, res) => {
   const razaoSocial = (data.razao_social || '').trim().toUpperCase();
   if (!razaoSocial) return res.status(400).json({ error: 'Razao social e obrigatoria' });
 
+  const erroDescarga = validarDescarga(data);
+  if (erroDescarga) return res.status(400).json({ error: erroDescarga });
+
   const codigo = (data.codigo_cliente || '').trim() || `C-${Date.now()}`;
   const existente = db.prepare('SELECT id FROM clientes WHERE codigo_cliente = ?').get(codigo);
   if (existente) return res.status(409).json({ error: 'Codigo de cliente ja cadastrado' });
@@ -114,6 +127,10 @@ clientesRouter.put('/api/clientes/:id', requireLogin, (req, res) => {
   if (!cliente) return res.status(404).json({ error: 'Cliente nao encontrado' });
 
   const data = req.body || {};
+
+  const erroDescarga = validarDescarga(data);
+  if (erroDescarga) return res.status(400).json({ error: erroDescarga });
+
   db.prepare(`
     UPDATE clientes SET
       razao_social = ?, cnpj = ?, cidade = ?, estado = ?, ddd = ?, telefone = ?, observacoes = ?,
@@ -149,9 +166,12 @@ clientesRouter.post('/api/clientes/import', requireLogin, upload.single('arquivo
   const linhas = parseCsv(decodeUploadedText(req.file.buffer)).slice(1); // primeira linha e cabecalho
 
   const existentes = new Set(db.prepare('SELECT codigo_cliente FROM clientes').all().map((r) => r.codigo_cliente));
+  // Importacao nao pergunta sobre descarga - como autodescarga fica 0 por
+  // padrao, precisa_ajudantes entra 1 pra nao violar a regra "sempre um ou
+  // outro" (o usuario ajusta manualmente depois se o cliente descarregar sozinho).
   const insert = db.prepare(`
-    INSERT INTO clientes (codigo_cliente, razao_social, ddd, telefone, cidade, estado, observacoes, is_remetente)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+    INSERT INTO clientes (codigo_cliente, razao_social, ddd, telefone, cidade, estado, observacoes, is_remetente, precisa_ajudantes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1)
   `);
 
   let novos = 0;

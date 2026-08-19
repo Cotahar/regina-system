@@ -142,6 +142,12 @@ form.addEventListener('submit', async (event) => {
     resolve_com_representante: document.getElementById('cliente-representante').checked
   };
 
+  if (!payload.autodescarga && !payload.precisa_ajudantes) {
+    msgModal.textContent = 'Marque "Faz autodescarga" ou "Precisa de ajudantes (chapas)" - a entrega sempre precisa de uma forma de descarga definida.';
+    msgModal.classList.remove('hidden');
+    return;
+  }
+
   try {
     if (id) await apiPut(`/api/clientes/${id}`, payload);
     else await apiPost('/api/clientes', payload);
@@ -190,4 +196,13 @@ configurarColarImport({
   onSucesso: carregar
 });
 
-carregar();
+// Atalho vindo do modal de carga (link "editar cliente" em cima do
+// remetente/destinatario) - abre direto na edicao desse cliente, sem
+// precisar buscar na lista manualmente.
+carregar().then(() => {
+  const idParaEditar = new URLSearchParams(window.location.search).get('editar');
+  if (idParaEditar) {
+    abrirEdicao(Number(idParaEditar));
+    history.replaceState(null, '', '/clientes.html');
+  }
+});

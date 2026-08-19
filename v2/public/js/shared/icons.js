@@ -13,5 +13,6 @@ export const icones = {
   alerta: svg('<path d="M10 3l8.5 14.5H1.5L10 3z"/><path d="M10 8.5v3.2"/><circle cx="10" cy="14.2" r="0.15" fill="currentColor" stroke="none"/>'),
   lixeira: svg('<path d="M4 6h12M8 6V4h4v2M6 6l.7 10a1 1 0 0 0 1 1h4.6a1 1 0 0 0 1-1L14 6"/><path d="M8.5 9v5M11.5 9v5"/>'),
   duplicar: svg('<rect x="3" y="3" width="10" height="10" rx="1.2"/><path d="M7 13v2.8a1.2 1.2 0 0 0 1.2 1.2H16a1.2 1.2 0 0 0 1.2-1.2V8.2A1.2 1.2 0 0 0 16 7h-3"/>'),
-  mensagem: svg('<path d="M3 4.5h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8l-4 3v-3H3a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z"/>')
+  mensagem: svg('<path d="M3 4.5h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H8l-4 3v-3H3a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z"/>'),
+  editar: svg('<path d="M4 16l.8-3.2L13 4.6a1.5 1.5 0 0 1 2.1 0l.3.3a1.5 1.5 0 0 1 0 2.1L7.2 15.2 4 16z"/><path d="M11.5 6.1l2.4 2.4"/>')
 };
