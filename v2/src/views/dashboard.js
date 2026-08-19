@@ -1,4 +1,5 @@
 import { renderModalDetalhesCarga } from './partials/modalDetalhesCarga.js';
+import { renderModalEditarCliente } from './partials/modalEditarCliente.js';
 
 const COLUNAS = [
   { status: 'Pendente', titulo: 'Pendente', ponto: 'bg-slate-400', borda: 'border-t-slate-400' },
@@ -30,5 +31,6 @@ export function renderDashboardPage() {
     </div>
 
     ${renderModalDetalhesCarga()}
+    ${renderModalEditarCliente()}
   `;
 }

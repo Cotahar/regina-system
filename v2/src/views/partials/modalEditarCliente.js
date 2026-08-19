@@ -1,0 +1,110 @@
+// Modal de criar/editar cliente - compartilhado entre a pagina de Clientes e
+// o modal de detalhes de carga (Painel/Consulta), pra dar pra editar o
+// cadastro do destinatario sem sair da tela da carga. z-40 (acima do modal de
+// detalhes de carga, que e z-30) pra funcionar nos dois contextos.
+export function renderModalEditarCliente() {
+  return `
+    <div id="modal-cliente" class="fixed inset-0 z-40 hidden items-center justify-center overflow-y-auto bg-slate-900/50 py-8">
+      <form id="form-cliente" class="card w-full max-w-xl">
+        <h2 class="mb-4 text-lg font-semibold" id="modal-titulo">Novo cliente</h2>
+        <input type="hidden" id="cliente-id">
+
+        <div class="mb-3">
+          <label class="label">Codigo do cliente</label>
+          <input type="text" id="cliente-codigo" class="input-field" placeholder="Deixe em branco para gerar automaticamente">
+        </div>
+
+        <div class="mb-3">
+          <label class="label">Razao social</label>
+          <input type="text" id="cliente-razao" class="input-field" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="label">CNPJ</label>
+          <input type="text" id="cliente-cnpj" class="input-field" placeholder="00.000.000/0000-00" maxlength="18">
+        </div>
+
+        <div class="mb-3 grid grid-cols-2 gap-3">
+          <div>
+            <label class="label">Cidade</label>
+            <input type="text" id="cliente-cidade" class="input-field">
+          </div>
+          <div>
+            <label class="label">Estado (UF)</label>
+            <input type="text" id="cliente-estado" class="input-field" maxlength="2">
+          </div>
+        </div>
+
+        <div class="mb-3 grid grid-cols-2 gap-3">
+          <div>
+            <label class="label">DDD</label>
+            <input type="text" id="cliente-ddd" class="input-field" maxlength="2">
+          </div>
+          <div>
+            <label class="label">Telefone</label>
+            <input type="text" id="cliente-telefone" class="input-field">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="label">Observacoes</label>
+          <textarea id="cliente-observacoes" class="input-field" rows="2"></textarea>
+        </div>
+
+        <label class="mb-3 flex items-center gap-2 text-sm text-slate-300">
+          <input type="checkbox" id="cliente-remetente" class="h-4 w-4">
+          Este cliente tambem pode ser remetente (origem de coleta)
+        </label>
+
+        <div class="mb-3">
+          <label class="label">Contato adicional (se houver mais de um)</label>
+          <input type="text" id="cliente-contato-extra" class="input-field" placeholder="Nome / telefone do segundo contato">
+        </div>
+
+        <div class="mb-4">
+          <p class="mb-2 text-xs text-slate-400">Perfil de atendimento (informacoes para quem for buscar/entregar)</p>
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" id="cliente-autodescarga" class="h-4 w-4"> Faz autodescarga
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" id="cliente-ajudantes" class="h-4 w-4"> Precisa de ajudantes (chapas)
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" id="cliente-descarga-direto" class="h-4 w-4"> Descarga paga direto ao recebimento
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" id="cliente-precisa-agendamento" class="h-4 w-4"> Precisa agendar entrega
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-300">
+              <input type="checkbox" id="cliente-representante" class="h-4 w-4"> Resolver com representante
+            </label>
+          </div>
+        </div>
+
+        <div class="mb-4 grid grid-cols-2 gap-3">
+          <div>
+            <label class="label">Forma de pagamento padrao</label>
+            <select id="cliente-forma-pagamento" class="input-field">
+              <option value="">-</option>
+            </select>
+          </div>
+          <div>
+            <label class="label">Tipo de pagamento padrao</label>
+            <select id="cliente-tipo-pagamento" class="input-field">
+              <option value="">-</option>
+              <option value="Boleto">Boleto</option>
+              <option value="Transferencia">Transferencia</option>
+            </select>
+          </div>
+        </div>
+
+        <p id="msg-modal" class="mb-3 hidden text-sm"></p>
+        <div class="flex justify-end gap-2">
+          <button type="button" id="btn-cancelar" class="btn-secondary">Cancelar</button>
+          <button type="submit" class="btn-success">Salvar</button>
+        </div>
+      </form>
+    </div>
+  `;
+}

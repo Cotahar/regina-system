@@ -26,16 +26,8 @@ function validarDescarga(data) {
   return null;
 }
 
-clientesRouter.get('/api/clientes/detalhes', requireLogin, (req, res) => {
-  const clientes = db.prepare(`
-    SELECT c.*, COUNT(e.id) as entregas_count
-    FROM clientes c
-    LEFT JOIN entregas e ON e.cliente_id = c.id
-    GROUP BY c.id
-    ORDER BY c.razao_social
-  `).all();
-
-  res.json(clientes.map((c) => ({
+function toDictClienteDetalhado(c) {
+  return {
     id: c.id,
     codigo_cliente: c.codigo_cliente,
     razao_social: c.razao_social,
@@ -57,7 +49,33 @@ clientesRouter.get('/api/clientes/detalhes', requireLogin, (req, res) => {
     precisa_agendamento: !!c.precisa_agendamento,
     resolve_com_representante: !!c.resolve_com_representante,
     contato_extra: c.contato_extra
-  })));
+  };
+}
+
+clientesRouter.get('/api/clientes/detalhes', requireLogin, (req, res) => {
+  const clientes = db.prepare(`
+    SELECT c.*, COUNT(e.id) as entregas_count
+    FROM clientes c
+    LEFT JOIN entregas e ON e.cliente_id = c.id
+    GROUP BY c.id
+    ORDER BY c.razao_social
+  `).all();
+
+  res.json(clientes.map(toDictClienteDetalhado));
+});
+
+// Usado pelo modal de editar cliente quando aberto direto do modal de carga
+// (sem a lista inteira ja carregada em memoria, so o id do cliente).
+clientesRouter.get('/api/clientes/:id/detalhes', requireLogin, (req, res) => {
+  const cliente = db.prepare(`
+    SELECT c.*, COUNT(e.id) as entregas_count
+    FROM clientes c
+    LEFT JOIN entregas e ON e.cliente_id = c.id
+    WHERE c.id = ?
+    GROUP BY c.id
+  `).get(req.params.id);
+  if (!cliente) return res.status(404).json({ error: 'Cliente nao encontrado' });
+  res.json(toDictClienteDetalhado(cliente));
 });
 
 clientesRouter.get('/api/clientes', requireLogin, (req, res) => {

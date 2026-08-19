@@ -6,6 +6,7 @@ import { criarCombobox } from './combobox.js';
 import { icones } from './icons.js';
 import { iconeMenuAcoes, criarMenuAcoes } from './menuAcoes.js';
 import { aplicarMascaraDecimal } from './mask.js';
+import { criarModalEditarCliente } from './cliente-modal.js';
 
 ['det-frete-pago', 'add-peso', 'add-frete', 'edit-peso', 'edit-peso-cubado', 'edit-frete']
   .forEach((id) => aplicarMascaraDecimal(document.getElementById(id)));
@@ -35,6 +36,14 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
   let entregasAtuais = [];
   const selecionadas = new Set();
   const gruposExpandidos = new Set();
+
+  // Editar o destinatario direto da carga (sem sair da tela) - depois de
+  // salvar, recarrega a carga aberta pra refletir mudancas de perfil na hora.
+  const modalCliente = criarModalEditarCliente({
+    onSalvo: async () => {
+      if (cargaAtual) await abrir(cargaAtual.id);
+    }
+  });
 
   async function carregarListasApoio() {
     [motoristas, veiculos, clientes] = await Promise.all([
@@ -313,12 +322,12 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     return `<div class="mt-1 flex flex-wrap gap-1">${badges.join('')}</div>${obs}${contatoExtra}`;
   }
 
-  // Atalho pra editar o cadastro do cliente sem sair da carga - abre em nova
-  // aba (mesmo padrao de "Gerenciar/Fat." e "Envio de Pagamento") pra dar pra
-  // ir clicando em varios clientes seguidos sem perder o modal aberto.
+  // Atalho pra editar o cadastro do cliente sem sair da carga - abre o mesmo
+  // modal de edicao por cima, sem navegar pra outra pagina (listener ligado
+  // em renderizarTabelaEntregas, depois que o HTML entra no DOM).
   function linkEditarCliente(clienteId) {
     if (!clienteId) return '';
-    return ` <a href="/clientes.html?editar=${clienteId}" target="_blank" class="inline-flex align-middle text-slate-500 hover:text-brand-yellow" title="Editar cadastro do cliente">${icones.editar}</a>`;
+    return ` <button type="button" class="link-editar-cliente inline-flex align-middle text-slate-500 hover:text-brand-yellow" data-cliente-id="${clienteId}" title="Editar cadastro do cliente">${icones.editar}</button>`;
   }
 
   function formatarContato(ddd, telefone) {
@@ -436,6 +445,10 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       const expandido = gruposExpandidos.has(chave);
       return linhaResumoGrupo(chave, itens, expandido) + (expandido ? itens.map((e, i) => linhaEntrega(e, true, i === itens.length - 1)).join('') : '');
     }).join('') || '<tr><td colspan="9" class="py-3 text-center text-slate-400">Nenhuma entrega nesta carga.</td></tr>';
+
+    tabelaEntregas.querySelectorAll('.link-editar-cliente').forEach((btn) => {
+      btn.addEventListener('click', () => modalCliente.abrirEdicao(Number(btn.dataset.clienteId)));
+    });
 
     tabelaEntregas.querySelectorAll('tr[data-id]').forEach((tr) => {
       const id = Number(tr.dataset.id);

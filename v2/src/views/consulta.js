@@ -1,4 +1,5 @@
 import { renderModalDetalhesCarga } from './partials/modalDetalhesCarga.js';
+import { renderModalEditarCliente } from './partials/modalEditarCliente.js';
 
 export function renderConsultaPage() {
   return `
@@ -57,5 +58,6 @@ export function renderConsultaPage() {
     </div>
 
     ${renderModalDetalhesCarga()}
+    ${renderModalEditarCliente()}
   `;
 }
