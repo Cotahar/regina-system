@@ -36,6 +36,43 @@ function destinosCidadeUf(c) {
   return lista.length ? lista : [{ cidade: 'N/A', uf: '' }];
 }
 
+// Paleta de avatar do motorista - sempre a mesma cor pro mesmo nome (hash do
+// texto), pra virar um "identificador visual" que da pra reconhecer so pela
+// cor/formato num relance, sem precisar ler o nome inteiro em cada card.
+// Pedido do usuario: os cards de uma mesma coluna de status ficavam
+// visualmente identicos, dificultando achar um especifico so batendo o olho.
+const PALETA_AVATAR = [
+  'bg-sky-900/50 text-sky-300',
+  'bg-emerald-900/50 text-emerald-300',
+  'bg-amber-900/50 text-amber-300',
+  'bg-rose-900/50 text-rose-300',
+  'bg-violet-900/50 text-violet-300',
+  'bg-cyan-900/50 text-cyan-300',
+  'bg-lime-900/50 text-lime-300',
+  'bg-fuchsia-900/50 text-fuchsia-300'
+];
+
+function corAvatar(nome) {
+  let hash = 0;
+  for (let i = 0; i < nome.length; i++) hash = (hash * 31 + nome.charCodeAt(i)) % PALETA_AVATAR.length;
+  return PALETA_AVATAR[Math.abs(hash) % PALETA_AVATAR.length];
+}
+
+function iniciaisMotorista(nome) {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (partes.length < 2) return partes[0].slice(0, 2).toUpperCase();
+  return (partes[0][0] + partes[1][0]).toUpperCase();
+}
+
+// Sem motorista vira um avatar tracejado com "?" - reforca visualmente que
+// essa carga ainda precisa de motorista, em vez de um nome generico confuso.
+function avatarMotorista(nome) {
+  if (!nome) {
+    return '<span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-dashed border-slate-600 text-xs font-bold text-slate-500">?</span>';
+  }
+  return `<span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${corAvatar(nome)}">${escapeHtml(iniciaisMotorista(nome))}</span>`;
+}
+
 function renderizarCard(c) {
   const borda = BORDA_STATUS[c.status] || 'border-l-slate-400';
   const destinos = destinosCidadeUf(c).map(({ cidade, uf }) => `
@@ -44,22 +81,29 @@ function renderizarCard(c) {
       ${uf ? `<span class="rounded bg-painel-bg px-1.5 py-0.5 text-[11px] font-bold text-slate-200">${escapeHtml(uf)}</span>` : ''}
     </span>
   `).join('<span class="text-slate-600">,</span>');
+  const motorista = c.motorista_nome && c.motorista_nome !== 'N/A' ? c.motorista_nome : null;
   return `
     <div class="cursor-pointer rounded-md border border-painel-border border-l-4 ${borda} bg-painel-card p-3 text-sm shadow-md shadow-black/20 transition-colors hover:bg-white/[0.03]" data-id="${c.id}" data-busca="${escapeHtml(`${c.codigo_carga} ${c.destino_principal} ${c.motorista_nome || ''} ${c.placa_veiculo || ''}`.toLowerCase())}">
-      <div class="flex items-center justify-between">
-        <span class="flex items-center gap-1.5">
-          <span class="font-semibold text-brand-yellow">${escapeHtml(c.codigo_carga)}</span>
-          ${c.veiculo_frota ? '<span class="rounded bg-violet-900/40 px-1.5 py-0.5 text-[10px] font-bold text-violet-300">FROTA</span>' : ''}
-        </span>
-        <span class="text-xs text-slate-400">${c.num_entregas} entrega(s)</span>
+      <div class="flex items-center justify-between text-[11px] text-slate-500">
+        <span class="font-mono">${escapeHtml(c.codigo_carga)}</span>
+        <span>${c.num_entregas} entrega(s)</span>
       </div>
-      <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-slate-300">
+      <div class="mt-1.5 flex items-center gap-2">
+        ${avatarMotorista(motorista)}
+        <div class="min-w-0 leading-tight">
+          <p class="truncate text-sm font-bold text-white">${motorista ? escapeHtml(motorista) : '<span class="font-semibold text-slate-500">Sem motorista</span>'}</p>
+          <p class="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-400">
+            <span>${c.placa_veiculo ? escapeHtml(c.placa_veiculo) : '-'}</span>
+            ${c.veiculo_frota ? '<span class="rounded bg-violet-900/40 px-1.5 py-0.5 text-[10px] font-bold text-violet-300">FROTA</span>' : ''}
+          </p>
+        </div>
+      </div>
+      <div class="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-slate-300">
         <span class="capitalize">${escapeHtml(c.origem.toLowerCase())}</span>
         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 shrink-0 text-slate-500"><path d="M4 10h12M11 5l5 5-5 5"/></svg>
         <span class="flex flex-wrap items-center gap-1">${destinos}</span>
       </div>
-      <p class="mt-1.5 text-xs font-semibold text-slate-200">${escapeHtml(c.motorista_nome || 'Sem motorista')}${c.placa_veiculo ? ' - ' + escapeHtml(c.placa_veiculo) : ''}</p>
-      <p class="mt-1 text-xs font-semibold text-slate-200">${formatarPeso(c.peso_total)} &middot; ${formatarMoeda(c.valor_frete_total)}</p>
+      <p class="mt-1.5 text-xs text-slate-400">${formatarPeso(c.peso_total)} &middot; ${formatarMoeda(c.valor_frete_total)}</p>
       ${linhaData(c)}
     </div>
   `;

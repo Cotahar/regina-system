@@ -58,7 +58,9 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
   combobox('det-veiculo-input', 'det-veiculo-id', () => veiculos);
   combobox('add-remetente-input', 'add-remetente-id', () => clientes);
   combobox('add-cliente-input', 'add-cliente-id', () => clientes);
+  combobox('add-local-coleta-input', 'add-local-coleta-id', () => clientes);
   combobox('edit-remetente-input', 'edit-remetente-id', () => clientes);
+  combobox('edit-local-coleta-input', 'edit-local-coleta-id', () => clientes);
   combobox('lote-remetente-input', 'lote-remetente-id', () => clientes);
 
   function mostrarMensagem(texto, tipo = 'erro') {
@@ -335,6 +337,18 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     return telefone ? escapeHtml(telefone) : '<span class="text-slate-500">-</span>';
   }
 
+  // Nome efetivo de onde o motorista vai buscar a carga - o local de coleta
+  // (quando um cliente foi vinculado, ou o texto livre legado) sobrepoe o
+  // remetente so pra exibicao; o cadastro do remetente original nunca muda.
+  function nomeColeta(e) {
+    return e.local_coleta_cliente_nome || e.local_coleta || null;
+  }
+
+  function badgeColeta(e) {
+    const nome = nomeColeta(e);
+    return nome ? `<br><span class="rounded bg-sky-900/40 px-1 text-[10px] text-sky-300">coleta: ${escapeHtml(nome)}</span>` : '';
+  }
+
   function linhaEntrega(e, indentada, ultimoDoGrupo) {
     const agrupada = !!e.grupo_id;
     const classeGrupo = agrupada ? 'bg-destaque/5 border-l-2 border-l-destaque' : '';
@@ -343,10 +357,10 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     return `
       <tr class="border-t border-painel-border transition-colors ${classeGrupo} ${classeIndentada}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
         <td class="${py}"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
-        <td class="${py}">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}</td>
+        <td class="${py}">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}${badgeColeta(e)}</td>
         <td class="${py}">${escapeHtml(e.razao_social)}${linkEditarCliente(e.cliente_id)}${perfilClienteLinha(e)}</td>
         <td class="${py}">${formatarContato(e.ddd, e.telefone)}</td>
-        <td class="${py}">${escapeHtml(e.cidade)}-${escapeHtml(e.estado)}${e.local_coleta ? `<br><span class="text-[10px] text-slate-400">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
+        <td class="${py}">${escapeHtml(e.cidade)}-${escapeHtml(e.estado)}</td>
         <td class="${py}">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-900/40 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
         <td class="${py}">${formatarPeso(e.peso_bruto)}</td>
         <td class="${py}">${formatarMoeda(e.valor_frete)}</td>
@@ -361,6 +375,11 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     const remetenteTexto = remetentes.size === 1
       ? escapeHtml([...remetentes][0])
       : '<span class="italic text-slate-400">Varios</span>';
+    // So mostra o selo de coleta quando todo o grupo concorda no mesmo local
+    // (senao o selo do primeiro item passaria a impressao errada de que o
+    // grupo inteiro tem esse local de coleta).
+    const colecoes = new Set(itens.map(nomeColeta));
+    const badgeColetaGrupo = colecoes.size === 1 ? badgeColeta(primeiro) : '';
     const pesoTotal = itens.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
     const freteTotal = itens.reduce((acc, e) => acc + (e.valor_frete || 0), 0);
     const todosSelecionados = itens.every((e) => selecionadas.has(e.id));
@@ -370,7 +389,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     return `
       <tr class="border-t border-painel-border transition-colors ${corGrupo}" data-grupo-visual="${escapeHtml(chave)}">
         <td class="py-1.5"><input type="checkbox" class="chk-grupo-visual" data-chave="${escapeHtml(chave)}" ${todosSelecionados ? 'checked' : ''}></td>
-        <td class="py-1.5">${remetenteTexto}</td>
+        <td class="py-1.5">${remetenteTexto}${badgeColetaGrupo}</td>
         <td class="py-1.5">
           <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-semibold text-blue-300 hover:text-blue-200" data-chave="${escapeHtml(chave)}">
             <svg viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3 shrink-0 transition-transform ${expandido ? 'rotate-90' : ''}"><path d="M7 4l7 6-7 6V4z"/></svg>
@@ -397,13 +416,14 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     document.getElementById('det-total-frete').value = formatarMoeda(freteTotal);
   }
 
-  // Um remetente por coleta (mesmo agrupamento usado no Espelho de Carga,
-  // so que resumido - so nome do remetente + peso total dele nesta carga).
+  // Um local de coleta por linha (mesmo agrupamento usado no Espelho de
+  // Carga, so que resumido - so o nome + peso total dele nesta carga). Usa o
+  // local de coleta da entrega quando definido, senao cai pro remetente.
   function coletasPorRemetente() {
     const mapa = new Map();
     const ordem = [];
     for (const e of entregasAtuais) {
-      const nome = e.remetente_nome || 'N/A';
+      const nome = nomeColeta(e) || e.remetente_nome || 'N/A';
       if (!mapa.has(nome)) { mapa.set(nome, 0); ordem.push(nome); }
       mapa.set(nome, mapa.get(nome) + (e.peso_bruto || 0));
     }
@@ -516,7 +536,8 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     document.getElementById('edit-peso-cubado').value = e.peso_cubado ?? '';
     document.getElementById('edit-frete').value = e.valor_frete ?? '';
     document.getElementById('edit-nf').value = e.nota_fiscal || '';
-    document.getElementById('edit-local-coleta').value = e.local_coleta || '';
+    document.getElementById('edit-local-coleta-input').value = e.local_coleta_cliente_nome || '';
+    document.getElementById('edit-local-coleta-id').value = e.local_coleta_cliente_id || '';
     document.getElementById('edit-cortesia').checked = !!e.is_cortesia;
     document.getElementById('edit-agendamento-wrap').classList.toggle('hidden', !e.cliente_precisa_agendamento);
     document.getElementById('edit-data-agendamento-descarga').value = formatarDataParaInput(e.data_agendamento_descarga);
@@ -626,7 +647,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       await apiPost(`/api/cargas/${cargaAtual.id}/entregas`, {
         remetente_id: Number(remetenteId),
         cliente_id: Number(clienteId),
-        local_coleta: document.getElementById('add-local-coleta').value.trim() || null,
+        local_coleta_cliente_id: document.getElementById('add-local-coleta-id').value || null,
         peso_bruto: parseDecimal(document.getElementById('add-peso').value),
         valor_frete: parseDecimal(document.getElementById('add-frete').value)
       });
@@ -652,7 +673,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
         peso_cubado: parseDecimal(document.getElementById('edit-peso-cubado').value),
         valor_frete: parseDecimal(document.getElementById('edit-frete').value),
         nota_fiscal: document.getElementById('edit-nf').value || null,
-        local_coleta: document.getElementById('edit-local-coleta').value.trim() || null,
+        local_coleta_cliente_id: document.getElementById('edit-local-coleta-id').value || null,
         is_cortesia: document.getElementById('edit-cortesia').checked,
         data_agendamento_descarga: document.getElementById('edit-data-agendamento-descarga').value || null
       });

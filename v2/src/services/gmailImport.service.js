@@ -76,10 +76,11 @@ function inserirNota(gmailIdParaLinha, mensagem, campos, extractionSource, xmlAr
     INSERT INTO notas_fiscais_email (
       gmail_message_id, gmail_thread_id, remetente_email, assunto, data_recebimento,
       extraction_source, numero_nf, chave_acesso, cnpj_emitente, nome_emitente,
-      cnpj_destinatario, nome_destinatario, peso_bruto, valor_total, data_emissao,
+      cnpj_destinatario, nome_destinatario, cidade_destinatario, estado_destinatario,
+      ddd_destinatario, telefone_destinatario, peso_bruto, valor_total, data_emissao,
       placa_veiculo, nome_motorista, remetente_id, cliente_id, xml_arquivo, pdf_arquivo,
       status, precisa_revisao
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', ?)
   `).run(
     gmailIdParaLinha,
     mensagem.threadId || null,
@@ -93,6 +94,10 @@ function inserirNota(gmailIdParaLinha, mensagem, campos, extractionSource, xmlAr
     campos.nomeEmitente,
     cnpjDestinatario,
     campos.nomeDestinatario,
+    campos.cidadeDestinatario,
+    campos.estadoDestinatario,
+    campos.dddDestinatario,
+    campos.telefoneDestinatario,
     campos.pesoBruto,
     campos.valorTotal,
     campos.dataEmissao,

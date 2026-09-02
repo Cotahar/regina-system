@@ -9,7 +9,7 @@ export function renderNotasFiscaisPage() {
         <input type="text" id="nf-busca" class="input-field max-w-xs" placeholder="Buscar por numero, CNPJ, nome...">
         <select id="nf-filtro-status" class="input-field w-44">
           <option value="">Status (todos)</option>
-          <option value="pendente">Pendente</option>
+          <option value="pendente" selected>Pendente</option>
           <option value="vinculada">Vinculada</option>
           <option value="entrega_criada">Entrega Criada</option>
           <option value="ignorada">Ignorada</option>
@@ -35,8 +35,8 @@ export function renderNotasFiscaisPage() {
               <th class="pb-2">NF</th>
               <th class="pb-2">Emitente (remetente)</th>
               <th class="pb-2">Destinatario (cliente)</th>
+              <th class="pb-2">Cidade/UF</th>
               <th class="pb-2">Peso</th>
-              <th class="pb-2">Valor NF</th>
               <th class="pb-2">Emissao</th>
               <th class="pb-2">Placa</th>
               <th class="pb-2">Motorista</th>

@@ -43,9 +43,10 @@ export function renderMontagemPage() {
           <label class="label">UF</label>
           <input type="text" id="nova-estado" class="input-field" maxlength="2">
         </div>
-        <div>
+        <div class="relative">
           <label class="label">Local de coleta</label>
-          <input type="text" id="nova-local-coleta" class="input-field" placeholder="Se diferente do remetente">
+          <input id="nova-local-coleta-input" class="input-field" placeholder="Se diferente do remetente">
+          <input type="hidden" id="nova-local-coleta-id">
         </div>
       </form>
       <div class="mt-3 flex items-center justify-between gap-2">
@@ -86,6 +87,7 @@ export function renderMontagemPage() {
           <button type="button" id="btn-agrupar" class="btn-secondary btn-sm">Agrupar selecionadas</button>
           <button type="button" id="btn-desagrupar" class="btn-secondary btn-sm">Desagrupar selecionadas</button>
           <button type="button" id="btn-lote-remetente" class="btn-secondary btn-sm">Alterar remetente selecionadas</button>
+          <button type="button" id="btn-add-carga-existente" class="btn-secondary btn-sm">Adicionar a carga existente</button>
         </div>
         <button type="button" id="btn-excluir-selecionadas" class="btn-danger btn-sm ml-auto">Excluir selecionadas</button>
       </div>
@@ -125,6 +127,23 @@ export function renderMontagemPage() {
       </div>
     </div>
 
+    <div id="modal-add-carga-existente" class="fixed inset-0 z-20 hidden items-center justify-center bg-slate-900/50">
+      <div class="card w-full max-w-md">
+        <h3 class="mb-3 text-base font-semibold">Adicionar a uma carga existente</h3>
+        <p class="mb-2 text-xs text-slate-400" id="add-carga-existente-contagem"></p>
+        <label class="label">Carga (Pendente ou Agendada)</label>
+        <div class="relative">
+          <input id="add-carga-existente-input" class="input-field" placeholder="Buscar carga (codigo ou origem)...">
+          <input type="hidden" id="add-carga-existente-id">
+        </div>
+        <p id="add-carga-existente-msg" class="mt-2 hidden text-sm"></p>
+        <div class="mt-4 flex justify-end gap-2">
+          <button type="button" id="btn-add-carga-existente-cancelar" class="btn-secondary">Cancelar</button>
+          <button type="button" id="btn-add-carga-existente-confirmar" class="btn-success">Adicionar</button>
+        </div>
+      </div>
+    </div>
+
     <div id="modal-editar" class="fixed inset-0 z-20 hidden items-center justify-center bg-slate-900/50">
       <form id="form-editar" class="card w-full max-w-lg">
         <h3 class="mb-3 text-base font-semibold">Editar entrega</h3>
@@ -150,9 +169,10 @@ export function renderMontagemPage() {
           <label class="label">Nota fiscal</label>
           <input type="text" id="edit-nf" class="input-field">
         </div>
-        <div class="mb-2">
+        <div class="relative mb-2">
           <label class="label">Local de coleta (se diferente do remetente)</label>
-          <input type="text" id="edit-local-coleta" class="input-field">
+          <input id="edit-local-coleta-input" class="input-field" placeholder="Buscar cliente...">
+          <input type="hidden" id="edit-local-coleta-id">
         </div>
         <label class="mb-2 flex items-center gap-2 text-sm text-slate-300">
           <input type="checkbox" id="edit-cortesia" class="h-4 w-4"> Cortesia (sem cobranca)

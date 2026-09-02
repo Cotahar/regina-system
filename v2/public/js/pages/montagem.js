@@ -44,7 +44,7 @@ function comboboxCliente(prefixo) {
     getItens: () => clientes
   });
 }
-['nova-remetente', 'edit-remetente', 'lote-remetente', 'nova-cliente'].forEach(comboboxCliente);
+['nova-remetente', 'edit-remetente', 'lote-remetente', 'nova-cliente', 'nova-local-coleta', 'edit-local-coleta'].forEach(comboboxCliente);
 
 function linhasCombinadas() {
   const doDraft = draftAtual ? draftAtual.entregas : [];
@@ -94,6 +94,18 @@ function agruparParaExibicao(entregas) {
   return ordem.map((chave) => ({ chave, itens: mapa.get(chave) }));
 }
 
+// Nome efetivo de onde o motorista vai buscar a carga - o local de coleta
+// (cliente vinculado, ou o texto livre legado) sobrepoe o remetente so pra
+// exibicao; o cadastro do remetente original nunca muda.
+function nomeColeta(e) {
+  return e.local_coleta_cliente_nome || e.local_coleta || null;
+}
+
+function badgeColeta(e) {
+  const nome = nomeColeta(e);
+  return nome ? `<br><span class="rounded bg-sky-900/40 px-1 text-[10px] text-sky-300">coleta: ${escapeHtml(nome)}</span>` : '';
+}
+
 function linhaEntrega(e, indentada) {
   const agrupada = !!e.grupo_id;
   // So uma cor de fundo por linha - concatenar as 3 classes ao mesmo tempo
@@ -110,9 +122,9 @@ function linhaEntrega(e, indentada) {
   return `
     <tr class="border-t border-painel-border transition-colors ${classeCor}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
       <td class="py-1.5"><input type="checkbox" class="chk-linha" ${selecionados.has(e.id) ? 'checked' : ''}></td>
-      <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}${e._rascunho ? ' <span class="rounded bg-violet-900/40 px-1 text-[10px] text-violet-300">rascunho</span>' : ''}</td>
+      <td class="py-1.5">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}${e._rascunho ? ' <span class="rounded bg-violet-900/40 px-1 text-[10px] text-violet-300">rascunho</span>' : ''}${badgeColeta(e)}</td>
       <td class="py-1.5">${escapeHtml(e.destinatario_nome)}</td>
-      <td class="py-1.5">${escapeHtml(e.cidade_entrega || '')}-${escapeHtml(e.estado_entrega || '')}${e.local_coleta ? `<br><span class="text-[10px] text-slate-400">coleta: ${escapeHtml(e.local_coleta)}</span>` : ''}</td>
+      <td class="py-1.5">${escapeHtml(e.cidade_entrega || '')}-${escapeHtml(e.estado_entrega || '')}</td>
       <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}${e.is_cortesia ? ' <span class="rounded bg-emerald-900/40 px-1 text-[10px] text-emerald-300">cortesia</span>' : ''}</td>
       <td class="py-1.5">${formatarPeso(e.peso_bruto)}</td>
       <td class="py-1.5">${formatarPeso(e.peso_cubado)}</td>
@@ -125,6 +137,9 @@ function linhaEntrega(e, indentada) {
 function linhaResumoGrupo(chave, itens, expandido) {
   const remetentes = new Set(itens.map((e) => e.remetente_nome));
   const remetenteTexto = remetentes.size === 1 ? escapeHtml([...remetentes][0]) : '<span class="italic text-slate-400">Varios</span>';
+  // So mostra o selo de coleta quando todo o grupo concorda no mesmo local.
+  const colecoes = new Set(itens.map(nomeColeta));
+  const badgeColetaGrupo = colecoes.size === 1 ? badgeColeta(itens[0]) : '';
   const primeiro = itens[0];
   const pesoTotal = itens.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
   // Mesma regra do rodape: usa o cubado por nota so quando ele for maior
@@ -145,7 +160,7 @@ function linhaResumoGrupo(chave, itens, expandido) {
   return `
     <tr class="border-t border-painel-border transition-colors ${corGrupo}" data-grupo-visual="${escapeHtml(chave)}">
       <td class="py-1.5"><input type="checkbox" class="chk-grupo-visual" data-chave="${escapeHtml(chave)}" ${todosSelecionados ? 'checked' : ''}></td>
-      <td class="py-1.5">${remetenteTexto}</td>
+      <td class="py-1.5">${remetenteTexto}${badgeColetaGrupo}</td>
       <td class="py-1.5">
         <button type="button" class="btn-expandir-grupo inline-flex items-center gap-1.5 font-semibold text-blue-300 hover:text-blue-200" data-chave="${escapeHtml(chave)}">
           <svg viewBox="0 0 20 20" fill="currentColor" class="h-3 w-3 shrink-0 transition-transform ${expandido ? 'rotate-90' : ''}"><path d="M7 4l7 6-7 6V4z"/></svg>
@@ -313,6 +328,8 @@ async function abrirRascunho(id) {
         is_cortesia: e.is_cortesia,
         grupo_id: e.grupo_id,
         local_coleta: e.local_coleta,
+        local_coleta_cliente_id: e.local_coleta_cliente_id,
+        local_coleta_cliente_nome: e.local_coleta_cliente_nome,
         _rascunho: true
       }))
     };
@@ -378,7 +395,8 @@ function abrirEdicao(id) {
   document.getElementById('edit-frete').value = e.valor_frete ?? '';
   document.getElementById('edit-tonelada').value = e.valor_tonelada ?? '';
   document.getElementById('edit-nf').value = e.nota_fiscal || '';
-  document.getElementById('edit-local-coleta').value = e.local_coleta || '';
+  document.getElementById('edit-local-coleta-input').value = e.local_coleta_cliente_nome || '';
+  document.getElementById('edit-local-coleta-id').value = e.local_coleta_cliente_id || '';
   document.getElementById('edit-cortesia').checked = !!e.is_cortesia;
   document.getElementById('edit-msg').classList.add('hidden');
   abrirModal(document.getElementById('modal-editar'));
@@ -398,7 +416,7 @@ document.getElementById('form-editar').addEventListener('submit', async (event) 
       valor_frete: parseDecimal(document.getElementById('edit-frete').value),
       valor_tonelada: parseDecimal(document.getElementById('edit-tonelada').value),
       nota_fiscal: document.getElementById('edit-nf').value || null,
-      local_coleta: document.getElementById('edit-local-coleta').value.trim() || null,
+      local_coleta_cliente_id: document.getElementById('edit-local-coleta-id').value || null,
       is_cortesia: document.getElementById('edit-cortesia').checked
     });
     fecharModal(document.getElementById('modal-editar'));
@@ -428,7 +446,7 @@ document.getElementById('form-nova-entrega').addEventListener('submit', async (e
       valor_frete: parseDecimal(document.getElementById('nova-frete').value),
       valor_tonelada: parseDecimal(document.getElementById('nova-tonelada').value),
       nota_fiscal: document.getElementById('nova-nf').value || null,
-      local_coleta: document.getElementById('nova-local-coleta').value.trim() || null,
+      local_coleta_cliente_id: document.getElementById('nova-local-coleta-id').value || null,
       is_cortesia: document.getElementById('nova-cortesia').checked
     });
     // So limpa os campos que mudam nota a nota - mantem Remetente/Destinatario
@@ -438,7 +456,7 @@ document.getElementById('form-nova-entrega').addEventListener('submit', async (e
     // value (vira o novo "default" do campo), entao o proprio reset() ja
     // volta pro ultimo remetente/destinatario escolhido - so nao atualizava
     // o texto visivel, que ficava com a aparencia de vazio por engano.
-    ['nova-peso', 'nova-cubado', 'nova-tonelada', 'nova-frete', 'nova-nf', 'nova-cidade', 'nova-estado', 'nova-local-coleta']
+    ['nova-peso', 'nova-cubado', 'nova-tonelada', 'nova-frete', 'nova-nf', 'nova-cidade', 'nova-estado', 'nova-local-coleta-input', 'nova-local-coleta-id']
       .forEach((id) => { document.getElementById(id).value = ''; });
     document.getElementById('nova-cortesia').checked = false;
     document.getElementById('nova-peso').focus();
@@ -545,6 +563,49 @@ document.getElementById('btn-desagrupar').addEventListener('click', async () => 
     await carregarPool();
   } catch (err) {
     alert(err.message);
+  }
+});
+
+// --- ADICIONAR SELECIONADAS A UMA CARGA JA EXISTENTE (Pendente/Agendada) ---
+// Reaproveita o mesmo padrao de combobox de carga usado na vinculacao de
+// nota fiscal (Notas Fiscais > Vincular a uma carga).
+const modalAddCarga = document.getElementById('modal-add-carga-existente');
+let cargasParaAdicionar = [];
+const comboAddCarga = criarCombobox({
+  input: document.getElementById('add-carga-existente-input'),
+  hidden: document.getElementById('add-carga-existente-id'),
+  getItens: () => cargasParaAdicionar.map((c) => ({
+    id: c.id,
+    text: `${c.codigo_carga} - ${c.origem} - ${c.motorista_nome || 'Sem motorista'} - ${c.placa_veiculo || 'Sem veiculo'}`
+  }))
+});
+
+document.getElementById('btn-add-carga-existente').addEventListener('click', async () => {
+  if (!selecionados.size) return alert('Selecione ao menos uma entrega.');
+  const todasAsCargas = await apiGet('/api/cargas');
+  cargasParaAdicionar = todasAsCargas.filter((c) => ['Pendente', 'Agendada'].includes(c.status));
+  document.getElementById('add-carga-existente-contagem').textContent = `${selecionados.size} entrega(s) selecionada(s).`;
+  document.getElementById('add-carga-existente-input').value = '';
+  document.getElementById('add-carga-existente-id').value = '';
+  document.getElementById('add-carga-existente-msg').classList.add('hidden');
+  abrirModal(modalAddCarga);
+});
+
+document.getElementById('btn-add-carga-existente-cancelar').addEventListener('click', () => fecharModal(modalAddCarga));
+
+document.getElementById('btn-add-carga-existente-confirmar').addEventListener('click', async () => {
+  const addMsg = document.getElementById('add-carga-existente-msg');
+  const cargaId = document.getElementById('add-carga-existente-id').value;
+  if (!cargaId) return exibirMensagem(addMsg, 'Selecione uma carga.', 'erro');
+
+  try {
+    const resp = await apiPut(`/api/cargas/${cargaId}/adicionar-entregas`, { entrega_ids: [...selecionados] });
+    fecharModal(modalAddCarga);
+    selecionados.clear();
+    await carregarPool();
+    exibirMensagem(document.getElementById('msg-nova'), resp.message, 'sucesso');
+  } catch (err) {
+    exibirMensagem(addMsg, err.message, 'erro');
   }
 });
 

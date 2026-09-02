@@ -2,7 +2,7 @@ import { apiGet, apiPut, apiPost } from '../shared/api.js';
 import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
 import { escapeHtml } from '../shared/escape.js';
 import { criarCombobox } from '../shared/combobox.js';
-import { formatarPeso, formatarMoeda, formatarData } from '../shared/format.js';
+import { formatarPeso, formatarData } from '../shared/format.js';
 import { ouvirMudancas } from '../shared/live.js';
 
 const msg = document.getElementById('nf-msg');
@@ -47,8 +47,8 @@ function linhaTabela(n) {
       <td class="py-1.5 px-1.5">${escapeHtml(n.numero_nf || '-')}</td>
       <td class="py-1.5 px-1.5">${celulaParte(n.remetente_nome_cadastro, n.cnpj_emitente, n.nome_emitente)}</td>
       <td class="py-1.5 px-1.5">${celulaParte(n.cliente_nome_cadastro, n.cnpj_destinatario, n.nome_destinatario)}</td>
+      <td class="py-1.5 px-1.5">${escapeHtml(n.cidade_destinatario || '-')}${n.estado_destinatario ? `/${escapeHtml(n.estado_destinatario)}` : ''}</td>
       <td class="py-1.5 px-1.5">${n.peso_bruto ? formatarPeso(n.peso_bruto) : '-'}</td>
-      <td class="py-1.5 px-1.5">${n.valor_total ? formatarMoeda(n.valor_total) : '-'}</td>
       <td class="py-1.5 px-1.5">${n.data_emissao ? formatarData(n.data_emissao) : '-'}</td>
       <td class="py-1.5 px-1.5">${escapeHtml(n.placa_veiculo || '-')}</td>
       <td class="py-1.5 px-1.5">${escapeHtml(n.nome_motorista || '-')}</td>
@@ -61,6 +61,7 @@ function linhaTabela(n) {
         ${n.xml_url ? `<a href="${n.xml_url}" target="_blank" class="text-brand-yellow hover:underline">XML</a>` : ''}
         ${n.xml_url && n.pdf_url ? ' · ' : ''}
         ${n.pdf_url ? `<a href="${n.pdf_url}" target="_blank" class="text-brand-yellow hover:underline">PDF</a>` : ''}
+        ${n.xml_url && !n.pdf_url ? ` · <a href="/notas-fiscais/${n.id}/visualizar-pdf" target="_blank" class="text-brand-yellow hover:underline" title="Gerado a partir dos dados do XML - nao e o DANFE oficial">Ver PDF</a>` : ''}
       </td>
     </tr>
   `;
@@ -121,6 +122,28 @@ document.getElementById('btn-nf-ignorar').addEventListener('click', async () => 
     exibirMensagem(msg, err.message, 'erro');
   }
 });
+
+// Depois de vincular, se a NF trouxe algum dado (CNPJ, cidade, UF, DDD,
+// telefone) que o cadastro do cliente ainda nao tinha, pergunta se quer
+// completar - nunca sobrescreve o que o cliente ja tinha preenchido (o
+// backend so calcula a sugestao pra campos vazios no cadastro).
+async function oferecerComplementoCadastro(sugestoes) {
+  if (!Array.isArray(sugestoes) || !sugestoes.length) return;
+  for (const s of sugestoes) {
+    const linhas = s.campos.map((c) => `- ${c.rotulo}: ${c.valor}`).join('\n');
+    const aceitar = confirm(
+      `O cadastro de "${s.cliente_nome}" esta sem os dados abaixo. Preencher com os dados desta nota fiscal?\n\n${linhas}`
+    );
+    if (!aceitar) continue;
+    try {
+      const payload = {};
+      s.campos.forEach((c) => { payload[c.campo] = c.valor; });
+      await apiPut(`/api/clientes/${s.cliente_id}/complementar`, payload);
+    } catch (err) {
+      exibirMensagem(msg, `Erro ao complementar cadastro de ${s.cliente_nome}: ${err.message}`, 'erro');
+    }
+  }
+}
 
 // --- VINCULAR A UMA CARGA ---
 const modalVincular = document.getElementById('modal-nf-vincular');
@@ -209,7 +232,7 @@ document.getElementById('btn-nf-vincular-salvar').addEventListener('click', asyn
   if (!atribuicoes.length) return exibirMensagem(msgVincular, 'Escolha a linha de pelo menos uma nota.', 'erro');
 
   try {
-    await apiPut('/api/notas-fiscais/vincular', {
+    const resp = await apiPut('/api/notas-fiscais/vincular', {
       atribuicoes,
       sobrescrever_peso_valor: document.getElementById('nf-vincular-sobrescrever').checked
     });
@@ -217,6 +240,7 @@ document.getElementById('btn-nf-vincular-salvar').addEventListener('click', asyn
     selecionadas.clear();
     await carregar();
     exibirMensagem(msg, 'Notas vinculadas com sucesso!', 'sucesso');
+    await oferecerComplementoCadastro(resp.sugestoes_complemento);
   } catch (err) {
     exibirMensagem(msgVincular, err.message, 'erro');
   }

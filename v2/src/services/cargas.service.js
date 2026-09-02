@@ -2,9 +2,12 @@ import { db } from '../db/connection.js';
 
 export function buscarEntregasDaCarga(cargaId) {
   return db.prepare(`
-    SELECT e.*, cl.cidade as cliente_cidade, cl.estado as cliente_estado, cl.razao_social as cliente_razao_social
+    SELECT e.*, cl.cidade as cliente_cidade, cl.estado as cliente_estado, cl.razao_social as cliente_razao_social,
+      cl.autodescarga as cliente_autodescarga, cl.precisa_ajudantes as cliente_precisa_ajudantes,
+      rem.cidade as remetente_cidade, rem.estado as remetente_estado, rem.razao_social as remetente_razao_social
     FROM entregas e
     LEFT JOIN clientes cl ON cl.id = e.cliente_id
+    LEFT JOIN clientes rem ON rem.id = e.remetente_id
     WHERE e.carga_id = ?
     ORDER BY e.id
   `).all(cargaId);

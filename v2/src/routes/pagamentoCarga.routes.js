@@ -19,6 +19,71 @@ function calcularDestinosDisponiveis(entregas) {
   return [...destinos].sort();
 }
 
+// Mesma ideia, so que pro lado do remetente (origem da carga).
+function calcularOrigensDisponiveis(entregas) {
+  const origens = new Set();
+  for (const e of entregas) {
+    const cidade = (e.remetente_cidade || '').toUpperCase().trim();
+    const estado = (e.remetente_estado || '').toUpperCase().trim();
+    if (!cidade && !estado) continue;
+    origens.add(`${cidade} - ${estado}`);
+  }
+  return [...origens].sort();
+}
+
+// Origem/destino sugeridos pra mensagem de pagamento = cidade/UF de quem
+// concentra mais peso na carga (remetente pra origem, destinatario pra
+// destino) - so um chute inicial, o usuario ainda pode trocar no select.
+function agruparPorMaiorVolume(entregas, extrair) {
+  const grupos = new Map();
+  for (const e of entregas) {
+    const { chave, texto } = extrair(e);
+    if (!texto) continue;
+    const atual = grupos.get(chave) || { texto, peso: 0 };
+    atual.peso += e.peso_bruto || 0;
+    grupos.set(chave, atual);
+  }
+  let melhor = null;
+  for (const g of grupos.values()) {
+    if (!melhor || g.peso > melhor.peso) melhor = g;
+  }
+  return melhor ? melhor.texto : '';
+}
+
+function origemSugerida(entregas) {
+  return agruparPorMaiorVolume(entregas, (e) => {
+    const cidade = (e.remetente_cidade || '').toUpperCase().trim();
+    const estado = (e.remetente_estado || '').toUpperCase().trim();
+    if (!cidade && !estado) return { chave: null, texto: null };
+    return { chave: `${e.remetente_id}_${cidade}_${estado}`, texto: `${cidade} - ${estado}` };
+  });
+}
+
+function destinoSugerido(entregas) {
+  return agruparPorMaiorVolume(entregas, (e) => {
+    const cidade = (e.cidade_entrega || e.cliente_cidade || '').toUpperCase().trim();
+    const estado = (e.estado_entrega || e.cliente_estado || '').toUpperCase().trim();
+    if (!cidade && !estado) return { chave: null, texto: null };
+    return { chave: `${e.cliente_id}_${cidade}_${estado}`, texto: `${cidade} - ${estado}` };
+  });
+}
+
+// So faz sentido pra veiculo FROTA (regra do usuario) - soma o peso das
+// entregas cujo cliente destinatario precisa de ajudante pra descarregar
+// (a transportadora paga essa descarga) separado do peso de quem descarrega
+// sozinho (autodescarga). A validacao de cadastro ja garante que todo
+// cliente tem uma das duas flags marcada.
+function calcularDescargaFrota(entregas) {
+  let pagaDescarga = 0;
+  let clienteDescarrega = 0;
+  for (const e of entregas) {
+    const peso = e.peso_bruto || 0;
+    if (e.cliente_precisa_ajudantes) pagaDescarga += peso;
+    else clienteDescarrega += peso;
+  }
+  return { paga_descarga: pagaDescarga, cliente_descarrega: clienteDescarrega };
+}
+
 // Unidade mais frequente entre as entregas da carga (empate resolvido a favor
 // da matriz); cai pra matriz se nenhuma entrega tiver unidade definida. E so
 // uma sugestao - a tela sempre deixa trocar num select.
@@ -78,6 +143,10 @@ pagamentoCargaRouter.get('/api/cargas/:id/pagamento', requireLogin, (req, res) =
       valor_frete_total: resumo.valor_frete_total
     },
     destinos_disponiveis: calcularDestinosDisponiveis(entregas),
+    origens_disponiveis: calcularOrigensDisponiveis(entregas),
+    origem_sugerida: origemSugerida(entregas),
+    destino_sugerido: destinoSugerido(entregas),
+    descarga_frota: carga.veiculo_frota ? calcularDescargaFrota(entregas) : null,
     veiculo_dados_pagamento: carga.veiculo_dados_pagamento || '',
     unidade_sugerida_id: calcularUnidadeSugerida(entregas)
   });

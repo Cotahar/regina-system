@@ -78,6 +78,31 @@ clientesRouter.get('/api/clientes/:id/detalhes', requireLogin, (req, res) => {
   res.json(toDictClienteDetalhado(cliente));
 });
 
+// Campos que a tela de Notas Fiscais pode sugerir completar (vindos da NF-e
+// vinculada). So preenche o que estiver realmente vazio no cadastro - nunca
+// sobrescreve um valor que o cliente ja tinha preenchido.
+const CAMPOS_COMPLEMENTAVEIS = ['cnpj', 'cidade', 'estado', 'ddd', 'telefone'];
+
+clientesRouter.put('/api/clientes/:id/complementar', requireLogin, (req, res) => {
+  const cliente = db.prepare('SELECT * FROM clientes WHERE id = ?').get(req.params.id);
+  if (!cliente) return res.status(404).json({ error: 'Cliente nao encontrado' });
+
+  const data = req.body || {};
+  const sets = [];
+  const valores = [];
+  for (const campo of CAMPOS_COMPLEMENTAVEIS) {
+    if (!(campo in data) || cliente[campo]) continue; // so preenche campo vazio
+    sets.push(`${campo} = ?`);
+    valores.push(campo === 'cnpj' ? normalizarCnpj(data[campo]) : (data[campo] || null));
+  }
+
+  if (!sets.length) return res.json({ message: 'Nenhum campo atualizado.' });
+
+  valores.push(req.params.id);
+  db.prepare(`UPDATE clientes SET ${sets.join(', ')} WHERE id = ?`).run(...valores);
+  res.json({ message: 'Cadastro do cliente complementado!' });
+});
+
 clientesRouter.get('/api/clientes', requireLogin, (req, res) => {
   const clientes = db.prepare('SELECT * FROM clientes ORDER BY razao_social').all();
   res.json(clientes.map((c) => ({

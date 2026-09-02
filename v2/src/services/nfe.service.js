@@ -14,6 +14,10 @@ const CAMPOS_VAZIOS = {
   nomeEmitente: null,
   cnpjDestinatario: null,
   nomeDestinatario: null,
+  cidadeDestinatario: null,
+  estadoDestinatario: null,
+  dddDestinatario: null,
+  telefoneDestinatario: null,
   pesoBruto: null,
   valorTotal: null,
   dataEmissao: null,
@@ -24,6 +28,16 @@ const CAMPOS_VAZIOS = {
 function numeroOuNulo(valor) {
   const n = Number(valor);
   return Number.isFinite(n) ? n : null;
+}
+
+// NF-e as vezes traz telefone do destinatario como um unico campo (DDD+numero
+// junto, sem formatacao) - separa pra bater com o formato ddd/telefone
+// separados do cadastro de cliente. So separa quando da pra ter certeza
+// (10+ digitos); caso contrario nao arrisca um DDD errado.
+function separarDddTelefone(fone) {
+  const digitos = (fone || '').replace(/\D/g, '');
+  if (digitos.length < 10) return { ddd: null, telefone: null };
+  return { ddd: digitos.slice(0, 2), telefone: digitos.slice(2) };
 }
 
 // Guarda sempre como AAAA-MM-DD (sem hora) - dhEmi do XML vem com hora e fuso
@@ -91,6 +105,14 @@ export function parseNFeXml(xmlText) {
   const cnpjDestinatario = infNFe?.dest?.CNPJ ?? infNFe?.dest?.CPF ?? null;
   const nomeDestinatario = infNFe?.dest?.xNome ?? null;
 
+  // Enderesco do destinatario e um campo padrao da NF-e (dest/enderDest) -
+  // usado so pra sugerir completar cadastro do cliente depois, na tela de
+  // vincular (nunca sobrescreve nada sozinho).
+  const enderDest = infNFe?.dest?.enderDest;
+  const cidadeDestinatario = enderDest?.xMun || null;
+  const estadoDestinatario = enderDest?.UF || null;
+  const { ddd: dddDestinatario, telefone: telefoneDestinatario } = separarDddTelefone(enderDest?.fone);
+
   const valorTotal = numeroOuNulo(infNFe?.total?.ICMSTot?.vNF);
 
   let pesoBruto = null;
@@ -114,6 +136,10 @@ export function parseNFeXml(xmlText) {
     nomeEmitente,
     cnpjDestinatario,
     nomeDestinatario,
+    cidadeDestinatario,
+    estadoDestinatario,
+    dddDestinatario,
+    telefoneDestinatario,
     pesoBruto,
     valorTotal,
     dataEmissao,
@@ -163,6 +189,10 @@ export function extractFromPdfText(texto) {
     nomeEmitente: null,
     cnpjDestinatario: cnpjs[1] || null,
     nomeDestinatario: null,
+    cidadeDestinatario: null,
+    estadoDestinatario: null,
+    dddDestinatario: null,
+    telefoneDestinatario: null,
     pesoBruto: pesoMatch ? decimalPtBr(pesoMatch[1]) : null,
     valorTotal: valorMatch ? decimalPtBr(valorMatch[1]) : null,
     dataEmissao: dataMatch ? normalizarData(dataMatch[1]) : null,

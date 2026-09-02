@@ -98,7 +98,8 @@ export function renderModalDetalhesCarga() {
           <input type="hidden" id="add-remetente-id">
           <div class="relative"><input id="add-cliente-input" class="input-field" placeholder="Destinatario..."></div>
           <input type="hidden" id="add-cliente-id">
-          <input type="text" id="add-local-coleta" class="input-field" placeholder="Local de coleta (opcional)">
+          <div class="relative"><input id="add-local-coleta-input" class="input-field" placeholder="Local de coleta (se diferente do remetente)"></div>
+          <input type="hidden" id="add-local-coleta-id">
           <input type="text" id="add-peso" class="input-field" placeholder="Peso bruto (kg)">
           <input type="text" id="add-frete" class="input-field" placeholder="Valor frete (R$)">
           <button type="submit" class="btn-primary">Adicionar</button>
@@ -171,9 +172,10 @@ export function renderModalDetalhesCarga() {
           <input type="text" id="edit-nf" class="input-field">
         </div>
       </div>
-      <div class="mb-2">
+      <div class="relative mb-2">
         <label class="label">Local de coleta (se diferente do remetente)</label>
-        <input type="text" id="edit-local-coleta" class="input-field">
+        <input id="edit-local-coleta-input" class="input-field" placeholder="Buscar cliente...">
+        <input type="hidden" id="edit-local-coleta-id">
       </div>
       <label class="mb-2 flex items-center gap-2 text-sm text-slate-300">
         <input type="checkbox" id="edit-cortesia" class="h-4 w-4"> Cortesia (sem cobranca)

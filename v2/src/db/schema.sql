@@ -109,6 +109,7 @@ CREATE TABLE IF NOT EXISTS entregas (
   is_cortesia INTEGER NOT NULL DEFAULT 0,
   grupo_id INTEGER,
   local_coleta TEXT,
+  local_coleta_cliente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
   valor_combinado REAL,
   repasse_destinatario TEXT,
   data_agendamento_descarga TEXT
@@ -157,6 +158,10 @@ CREATE TABLE IF NOT EXISTS notas_fiscais_email (
   nome_emitente TEXT,
   cnpj_destinatario TEXT,
   nome_destinatario TEXT,
+  cidade_destinatario TEXT,
+  estado_destinatario TEXT,
+  ddd_destinatario TEXT,
+  telefone_destinatario TEXT,
   peso_bruto REAL,
   valor_total REAL,
   data_emissao TEXT,

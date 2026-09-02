@@ -147,10 +147,12 @@ cargasRouter.get('/api/cargas/:id', requireLogin, (req, res) => {
       cl.precisa_agendamento as cliente_precisa_agendamento, cl.autodescarga as cliente_autodescarga,
       cl.precisa_ajudantes as cliente_precisa_ajudantes, cl.descarga_paga_direto as cliente_descarga_paga_direto,
       cl.resolve_com_representante as cliente_resolve_com_representante, cl.contato_extra as cliente_contato_extra,
-      rem.razao_social as remetente_razao_social, rem.cidade as remetente_cidade, rem.estado as remetente_estado
+      rem.razao_social as remetente_razao_social, rem.cidade as remetente_cidade, rem.estado as remetente_estado,
+      lc.razao_social as local_coleta_cliente_nome
     FROM entregas e
     LEFT JOIN clientes cl ON cl.id = e.cliente_id
     LEFT JOIN clientes rem ON rem.id = e.remetente_id
+    LEFT JOIN clientes lc ON lc.id = e.local_coleta_cliente_id
     WHERE e.carga_id = ?
     ORDER BY e.id
   `).all(req.params.id);
@@ -197,6 +199,8 @@ cargasRouter.get('/api/cargas/:id', requireLogin, (req, res) => {
     is_cortesia: !!e.is_cortesia,
     grupo_id: e.grupo_id,
     local_coleta: e.local_coleta,
+    local_coleta_cliente_id: e.local_coleta_cliente_id,
+    local_coleta_cliente_nome: e.local_coleta_cliente_nome,
     valor_combinado: e.valor_combinado,
     repasse_destinatario: e.repasse_destinatario,
     data_agendamento_descarga: e.data_agendamento_descarga
@@ -308,13 +312,13 @@ cargasRouter.post('/api/cargas/:id/duplicar', requireLogin, (req, res) => {
 
   const novaCargaId = info.lastInsertRowid;
   const inserirEntrega = db.prepare(`
-    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, peso_cubado, valor_tonelada, cidade_entrega, estado_entrega, local_coleta, is_cortesia)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, peso_cubado, valor_tonelada, cidade_entrega, estado_entrega, local_coleta, local_coleta_cliente_id, is_cortesia)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   for (const e of entregas) {
     inserirEntrega.run(
       novaCargaId, e.cliente_id, e.remetente_id, e.peso_bruto, e.valor_frete, e.peso_cubado,
-      e.valor_tonelada, e.cidade_entrega, e.estado_entrega, e.local_coleta, e.is_cortesia
+      e.valor_tonelada, e.cidade_entrega, e.estado_entrega, e.local_coleta, e.local_coleta_cliente_id, e.is_cortesia
     );
   }
 
@@ -381,6 +385,32 @@ cargasRouter.put('/api/cargas/:id/montar', requireLogin, (req, res) => {
   res.json({ message: `Rascunho ${carga.codigo_carga} atualizado com sucesso!`, carga_id: Number(req.params.id) });
 });
 
+// Adiciona entregas ja existentes na lista de Disponiveis (ou de outro
+// rascunho) direto numa carga ja confirmada (Pendente/Agendada) - sem passar
+// pelo fluxo de rascunho. So soma, nunca remove o que a carga ja tinha.
+cargasRouter.put('/api/cargas/:id/adicionar-entregas', requireLogin, (req, res) => {
+  const carga = db.prepare('SELECT * FROM cargas WHERE id = ?').get(req.params.id);
+  if (!carga) return res.status(404).json({ error: 'Carga nao encontrada' });
+  if (!['Pendente', 'Agendada'].includes(carga.status)) {
+    return res.status(400).json({ error: 'So e possivel adicionar entregas a cargas Pendentes ou Agendadas.' });
+  }
+
+  const entregaIds = [...new Set((req.body?.entrega_ids || []).map(Number))];
+  if (!entregaIds.length) return res.status(400).json({ error: 'Selecione ao menos uma entrega.' });
+
+  const placeholders = entregaIds.map(() => '?').join(',');
+  const disponiveis = db.prepare(
+    `SELECT id FROM entregas WHERE id IN (${placeholders}) AND carga_id IS NULL`
+  ).all(...entregaIds);
+  if (disponiveis.length !== entregaIds.length) {
+    return res.status(409).json({ error: 'Uma ou mais entregas selecionadas ja estao em outra carga.' });
+  }
+
+  db.prepare(`UPDATE entregas SET carga_id = ? WHERE id IN (${placeholders})`).run(req.params.id, ...entregaIds);
+
+  res.json({ message: `${entregaIds.length} entrega(s) adicionada(s) a carga ${carga.codigo_carga}!` });
+});
+
 cargasRouter.delete('/api/cargas/:id/rascunho', requireLogin, (req, res) => {
   const carga = db.prepare("SELECT * FROM cargas WHERE id = ? AND status = 'Rascunho'").get(req.params.id);
   if (!carga) return res.status(404).json({ error: 'Rascunho nao encontrado' });
@@ -402,10 +432,12 @@ cargasRouter.get('/cargas/:id/espelho_impressao', requireLogin, (req, res) => {
       cl.precisa_agendamento as cliente_precisa_agendamento, cl.autodescarga as cliente_autodescarga,
       cl.precisa_ajudantes as cliente_precisa_ajudantes, cl.descarga_paga_direto as cliente_descarga_paga_direto,
       cl.resolve_com_representante as cliente_resolve_com_representante, cl.contato_extra as cliente_contato_extra,
-      rem.razao_social as remetente_razao_social
+      rem.razao_social as remetente_razao_social,
+      lc.razao_social as local_coleta_cliente_nome
     FROM entregas e
     LEFT JOIN clientes cl ON cl.id = e.cliente_id
     LEFT JOIN clientes rem ON rem.id = e.remetente_id
+    LEFT JOIN clientes lc ON lc.id = e.local_coleta_cliente_id
     WHERE e.carga_id = ?
   `).all(req.params.id);
 
@@ -440,9 +472,13 @@ cargasRouter.get('/cargas/:id/espelho_impressao', requireLogin, (req, res) => {
     }
     entregasAgrupadasMap.get(chave).peso += peso;
 
-    const remetenteNome = e.remetente_razao_social || 'SEM REMETENTE';
-    if (!coletasMap.has(remetenteNome)) coletasMap.set(remetenteNome, { entregas: new Map(), totalPeso: 0 });
-    const coleta = coletasMap.get(remetenteNome);
+    // Local de coleta (quando definido na entrega) prevalece sobre o
+    // remetente pra fins de exibicao na relacao de coletas - o remetente
+    // original continua intacto no cadastro, isso e so pra onde o motorista
+    // efetivamente vai buscar a carga.
+    const nomeColeta = e.local_coleta_cliente_nome || e.local_coleta || e.remetente_razao_social || 'SEM REMETENTE';
+    if (!coletasMap.has(nomeColeta)) coletasMap.set(nomeColeta, { entregas: new Map(), totalPeso: 0 });
+    const coleta = coletasMap.get(nomeColeta);
     coleta.totalPeso += peso;
     if (!coleta.entregas.has(chave)) coleta.entregas.set(chave, { cliente: clienteNome, cidadeUf: `${cidade}-${estado}`, peso: 0, perfil: perfilCliente(e) });
     coleta.entregas.get(chave).peso += peso;

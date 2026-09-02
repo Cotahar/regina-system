@@ -20,15 +20,18 @@ export function renderPagamentoCargaPage() {
         </div>
       </div>
 
-      <div id="pag-secao-frota" class="mt-4 hidden grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label class="label">Origem</label>
-          <input id="pag-origem" class="input-field" readonly>
+          <select id="pag-origem" class="input-field"></select>
         </div>
         <div>
-          <label class="label">Destino final</label>
+          <label class="label">Destino</label>
           <select id="pag-destino" class="input-field"></select>
         </div>
+      </div>
+
+      <div id="pag-secao-frota" class="mt-4 hidden grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label class="label">Frete empresa</label>
           <input id="pag-frete-empresa" class="input-field" readonly>

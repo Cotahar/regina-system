@@ -29,26 +29,44 @@ function nomeUnidadeSelecionada() {
   return opcao ? opcao.text : '';
 }
 
+// So aparece no final da mensagem de FROTA, e so com o peso quando a carga
+// mistura os dois tipos de descarga - se for tudo de um tipo so, mostra so o
+// rotulo (regra do usuario: nao faz sentido mostrar peso igual ao total).
+function linhasDescargaFrota() {
+  const d = dados.descarga_frota;
+  if (!d) return [];
+  const temPaga = d.paga_descarga > 0;
+  const temCliente = d.cliente_descarrega > 0;
+  if (temPaga && temCliente) {
+    return ['', `Paga Descarga: ${formatarDecimalParaInput(d.paga_descarga)} Kg`, `Cliente Descarrega: ${formatarDecimalParaInput(d.cliente_descarrega)} Kg`];
+  }
+  if (temPaga) return ['', 'Paga Descarga'];
+  if (temCliente) return ['', 'Cliente Descarrega'];
+  return [];
+}
+
 // Monta o texto exato da mensagem de WhatsApp - linha em branco = string
 // vazia no array. Os dois modelos (frota/terceiro) tem espacamento e negrito
 // (*texto*) diferentes, reproduzidos ao pe da letra dos exemplos combinados.
 function montarMensagem() {
   const unidade = nomeUnidadeSelecionada();
   const motorista = dados.carga.motorista_nome;
+  const origem = document.getElementById('pag-origem').value;
+  const destino = document.getElementById('pag-destino').value;
 
   if (dados.carga.veiculo_frota) {
-    const destino = document.getElementById('pag-destino').value;
     return [
       `UN. ${unidade}`,
       '',
       'FROTA',
       '',
       `Motorista: ${motorista}`,
-      `Origem: ${dados.carga.origem || ''}`,
+      `Origem: ${origem}`,
       `Destino: ${destino}`,
       `Frete empresa: ${formatarDecimalParaInput(dados.resumo.valor_frete_total)}`,
       `Peso: ${formatarDecimalParaInput(dados.resumo.peso_total)}`,
-      `Frete motorista: ${formatarDecimalParaInput(dados.carga.frete_pago)}`
+      `Frete motorista: ${formatarDecimalParaInput(dados.carga.frete_pago)}`,
+      ...linhasDescargaFrota()
     ].join('\n');
   }
 
@@ -60,6 +78,9 @@ function montarMensagem() {
     `UN. ${unidade}`,
     '',
     '*ADIANTAMENTO*',
+    '',
+    `Origem: ${origem}`,
+    `Destino: ${destino}`,
     '',
     `Motorista: ${motorista}`,
     '',
@@ -92,21 +113,31 @@ async function carregar() {
   document.getElementById('pag-tipo').value = dados.carga.veiculo_frota ? 'Frota' : 'Terceiro';
   document.getElementById('pag-unidade').innerHTML = opcoesUnidade(unidades, dados.unidade_sugerida_id);
 
+  // Origem/destino = cidade/UF de quem tem mais peso na carga (remetente e
+  // destinatario respectivamente) - vale pros dois tipos de veiculo. O select
+  // ja vem com a sugestao marcada, mas continua editavel pra corrigir dado
+  // de cadastro ruim ou empate.
+  function preencherSelectCidade(select, opcoes, sugestao) {
+    select.innerHTML = '<option value="">Selecione...</option>' +
+      opcoes.map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
+    if (sugestao) {
+      if (!opcoes.includes(sugestao)) select.insertAdjacentHTML('beforeend', `<option value="${escapeHtml(sugestao)}">${escapeHtml(sugestao)}</option>`);
+      select.value = sugestao;
+    } else if (opcoes.length === 1) {
+      select.value = opcoes[0];
+    }
+  }
+  preencherSelectCidade(document.getElementById('pag-origem'), dados.origens_disponiveis || [], dados.origem_sugerida);
+  preencherSelectCidade(document.getElementById('pag-destino'), dados.destinos_disponiveis || [], dados.destino_sugerido);
+
   if (dados.carga.veiculo_frota) {
     document.getElementById('pag-secao-frota').classList.remove('hidden');
     document.getElementById('pag-secao-terceiro').classList.add('hidden');
     document.getElementById('btn-pag-salvar').classList.add('hidden');
 
-    document.getElementById('pag-origem').value = dados.carga.origem || '';
     document.getElementById('pag-frete-empresa').value = `R$ ${formatarDecimalParaInput(dados.resumo.valor_frete_total)}`;
     document.getElementById('pag-peso').value = formatarDecimalParaInput(dados.resumo.peso_total);
     document.getElementById('pag-frete-motorista-frota').value = formatarDecimalParaInput(dados.carga.frete_pago);
-
-    const destinos = dados.destinos_disponiveis || [];
-    const destinoSelect = document.getElementById('pag-destino');
-    destinoSelect.innerHTML = '<option value="">Selecione...</option>' +
-      destinos.map((d) => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join('');
-    if (destinos.length === 1) destinoSelect.value = destinos[0];
   } else {
     document.getElementById('pag-secao-terceiro').classList.remove('hidden');
     document.getElementById('pag-secao-frota').classList.add('hidden');
@@ -128,6 +159,7 @@ async function carregar() {
 }
 
 document.getElementById('pag-unidade').addEventListener('change', atualizarPreview);
+document.getElementById('pag-origem').addEventListener('change', atualizarPreview);
 document.getElementById('pag-destino').addEventListener('change', atualizarPreview);
 ['pag-saldo', 'pag-vale-pedagio', 'pag-dados-pagamento'].forEach((id) => {
   const campo = document.getElementById(id);

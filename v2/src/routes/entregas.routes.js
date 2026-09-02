@@ -37,16 +37,19 @@ entregasRouter.post('/api/cargas/:id/entregas', requireLogin, (req, res) => {
   const carga = db.prepare('SELECT id FROM cargas WHERE id = ?').get(req.params.id);
   if (!carga) return res.status(404).json({ error: 'Carga nao encontrada' });
 
-  const { cliente_id: clienteId, remetente_id: remetenteId, peso_bruto: pesoBruto, valor_frete: valorFrete, local_coleta: localColeta } = req.body || {};
+  const {
+    cliente_id: clienteId, remetente_id: remetenteId, peso_bruto: pesoBruto, valor_frete: valorFrete,
+    local_coleta: localColeta, local_coleta_cliente_id: localColetaClienteId
+  } = req.body || {};
   if (!remetenteId) return res.status(400).json({ error: 'Remetente nao foi selecionado.' });
 
   const cliente = db.prepare('SELECT * FROM clientes WHERE id = ?').get(clienteId);
   if (!cliente) return res.status(404).json({ error: 'Cliente (Destinatario) nao encontrado.' });
 
   db.prepare(`
-    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, cidade_entrega, estado_entrega, local_coleta)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(carga.id, cliente.id, remetenteId, pesoBruto || null, valorFrete || null, cliente.cidade, cliente.estado, localColeta || null);
+    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, cidade_entrega, estado_entrega, local_coleta, local_coleta_cliente_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(carga.id, cliente.id, remetenteId, pesoBruto || null, valorFrete || null, cliente.cidade, cliente.estado, localColeta || null, localColetaClienteId || null);
 
   res.status(201).json({ message: 'Entrega rapida adicionada com sucesso!' });
 });
@@ -69,10 +72,12 @@ entregasRouter.get('/api/entregas/disponiveis', requireLogin, (req, res) => {
   const entregas = db.prepare(`
     SELECT e.*,
       rem.razao_social as remetente_razao_social, rem.estado as remetente_estado,
-      cli.razao_social as cliente_razao_social, cli.cidade as cliente_cidade, cli.estado as cliente_estado
+      cli.razao_social as cliente_razao_social, cli.cidade as cliente_cidade, cli.estado as cliente_estado,
+      lc.razao_social as local_coleta_cliente_nome
     FROM entregas e
     LEFT JOIN clientes rem ON rem.id = e.remetente_id
     LEFT JOIN clientes cli ON cli.id = e.cliente_id
+    LEFT JOIN clientes lc ON lc.id = e.local_coleta_cliente_id
     WHERE e.carga_id IS NULL
     ORDER BY e.id DESC
   `).all();
@@ -96,6 +101,8 @@ entregasRouter.get('/api/entregas/disponiveis', requireLogin, (req, res) => {
     is_cortesia: !!e.is_cortesia,
     grupo_id: e.grupo_id,
     local_coleta: e.local_coleta,
+    local_coleta_cliente_id: e.local_coleta_cliente_id,
+    local_coleta_cliente_nome: e.local_coleta_cliente_nome,
     selecionada: false
   })));
 });
@@ -104,12 +111,12 @@ entregasRouter.post('/api/entregas/disponiveis', requireLogin, (req, res) => {
   const data = req.body || {};
   const isCortesia = !!data.is_cortesia;
   db.prepare(`
-    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, peso_cubado, valor_tonelada, nota_fiscal, cidade_entrega, estado_entrega, local_coleta, is_cortesia)
-    VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, peso_cubado, valor_tonelada, nota_fiscal, cidade_entrega, estado_entrega, local_coleta, local_coleta_cliente_id, is_cortesia)
+    VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     data.cliente_id, data.remetente_id || null, data.peso_bruto || null, isCortesia ? 0 : (data.valor_frete || null),
     data.peso_cubado || null, data.valor_tonelada || null, data.nota_fiscal || null, data.cidade_entrega || null, data.estado_entrega || null,
-    data.local_coleta || null, isCortesia ? 1 : 0
+    data.local_coleta || null, data.local_coleta_cliente_id || null, isCortesia ? 1 : 0
   );
   res.status(201).json({ message: 'Entrega adicionada a lista de disponiveis!' });
 });
@@ -146,7 +153,7 @@ entregasRouter.put('/api/entregas/:id', requireLogin, (req, res) => {
   const cortesiaForcada = 'is_cortesia' in data && data.is_cortesia;
   const camposSimples = [
     'remetente_id', 'peso_bruto', 'valor_frete', 'peso_cubado', 'nota_fiscal', 'cidade_entrega', 'estado_entrega',
-    'local_coleta', 'valor_combinado', 'repasse_destinatario', 'valor_tonelada', 'data_agendamento_descarga'
+    'local_coleta', 'local_coleta_cliente_id', 'valor_combinado', 'repasse_destinatario', 'valor_tonelada', 'data_agendamento_descarga'
   ];
   const sets = [];
   const valores = [];
