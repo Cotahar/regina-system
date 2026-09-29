@@ -1,4 +1,5 @@
 import { db } from './connection.js';
+import { encontrarMunicipio } from '../services/municipios.service.js';
 
 // Adiciona colunas novas em bancos ja existentes (deploys anteriores a essas
 // mudancas). CREATE TABLE ... IF NOT EXISTS do schema.sql nao altera tabelas
@@ -29,7 +30,8 @@ const colunasNovas = [
   ['notas_fiscais_email', 'estado_destinatario', 'TEXT'],
   ['notas_fiscais_email', 'ddd_destinatario', 'TEXT'],
   ['notas_fiscais_email', 'telefone_destinatario', 'TEXT'],
-  ['entregas', 'local_coleta_cliente_id', 'INTEGER REFERENCES clientes(id) ON DELETE SET NULL']
+  ['entregas', 'local_coleta_cliente_id', 'INTEGER REFERENCES clientes(id) ON DELETE SET NULL'],
+  ['entregas', 'ordem_coleta_id', 'INTEGER REFERENCES ordens_coleta(id) ON DELETE SET NULL']
 ];
 
 // Padroniza data_emissao pra AAAA-MM-DD em linhas gravadas antes dessa
@@ -67,6 +69,40 @@ function removerMotoristasSemNome() {
   if (info.changes) console.log(`Patch: ${info.changes} motorista(s) sem nome removido(s).`);
 }
 
+// Cadastros antigos podem ter cidade digitada sem acento ou com grafia
+// antiga (ex: "MOJI MIRIM" -> hoje e "MOGI MIRIM") - corrige pra forma
+// oficial so quando reconhece com confianca (mesmo nome, so faltando
+// acento/caixa, ou a UF desempata nomes repetidos em estados diferentes).
+// Nunca mexe em cidade que nao reconhece (ex: alguns cadastros tem "NaN"
+// no lugar de cidade, resto de um bug de importacao antigo - isso fica pra
+// revisao manual, nao da pra adivinhar a cidade certa). Idempotente - na
+// segunda vez ja nao sobra nada pra corrigir, porque o valor ja fica na
+// forma oficial.
+function padronizarCidadesExistentes(tabela, colunaCidade, colunaEstado) {
+  const linhas = db.prepare(`SELECT id, ${colunaCidade} as cidade, ${colunaEstado} as estado FROM ${tabela} WHERE ${colunaCidade} IS NOT NULL AND ${colunaCidade} != ''`).all();
+  const update = db.prepare(`UPDATE ${tabela} SET ${colunaCidade} = ?, ${colunaEstado} = ? WHERE id = ?`);
+
+  // Uma transacao so pro lote inteiro - sem isso cada UPDATE seria um commit
+  // separado, e essa tabela pode ter milhares de linhas (roda em todo boot).
+  let corrigidos = 0;
+  db.exec('BEGIN');
+  try {
+    for (const linha of linhas) {
+      const municipio = encontrarMunicipio(linha.cidade, linha.estado);
+      if (!municipio) continue;
+      const cidadeCorrigida = municipio.cidade.toUpperCase();
+      if (cidadeCorrigida === linha.cidade && municipio.uf === linha.estado) continue;
+      update.run(cidadeCorrigida, municipio.uf, linha.id);
+      corrigidos++;
+    }
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+  if (corrigidos) console.log(`Patch: ${corrigidos} registro(s) de ${tabela} com cidade/UF padronizada pra forma oficial.`);
+}
+
 export function aplicarPatches() {
   for (const [tabela, coluna, definicao] of colunasNovas) {
     try {
@@ -82,4 +118,6 @@ export function aplicarPatches() {
   normalizarDatasEmissaoExistentes();
   removerMotoristasSemNome();
   corrigirClientesSemFormaDeDescarga();
+  padronizarCidadesExistentes('clientes', 'cidade', 'estado');
+  padronizarCidadesExistentes('entregas', 'cidade_entrega', 'estado_entrega');
 }

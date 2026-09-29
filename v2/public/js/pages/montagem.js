@@ -10,6 +10,7 @@ import { iconeMenuAcoes, criarMenuAcoes } from '../shared/menuAcoes.js';
 import { aplicarMascaraDecimal, ligarCalculadoraFretePorTonelada } from '../shared/mask.js';
 
 criarComboboxMunicipio({ inputCidade: document.getElementById('nova-cidade'), inputUf: document.getElementById('nova-estado') });
+criarComboboxMunicipio({ inputCidade: document.getElementById('edit-cidade'), inputUf: document.getElementById('edit-estado') });
 
 ['nova-peso', 'nova-cubado', 'nova-frete', 'nova-tonelada', 'edit-peso', 'edit-cubado', 'edit-frete', 'edit-tonelada']
   .forEach((id) => aplicarMascaraDecimal(document.getElementById(id)));

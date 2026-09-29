@@ -7,9 +7,12 @@ import { icones } from './icons.js';
 import { iconeMenuAcoes, criarMenuAcoes } from './menuAcoes.js';
 import { aplicarMascaraDecimal } from './mask.js';
 import { criarModalEditarCliente } from './cliente-modal.js';
+import { criarComboboxMunicipio } from './municipio.js';
 
 ['det-frete-pago', 'add-peso', 'add-frete', 'edit-peso', 'edit-peso-cubado', 'edit-frete']
   .forEach((id) => aplicarMascaraDecimal(document.getElementById(id)));
+
+criarComboboxMunicipio({ inputCidade: document.getElementById('edit-cidade'), inputUf: document.getElementById('edit-estado') });
 
 const ajustarAlturaObservacoes = ativarAutoResize(document.getElementById('det-observacoes'));
 
@@ -80,6 +83,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
       renderizarTabelaEntregas();
       renderizarColetas();
       aplicarEstadoColetas();
+      await carregarOcorrencias();
       formAdd.classList.add('hidden');
       formLote.classList.add('hidden');
       msg.classList.add('hidden');
@@ -454,6 +458,56 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     const aberta = !document.getElementById('det-coletas-conteudo').classList.contains('hidden');
     localStorage.setItem(CHAVE_COLETAS_ABERTA, aberta ? '0' : '1');
     aplicarEstadoColetas();
+  });
+
+  // --- OCORRENCIAS (linha do tempo da carga) ---
+  function formatarDataHora(valor) {
+    if (!valor) return '';
+    const d = new Date(valor.replace(' ', 'T'));
+    if (Number.isNaN(d.getTime())) return valor;
+    return `${d.toLocaleDateString('pt-BR')} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  async function carregarOcorrencias() {
+    const ocorrencias = await apiGet(`/api/cargas/${cargaAtual.id}/ocorrencias`);
+    document.getElementById('det-ocorrencias-lista').innerHTML = ocorrencias.length
+      ? ocorrencias.map((o) => `
+          <div class="rounded border border-painel-border px-2 py-1.5">
+            <div class="flex items-center justify-between gap-2 text-[11px] text-slate-400">
+              <span>${escapeHtml(o.usuario_nome || 'Sistema')}${o.tipo === 'automatico' ? ' <span class="rounded bg-slate-700/60 px-1 text-[10px]">automatico</span>' : ''}</span>
+              <span>${formatarDataHora(o.criado_em)}</span>
+            </div>
+            <p class="mt-0.5 text-xs text-slate-200">${escapeHtml(o.texto)}</p>
+          </div>
+        `).join('')
+      : '<p class="text-xs text-slate-400">Nenhuma ocorrencia registrada ainda.</p>';
+  }
+
+  const CHAVE_OCORRENCIAS_ABERTA = 'frottex-ocorrencias-aberta';
+  function aplicarEstadoOcorrencias() {
+    const aberta = localStorage.getItem(CHAVE_OCORRENCIAS_ABERTA) === '1';
+    document.getElementById('det-ocorrencias-conteudo').classList.toggle('hidden', !aberta);
+    document.getElementById('icone-toggle-ocorrencias').classList.toggle('rotate-90', aberta);
+  }
+  aplicarEstadoOcorrencias();
+  document.getElementById('btn-toggle-ocorrencias').addEventListener('click', () => {
+    const aberta = !document.getElementById('det-ocorrencias-conteudo').classList.contains('hidden');
+    localStorage.setItem(CHAVE_OCORRENCIAS_ABERTA, aberta ? '0' : '1');
+    aplicarEstadoOcorrencias();
+  });
+
+  document.getElementById('form-nova-ocorrencia').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const input = document.getElementById('nova-ocorrencia-texto');
+    const texto = input.value.trim();
+    if (!texto) return;
+    try {
+      await apiPost(`/api/cargas/${cargaAtual.id}/ocorrencias`, { texto });
+      input.value = '';
+      await carregarOcorrencias();
+    } catch (err) {
+      mostrarMensagem(err.message, 'erro');
+    }
   });
 
   function renderizarTabelaEntregas() {

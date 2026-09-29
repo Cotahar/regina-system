@@ -3,6 +3,7 @@ import multer from 'multer';
 import { db } from '../db/connection.js';
 import { requireLogin } from '../middleware/auth.js';
 import { decodeUploadedText, parseCsv } from '../utils/csv.js';
+import { encontrarMunicipio } from '../services/municipios.service.js';
 
 const upload = multer({ storage: multer.memoryStorage() });
 export const clientesRouter = Router();
@@ -101,6 +102,36 @@ clientesRouter.put('/api/clientes/:id/complementar', requireLogin, (req, res) =>
   valores.push(req.params.id);
   db.prepare(`UPDATE clientes SET ${sets.join(', ')} WHERE id = ?`).run(...valores);
   res.json({ message: 'Cadastro do cliente complementado!' });
+});
+
+// Usado pela tela de Orcamentos: depois de gerar o PDF, se o usuario editou
+// nome/cidade/estado/cnpj do cliente so pra esse orcamento e confirma que
+// quer levar a correcao pro cadastro, isso PODE sobrescrever um valor que ja
+// existia (diferente do /complementar, que so preenche vazio) - foi uma
+// edicao deliberada, entao o pedido e respeitado.
+const CAMPOS_ATUALIZAVEIS = ['razao_social', 'cnpj', 'cidade', 'estado'];
+
+clientesRouter.put('/api/clientes/:id/atualizar-campos', requireLogin, (req, res) => {
+  const cliente = db.prepare('SELECT id FROM clientes WHERE id = ?').get(req.params.id);
+  if (!cliente) return res.status(404).json({ error: 'Cliente nao encontrado' });
+
+  const data = req.body || {};
+  const sets = [];
+  const valores = [];
+  for (const campo of CAMPOS_ATUALIZAVEIS) {
+    if (!(campo in data)) continue;
+    sets.push(`${campo} = ?`);
+    if (campo === 'cnpj') valores.push(normalizarCnpj(data[campo]));
+    else if (campo === 'razao_social') valores.push((data[campo] || '').toUpperCase());
+    else if (campo === 'cidade' || campo === 'estado') valores.push((data[campo] || '').toUpperCase() || null);
+    else valores.push(data[campo] || null);
+  }
+
+  if (!sets.length) return res.json({ message: 'Nenhum campo atualizado.' });
+
+  valores.push(req.params.id);
+  db.prepare(`UPDATE clientes SET ${sets.join(', ')} WHERE id = ?`).run(...valores);
+  res.json({ message: 'Cadastro do cliente atualizado!' });
 });
 
 clientesRouter.get('/api/clientes', requireLogin, (req, res) => {
@@ -219,6 +250,7 @@ clientesRouter.post('/api/clientes/import', requireLogin, upload.single('arquivo
 
   let novos = 0;
   let ignorados = 0;
+  let cidadesNaoReconhecidas = 0;
 
   for (const linha of linhas) {
     const codigo = (linha[0] || '').trim();
@@ -229,14 +261,33 @@ clientesRouter.post('/api/clientes/import', requireLogin, upload.single('arquivo
 
     const ddd = (linha[2] || '').trim().slice(0, 2);
     const telefone = (linha[3] || '').trim();
-    const cidade = (linha[4] || '').trim().toUpperCase();
-    const estado = (linha[5] || '').trim().toUpperCase().slice(0, 2);
+    const cidadeDigitada = (linha[4] || '').trim();
+    const estadoDigitado = (linha[5] || '').trim().toUpperCase().slice(0, 2);
     const observacoes = (linha[6] || '').trim();
+
+    // Casa a cidade da planilha com a lista oficial de municipios (mesma
+    // base que o combobox usa) - corrige acento/caixa automaticamente
+    // quando acha um municipio unico. Quando nao reconhece, mantem o texto
+    // digitado (nao trava a importacao) e conta pra avisar no resumo.
+    let cidade = cidadeDigitada.toUpperCase();
+    let estado = estadoDigitado;
+    if (cidadeDigitada) {
+      const municipio = encontrarMunicipio(cidadeDigitada, estadoDigitado);
+      if (municipio) {
+        cidade = municipio.cidade.toUpperCase();
+        estado = municipio.uf;
+      } else {
+        cidadesNaoReconhecidas++;
+      }
+    }
 
     insert.run(codigo, razaoSocial, ddd || null, telefone || null, cidade || null, estado || null, observacoes || null);
     existentes.add(codigo);
     novos++;
   }
 
-  res.json({ message: `Importacao concluida! ${novos} novos clientes importados, ${ignorados} ignorados (codigo ja existente ou dados incompletos).` });
+  const avisoCidades = cidadesNaoReconhecidas
+    ? ` ${cidadesNaoReconhecidas} com cidade nao reconhecida na lista oficial - revise manualmente.`
+    : '';
+  res.json({ message: `Importacao concluida! ${novos} novos clientes importados, ${ignorados} ignorados (codigo ja existente ou dados incompletos).${avisoCidades}` });
 });

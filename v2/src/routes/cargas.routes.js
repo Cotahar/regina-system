@@ -3,6 +3,7 @@ import { db } from '../db/connection.js';
 import { requireLogin, requireAdmin } from '../middleware/auth.js';
 import { buscarEntregasDaCarga, resumoCarga, toDictCarga, toDictEntrega } from '../services/cargas.service.js';
 import { renderEspelhoCarga } from '../views/espelho.js';
+import { registrarOcorrencia, detectarEventosAutomaticos } from '../services/ocorrencias.service.js';
 
 export const cargasRouter = Router();
 
@@ -215,6 +216,7 @@ cargasRouter.put('/api/cargas/:id/status', requireLogin, (req, res) => {
   if (!carga) return res.status(404).json({ error: 'Carga nao encontrada' });
 
   const data = req.body || {};
+  const eventosAutomaticos = detectarEventosAutomaticos(carga, data);
 
   if ('status' in data) {
     const novoStatus = data.status;
@@ -248,17 +250,24 @@ cargasRouter.put('/api/cargas/:id/status', requireLogin, (req, res) => {
   // Frete pago tambem pode ser editado por aqui (modal de detalhes da carga),
   // fora do Gerenciar Carga - recalcula o adiantamento pra nao deixar
   // desatualizado, igual o Gerenciar Carga ja faz toda vez que salva.
+  // Veiculo FROTA nunca tem adiantamento (regra do usuario).
   if ('frete_pago' in data && !('adiantamento_valor' in data)) {
+    const veiculoIdEfetivo = 'veiculo_id' in data ? data.veiculo_id : carga.veiculo_id;
+    const veiculo = veiculoIdEfetivo ? db.prepare('SELECT is_frota FROM veiculos WHERE id = ?').get(veiculoIdEfetivo) : null;
+    const ehFrota = !!veiculo?.is_frota;
+
     const percentual = carga.adiantamento_percentual ?? 70.0;
     const fretePago = data.frete_pago;
     campos.push('adiantamento_valor = ?');
-    valores.push(fretePago && percentual ? (fretePago * percentual) / 100 : null);
+    valores.push(!ehFrota && fretePago != null && percentual != null ? (fretePago * percentual) / 100 : null);
   }
 
   if (campos.length) {
     valores.push(req.params.id);
     db.prepare(`UPDATE cargas SET ${campos.join(', ')} WHERE id = ?`).run(...valores);
   }
+
+  for (const texto of eventosAutomaticos) registrarOcorrencia(req.params.id, texto, req.session.userName);
 
   res.json({ message: 'Status da carga atualizado com sucesso!' });
 });

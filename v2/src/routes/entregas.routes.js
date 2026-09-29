@@ -13,10 +13,18 @@ entregasRouter.delete('/api/entregas/em-massa', requireLogin, (req, res) => {
   }
 
   const placeholders = entregaIds.map(() => '?').join(',');
-  const entregas = db.prepare(`SELECT id, carga_id FROM entregas WHERE id IN (${placeholders})`).all(...entregaIds);
+  const entregas = db.prepare(`
+    SELECT e.id, e.carga_id, oc.status as ordem_coleta_status
+    FROM entregas e
+    LEFT JOIN ordens_coleta oc ON oc.id = e.ordem_coleta_id
+    WHERE e.id IN (${placeholders})
+  `).all(...entregaIds);
 
   const paraDesvincular = entregas.filter((e) => e.carga_id !== null).map((e) => e.id);
-  const paraExcluir = entregas.filter((e) => e.carga_id === null).map((e) => e.id);
+  // Solta e numa ordem de coleta ainda pendente - nao apaga de vez pra nao
+  // sumir silenciosamente da rota de coleta que o motorista vai receber.
+  const presasEmColetaPendente = entregas.filter((e) => e.carga_id === null && e.ordem_coleta_status === 'pendente');
+  const paraExcluir = entregas.filter((e) => e.carga_id === null && e.ordem_coleta_status !== 'pendente').map((e) => e.id);
 
   if (paraDesvincular.length) {
     const ph = paraDesvincular.map(() => '?').join(',');
@@ -27,8 +35,11 @@ entregasRouter.delete('/api/entregas/em-massa', requireLogin, (req, res) => {
     db.prepare(`DELETE FROM entregas WHERE id IN (${ph})`).run(...paraExcluir);
   }
 
+  const avisoColeta = presasEmColetaPendente.length
+    ? ` ${presasEmColetaPendente.length} nao excluida(s) por estar(em) numa ordem de coleta pendente.`
+    : '';
   res.json({
-    message: `${paraDesvincular.length} entrega(s) devolvida(s) para disponiveis, ${paraExcluir.length} excluida(s) definitivamente.`
+    message: `${paraDesvincular.length} entrega(s) devolvida(s) para disponiveis, ${paraExcluir.length} excluida(s) definitivamente.${avisoColeta}`
   });
 });
 
@@ -122,8 +133,16 @@ entregasRouter.post('/api/entregas/disponiveis', requireLogin, (req, res) => {
 });
 
 entregasRouter.delete('/api/entregas/disponiveis/:id', requireLogin, (req, res) => {
-  const entrega = db.prepare('SELECT id FROM entregas WHERE id = ? AND carga_id IS NULL').get(req.params.id);
+  const entrega = db.prepare(`
+    SELECT e.id, oc.status as ordem_coleta_status
+    FROM entregas e
+    LEFT JOIN ordens_coleta oc ON oc.id = e.ordem_coleta_id
+    WHERE e.id = ? AND e.carga_id IS NULL
+  `).get(req.params.id);
   if (!entrega) return res.status(404).json({ error: 'Entrega disponivel nao encontrada' });
+  if (entrega.ordem_coleta_status === 'pendente') {
+    return res.status(409).json({ error: 'Essa entrega esta numa ordem de coleta pendente - remova-a da ordem antes de excluir.' });
+  }
   db.prepare('DELETE FROM entregas WHERE id = ?').run(req.params.id);
   res.json({ message: 'Entrega disponivel excluida com sucesso.' });
 });

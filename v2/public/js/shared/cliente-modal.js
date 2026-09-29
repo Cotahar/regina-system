@@ -1,6 +1,7 @@
 import { apiGet, apiPost, apiPut } from './api.js';
 import { abrirModal, fecharModal } from './ui.js';
 import { escapeHtml } from './escape.js';
+import { criarComboboxMunicipio } from './municipio.js';
 
 // Modal de criar/editar cliente, compartilhado entre a pagina de Clientes e o
 // modal de detalhes de carga - permite editar o cadastro do destinatario sem
@@ -10,6 +11,15 @@ export function criarModalEditarCliente({ onSalvo } = {}) {
   const form = document.getElementById('form-cliente');
   const msgModal = document.getElementById('msg-modal');
   const selectForma = document.getElementById('cliente-forma-pagamento');
+
+  // Cidade/UF do cadastro passam a vir da lista oficial de municipios (mesmo
+  // componente ja usado na Montagem) - cadastros antigos com texto livre
+  // continuam exibindo o que ja tinham, so passa a valer o combobox pra
+  // quem editar/criar dali pra frente.
+  criarComboboxMunicipio({
+    inputCidade: document.getElementById('cliente-cidade'),
+    inputUf: document.getElementById('cliente-estado')
+  });
 
   let formasPagamento = null;
 

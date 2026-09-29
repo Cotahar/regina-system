@@ -18,6 +18,9 @@ import { pagamentoCargaRouter } from './routes/pagamentoCarga.routes.js';
 import { avariasRouter } from './routes/avarias.routes.js';
 import { usuariosRouter } from './routes/usuarios.routes.js';
 import { notasFiscaisRouter } from './routes/notasFiscais.routes.js';
+import { ordensColetaRouter } from './routes/ordensColeta.routes.js';
+import { ocorrenciasRouter } from './routes/ocorrencias.routes.js';
+import { orcamentosRouter } from './routes/orcamentos.routes.js';
 import { registrarClienteSSE, removerClienteSSE } from './services/eventos.js';
 import { iniciarPollingGmail } from './services/gmailImport.service.js';
 
@@ -70,6 +73,9 @@ app.use(pagamentoCargaRouter);
 app.use(avariasRouter);
 app.use(usuariosRouter);
 app.use(notasFiscaisRouter);
+app.use(ordensColetaRouter);
+app.use(ocorrenciasRouter);
+app.use(orcamentosRouter);
 app.use(pagesRouter);
 
 app.use((req, res) => {

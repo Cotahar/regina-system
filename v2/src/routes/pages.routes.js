@@ -16,6 +16,8 @@ import { renderPagamentoCargaPage } from '../views/pagamentoCarga.js';
 import { renderAvariasPage } from '../views/avarias.js';
 import { renderUsuariosPage } from '../views/usuarios.js';
 import { renderNotasFiscaisPage } from '../views/notasFiscais.js';
+import { renderOrdensColetaPage } from '../views/ordensColeta.js';
+import { renderOrcamentosPage } from '../views/orcamentos.js';
 
 export const pagesRouter = Router();
 
@@ -93,6 +95,26 @@ pagesRouter.get('/montagem.html', requireLogin, (req, res) => {
     user: req.session,
     bodyHtml: renderMontagemPage(),
     extraScripts: '<script type="module" src="/js/pages/montagem.js"></script>'
+  }));
+});
+
+pagesRouter.get('/ordens-coleta.html', requireLogin, (req, res) => {
+  res.type('html').send(renderLayout({
+    title: 'Ordens de Coleta',
+    activeHref: '/ordens-coleta.html',
+    user: req.session,
+    bodyHtml: renderOrdensColetaPage(),
+    extraScripts: '<script type="module" src="/js/pages/ordens-coleta.js"></script>'
+  }));
+});
+
+pagesRouter.get('/orcamentos.html', requireLogin, (req, res) => {
+  res.type('html').send(renderLayout({
+    title: 'Orçamentos',
+    activeHref: '/orcamentos.html',
+    user: req.session,
+    bodyHtml: renderOrcamentosPage(),
+    extraScripts: '<script type="module" src="/js/pages/orcamentos.js"></script>'
   }));
 });
 

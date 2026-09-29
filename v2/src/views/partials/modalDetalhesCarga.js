@@ -61,6 +61,20 @@ export function renderModalDetalhesCarga() {
           <div id="det-coletas-conteudo" class="hidden border-t border-painel-border px-3 py-2"></div>
         </div>
 
+        <div class="mt-3 rounded-md border border-painel-border">
+          <button type="button" id="btn-toggle-ocorrencias" class="flex w-full items-center justify-between px-3 py-2 text-left">
+            <span class="text-xs font-semibold uppercase tracking-wide text-slate-400">Ocorrencias</span>
+            <svg id="icone-toggle-ocorrencias" viewBox="0 0 20 20" fill="currentColor" class="h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform"><path d="M7 4l7 6-7 6V4z"/></svg>
+          </button>
+          <div id="det-ocorrencias-conteudo" class="hidden border-t border-painel-border px-3 py-2">
+            <form id="form-nova-ocorrencia" class="mb-2 flex gap-2">
+              <input type="text" id="nova-ocorrencia-texto" class="input-field" placeholder="Registrar uma ocorrencia (atraso, imprevisto, aviso...)">
+              <button type="submit" class="btn-primary btn-sm shrink-0">Registrar</button>
+            </form>
+            <div id="det-ocorrencias-lista" class="max-h-56 space-y-2 overflow-y-auto"></div>
+          </div>
+        </div>
+
         <div class="mt-3">
           <label class="mb-1 block text-xs font-semibold text-slate-300">Observacoes</label>
           <textarea id="det-observacoes" class="input-field min-h-[4.5rem] resize-none overflow-hidden" rows="3" placeholder="Informacoes sobre a carga, combinados, avisos..."></textarea>

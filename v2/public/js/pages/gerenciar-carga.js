@@ -235,10 +235,37 @@ function atualizarTotaisSelecionados() {
   document.getElementById('total-sel-frete').textContent = formatarMoeda(somarCampo(linhas, '.campo-frete'));
 }
 
+function veiculoSelecionadoEhFrota() {
+  const id = Number(document.getElementById('ger-veiculo-id').value) || null;
+  if (!id) return false;
+  const veiculo = veiculos.find((v) => v.id === id);
+  return !!veiculo?.is_frota;
+}
+
+// Veiculo FROTA nunca tem adiantamento (regra do usuario) - esconde os
+// campos e limpa qualquer valor antigo pra nao ser salvo escondido.
+function aplicarRegraFrota() {
+  const ehFrota = veiculoSelecionadoEhFrota();
+  document.getElementById('ger-adiant-percentual-wrap').classList.toggle('hidden', ehFrota);
+  document.getElementById('ger-adiant-valor-wrap').classList.toggle('hidden', ehFrota);
+  document.getElementById('ger-adiant-frota-aviso').classList.toggle('hidden', !ehFrota);
+  if (ehFrota) {
+    document.getElementById('ger-adiant-percentual').value = '';
+    document.getElementById('ger-adiant-valor').value = '';
+  }
+}
+
+// Campo vazio = "sem adiantamento definido" (fica null, cai no padrao de
+// 70% so na exibicao). Zero digitado de proposito e um valor valido e tem
+// que ser respeitado - antes "Number(...) || null" transformava um 0
+// digitado em null, e a tela voltava pra 70% sozinha no proximo carregamento.
 function recalcularAdiantamento() {
-  const fretePago = parseDecimal(document.getElementById('ger-frete-pago').value) || 0;
-  const percentual = Number(document.getElementById('ger-adiant-percentual').value) || 0;
-  document.getElementById('ger-adiant-valor').value = formatarMoeda((fretePago * percentual) / 100);
+  if (veiculoSelecionadoEhFrota()) return;
+  const fretePago = parseDecimal(document.getElementById('ger-frete-pago').value);
+  const percentualStr = document.getElementById('ger-adiant-percentual').value.trim();
+  const percentual = percentualStr === '' ? null : Number(percentualStr);
+  const valor = fretePago != null && percentual != null ? (fretePago * percentual) / 100 : null;
+  document.getElementById('ger-adiant-valor').value = valor != null ? formatarMoeda(valor) : '';
 }
 
 async function carregar() {
@@ -276,6 +303,7 @@ async function carregar() {
   document.getElementById('ger-frete-pago').value = c.frete_pago ?? '';
   document.getElementById('ger-adiant-percentual').value = c.adiantamento_percentual ?? 70;
   document.getElementById('ger-observacoes').value = c.observacoes_faturamento || '';
+  aplicarRegraFrota();
   recalcularAdiantamento();
 
   renderizarTabela();
@@ -283,6 +311,10 @@ async function carregar() {
 
 document.getElementById('ger-frete-pago').addEventListener('blur', recalcularAdiantamento);
 document.getElementById('ger-adiant-percentual').addEventListener('input', recalcularAdiantamento);
+document.getElementById('ger-veiculo-input').addEventListener('combobox-select', () => {
+  aplicarRegraFrota();
+  recalcularAdiantamento();
+});
 
 document.getElementById('ger-chk-todas').addEventListener('change', (e) => {
   document.querySelectorAll('#ger-tabela .chk-linha').forEach((chk) => {
@@ -463,8 +495,15 @@ async function salvarTudo() {
   });
 
   const fretePago = parseDecimal(document.getElementById('ger-frete-pago').value);
-  const percentual = Number(document.getElementById('ger-adiant-percentual').value) || null;
-  const adiantamentoValor = fretePago && percentual ? (fretePago * percentual) / 100 : null;
+  // Veiculo FROTA nunca tem adiantamento - manda nulo direto (o backend
+  // tambem forca isso, mas ja evita mandar um valor que nem deveria existir).
+  // Campo vazio = sem adiantamento definido; "0" digitado de proposito e um
+  // valor valido e precisa ser respeitado (nao pode virar null so por ser
+  // falsy - era exatamente esse o bug que fazia a tela voltar pra 70%).
+  const ehFrota = veiculoSelecionadoEhFrota();
+  const percentualStr = document.getElementById('ger-adiant-percentual').value.trim();
+  const percentual = ehFrota || percentualStr === '' ? null : Number(percentualStr);
+  const adiantamentoValor = !ehFrota && fretePago != null && percentual != null ? (fretePago * percentual) / 100 : null;
   const eixosValor = document.getElementById('ger-vp-eixos').value.trim();
 
   await apiPut(`/api/cargas/${cargaId}/gerenciar`, {

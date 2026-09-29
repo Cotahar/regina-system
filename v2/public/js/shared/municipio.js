@@ -1,5 +1,11 @@
 import { escapeHtml } from './escape.js';
 
+// Sem acento e sem caixa - "sao luis" tem que achar "São Luís" (digitar
+// acento certo em nome de cidade e chato demais pra depender disso).
+function normalizarBusca(texto) {
+  return texto.trim().toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+}
+
 // Lista oficial de municipios do IBGE (nome + UF), carregada uma unica vez
 // e reaproveitada por todos os campos de cidade/UF da pagina.
 let cachePromise = null;
@@ -48,16 +54,19 @@ export function criarComboboxMunicipio({ inputCidade, inputUf, maxResultados = 8
   }
 
   function selecionar(m) {
-    inputCidade.value = m.cidade;
+    // Maiuscula pra bater com a convencao do resto do sistema (cadastros
+    // antigos sao todos em caixa alta) - mantem o acento certo da lista
+    // oficial, so a caixa que muda.
+    inputCidade.value = m.cidade.toUpperCase();
     inputUf.value = m.uf;
     fechar();
     inputCidade.dispatchEvent(new Event('municipio-select', { bubbles: true }));
   }
 
   function buscar() {
-    const termo = inputCidade.value.trim().toLowerCase();
+    const termo = normalizarBusca(inputCidade.value);
     if (!termo) { fechar(); return; }
-    resultados = municipios.filter((m) => m.cidade.toLowerCase().includes(termo)).slice(0, maxResultados);
+    resultados = municipios.filter((m) => normalizarBusca(m.cidade).includes(termo)).slice(0, maxResultados);
     indiceAtivo = -1;
     renderizar();
   }

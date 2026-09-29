@@ -2,12 +2,13 @@ import { Router } from 'express';
 import { db } from '../db/connection.js';
 import { requireLogin } from '../middleware/auth.js';
 import { renderRelatorioFaturamento } from '../views/relatorioFaturamento.js';
+import { registrarOcorrencia, detectarEventosAutomaticos } from '../services/ocorrencias.service.js';
 
 export const gerenciarCargaRouter = Router();
 
 gerenciarCargaRouter.get('/api/cargas/:id/gerenciar', requireLogin, (req, res) => {
   const carga = db.prepare(`
-    SELECT c.*, m.nome as motorista_nome, v.placa as placa_veiculo
+    SELECT c.*, m.nome as motorista_nome, v.placa as placa_veiculo, v.is_frota as veiculo_frota
     FROM cargas c
     LEFT JOIN motoristas m ON m.id = c.motorista_id
     LEFT JOIN veiculos v ON v.id = c.veiculo_id
@@ -39,6 +40,7 @@ gerenciarCargaRouter.get('/api/cargas/:id/gerenciar', requireLogin, (req, res) =
       veiculo_id: carga.veiculo_id,
       motorista_nome: carga.motorista_nome || '',
       placa_veiculo: carga.placa_veiculo || '',
+      veiculo_frota: !!carga.veiculo_frota,
       frete_pago: carga.frete_pago,
       observacoes_faturamento: carga.observacoes_faturamento,
       rota_manifesto: carga.rota_manifesto,
@@ -78,13 +80,20 @@ gerenciarCargaRouter.get('/api/cargas/:id/gerenciar', requireLogin, (req, res) =
 });
 
 gerenciarCargaRouter.put('/api/cargas/:id/gerenciar', requireLogin, (req, res) => {
-  const carga = db.prepare('SELECT id FROM cargas WHERE id = ?').get(req.params.id);
+  const carga = db.prepare('SELECT * FROM cargas WHERE id = ?').get(req.params.id);
   if (!carga) return res.status(404).json({ error: 'Carga nao encontrada' });
 
   const data = req.body || {};
+  const eventosAutomaticos = data.carga ? detectarEventosAutomaticos(carga, data.carga) : [];
 
   if (data.carga) {
     const c = data.carga;
+    // Regra do usuario: veiculo FROTA nunca tem adiantamento - forca nulo no
+    // banco independente do que a tela mandar, pra nao depender so da
+    // validacao do frontend (ex: veiculo trocado entre o load e o save).
+    const veiculo = c.veiculo_id ? db.prepare('SELECT is_frota FROM veiculos WHERE id = ?').get(c.veiculo_id) : null;
+    const ehFrota = !!veiculo?.is_frota;
+
     db.prepare(`
       UPDATE cargas SET
         motorista_id = ?, veiculo_id = ?, observacoes_faturamento = ?, rota_manifesto = ?,
@@ -100,8 +109,8 @@ gerenciarCargaRouter.put('/api/cargas/:id/gerenciar', requireLogin, (req, res) =
       c.vale_pedagio_rota || null,
       c.vale_pedagio_eixos || null,
       c.frete_pago ?? null,
-      c.adiantamento_percentual ?? null,
-      c.adiantamento_valor ?? null,
+      ehFrota ? null : (c.adiantamento_percentual ?? null),
+      ehFrota ? null : (c.adiantamento_valor ?? null),
       req.params.id
     );
   }
@@ -133,6 +142,8 @@ gerenciarCargaRouter.put('/api/cargas/:id/gerenciar', requireLogin, (req, res) =
       );
     }
   }
+
+  for (const texto of eventosAutomaticos) registrarOcorrencia(req.params.id, texto, req.session.userName);
 
   res.json({ message: 'Dados de gerenciamento salvos com sucesso!' });
 });

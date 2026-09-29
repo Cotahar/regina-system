@@ -89,6 +89,23 @@ CREATE TABLE IF NOT EXISTS cargas (
   vale_pedagio_valor TEXT
 );
 
+-- Ordem de coleta: junta entregas de fontes diferentes (cargas em rascunho,
+-- pendentes, agendadas, ou ainda soltas na Montagem) numa mesma rota de
+-- coleta pro motorista visitar varias fabricas. Fica "pendente" (editavel)
+-- ate a coleta acontecer de fato; "baixar" define o local de coleta real
+-- (um cliente cadastrado) que passa a valer pra todas as entregas da ordem.
+CREATE TABLE IF NOT EXISTS ordens_coleta (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  codigo TEXT NOT NULL UNIQUE,
+  status TEXT NOT NULL DEFAULT 'pendente',
+  motorista_id INTEGER REFERENCES motoristas(id) ON DELETE SET NULL,
+  veiculo_id INTEGER REFERENCES veiculos(id) ON DELETE SET NULL,
+  local_coleta_cliente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
+  observacoes TEXT,
+  data_baixa TEXT,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
 CREATE TABLE IF NOT EXISTS entregas (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   carga_id INTEGER REFERENCES cargas(id) ON DELETE SET NULL,
@@ -112,7 +129,8 @@ CREATE TABLE IF NOT EXISTS entregas (
   local_coleta_cliente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
   valor_combinado REAL,
   repasse_destinatario TEXT,
-  data_agendamento_descarga TEXT
+  data_agendamento_descarga TEXT,
+  ordem_coleta_id INTEGER REFERENCES ordens_coleta(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS avarias (
@@ -178,9 +196,64 @@ CREATE TABLE IF NOT EXISTS notas_fiscais_email (
   criado_em TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Linha do tempo de uma carga: notas manuais (qualquer usuario registra algo
+-- - atraso, imprevisto, observacao) + eventos automaticos (o sistema
+-- registra sozinho quando algo relevante muda, ex: troca de motorista/
+-- veiculo, mudanca de status). E um historico, nao um campo editavel -
+-- nunca se edita/apaga um registro, so acrescenta um novo.
+CREATE TABLE IF NOT EXISTS ocorrencias_carga (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  carga_id INTEGER NOT NULL REFERENCES cargas(id) ON DELETE CASCADE,
+  tipo TEXT NOT NULL DEFAULT 'manual',
+  texto TEXT NOT NULL,
+  usuario_nome TEXT,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Orcamentos (propostas comerciais de frete) - remetente e destinatario
+-- sempre vem do cadastro de clientes (nunca texto solto), mas o nome/cidade
+-- exibidos no PDF sao um "instantaneo" proprio do orcamento, editavel sem
+-- mexer no cadastro. So o CNPJ do destinatario e travado quando o cadastro
+-- ja tem um - por isso fica salvo aqui tambem, nao so referenciado.
+CREATE TABLE IF NOT EXISTS orcamentos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  codigo TEXT NOT NULL UNIQUE,
+  data TEXT NOT NULL,
+  destinatario_id INTEGER NOT NULL REFERENCES clientes(id),
+  destinatario_nome TEXT NOT NULL,
+  destinatario_cnpj TEXT NOT NULL,
+  destino_cidade TEXT,
+  destino_estado TEXT,
+  produto TEXT,
+  prazo_entrega TEXT,
+  forma_pagamento TEXT,
+  descarga_metros REAL,
+  mercadoria_segurada INTEGER NOT NULL DEFAULT 1,
+  frete_ajustavel_diesel INTEGER NOT NULL DEFAULT 1,
+  observacoes TEXT,
+  usuario_nome TEXT,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Um orcamento pode ter mais de um "lote" de frete (origens/pesos/valores
+-- diferentes pro mesmo destino - existe nos exemplos reais).
+CREATE TABLE IF NOT EXISTS orcamento_itens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  orcamento_id INTEGER NOT NULL REFERENCES orcamentos(id) ON DELETE CASCADE,
+  ordem INTEGER NOT NULL DEFAULT 0,
+  remetente_id INTEGER NOT NULL REFERENCES clientes(id),
+  remetente_nome TEXT NOT NULL,
+  peso_kg REAL NOT NULL,
+  valor_tonelada REAL,
+  valor_frete_total REAL NOT NULL,
+  descarga_inclusa INTEGER NOT NULL DEFAULT 1
+);
+
 CREATE INDEX IF NOT EXISTS idx_entregas_carga_id ON entregas(carga_id);
 CREATE INDEX IF NOT EXISTS idx_entregas_cliente_id ON entregas(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_entregas_remetente_id ON entregas(remetente_id);
 CREATE INDEX IF NOT EXISTS idx_avarias_entrega_id ON avarias(entrega_id);
 CREATE INDEX IF NOT EXISTS idx_notas_fiscais_email_status ON notas_fiscais_email(status);
 CREATE INDEX IF NOT EXISTS idx_cargas_status ON cargas(status);
+CREATE INDEX IF NOT EXISTS idx_ocorrencias_carga_id ON ocorrencias_carga(carga_id);
+CREATE INDEX IF NOT EXISTS idx_orcamento_itens_orcamento_id ON orcamento_itens(orcamento_id);

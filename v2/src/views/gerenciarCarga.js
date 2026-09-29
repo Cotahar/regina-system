@@ -39,14 +39,15 @@ export function renderGerenciarCargaPage() {
         <label class="label">Frete pago (motorista)</label>
         <input type="text" id="ger-frete-pago" class="input-field">
       </div>
-      <div>
+      <div id="ger-adiant-percentual-wrap">
         <label class="label">Adiantamento (%)</label>
         <input type="number" id="ger-adiant-percentual" class="input-field" value="70">
       </div>
-      <div>
+      <div id="ger-adiant-valor-wrap">
         <label class="label">Valor do adiantamento</label>
         <input type="text" id="ger-adiant-valor" class="input-field" readonly>
       </div>
+      <p id="ger-adiant-frota-aviso" class="hidden self-end pb-2 text-xs text-slate-400 sm:col-span-2">Veiculo FROTA nao tem adiantamento.</p>
       <div class="sm:col-span-2 lg:col-span-4">
         <label class="label">Observacoes de faturamento</label>
         <textarea id="ger-observacoes" class="input-field" rows="2"></textarea>
