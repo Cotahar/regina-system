@@ -1,6 +1,6 @@
 import { apiGet, apiPost, apiPut, apiDelete } from './api.js';
 import { escapeHtml } from './escape.js';
-import { formatarMoeda, formatarPeso, formatarData, formatarDataParaInput, parseDecimal } from './format.js';
+import { formatarMoeda, formatarPeso, formatarData, formatarDataParaInput, getHojeFormatado, parseDecimal } from './format.js';
 import { abrirModal, fecharModal, exibirMensagem, ativarAutoResize } from './ui.js';
 import { criarCombobox } from './combobox.js';
 import { icones } from './icons.js';
@@ -207,16 +207,10 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
 
     if (c.status === 'Em Trânsito') {
       fluxo.appendChild(botao('Finalizar', 'btn-primary', async () => {
-        const campos = coletarCamposEditaveis();
-        if (!campos.data_finalizacao) return mostrarMensagem('Informe a data de finalizacao.', 'erro');
-        const senha = prompt('Confirme sua senha para finalizar a carga:');
-        if (senha === null) return;
-        try {
-          await apiPost('/api/verify-password', { password: senha });
-        } catch (err) {
-          return mostrarMensagem(err.message, 'erro');
-        }
-        await atualizarStatus({ data_finalizacao: campos.data_finalizacao, status: 'Finalizada' }, 'Carga finalizada!');
+        if (!confirm('Deseja mesmo encerrar esta carga?')) return;
+        // Sem data informada, finaliza com a data de hoje (e ja reflete no campo).
+        const dataFinalizacao = coletarCamposEditaveis().data_finalizacao || getHojeFormatado();
+        await atualizarStatus({ data_finalizacao: dataFinalizacao, status: 'Finalizada' }, 'Carga finalizada!');
       }, icones.check));
       if (isAdmin) {
         fluxo.appendChild(botao('Regredir p/ Agendada', 'btn-secondary', async () => {

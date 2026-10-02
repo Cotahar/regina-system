@@ -75,13 +75,3 @@ authRouter.get('/api/session', requireLogin, (req, res) => {
     user_permission: req.session.permissao
   });
 });
-
-authRouter.post('/api/verify-password', requireLogin, (req, res) => {
-  const { password } = req.body || {};
-  const usuario = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(req.session.userId);
-  if (!usuario) return res.status(401).json({ error: 'Usuario nao encontrado' });
-  if (!verifyPassword(password || '', usuario.senha_hash)) {
-    return res.status(401).json({ error: 'Senha incorreta' });
-  }
-  res.json({ message: 'Senha correta!' });
-});

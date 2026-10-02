@@ -26,8 +26,13 @@ export function formatarCnpj(cnpj) {
   return digitos.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
 }
 
+// Data local (nao UTC): toISOString() devolveria o dia seguinte depois das
+// 21h no horario de Brasilia.
 export function getHojeFormatado() {
-  return new Date().toISOString().slice(0, 10);
+  const agora = new Date();
+  const mes = String(agora.getMonth() + 1).padStart(2, '0');
+  const dia = String(agora.getDate()).padStart(2, '0');
+  return `${agora.getFullYear()}-${mes}-${dia}`;
 }
 
 export function parseDecimal(valorTexto) {
