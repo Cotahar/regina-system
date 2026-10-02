@@ -21,7 +21,11 @@ export function renderModalEditarCliente() {
 
         <div class="mb-3">
           <label class="label">CNPJ</label>
-          <input type="text" id="cliente-cnpj" class="input-field" placeholder="00.000.000/0000-00" maxlength="18">
+          <div class="flex gap-2">
+            <input type="text" id="cliente-cnpj" class="input-field" placeholder="00.000.000/0000-00" maxlength="18">
+            <button type="button" id="btn-buscar-cnpj" class="btn-secondary btn-sm shrink-0">Buscar na Receita</button>
+          </div>
+          <p id="cliente-cnpj-aviso" class="mt-1 hidden text-[11px]"></p>
         </div>
 
         <div class="mb-3 grid grid-cols-2 gap-3">

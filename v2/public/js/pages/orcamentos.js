@@ -6,6 +6,7 @@ import { criarCombobox } from '../shared/combobox.js';
 import { criarComboboxMunicipio } from '../shared/municipio.js';
 import { aplicarMascaraDecimal } from '../shared/mask.js';
 import { ouvirMudancas } from '../shared/live.js';
+import { ativarBuscaCnpj } from '../shared/cnpj.js';
 
 const tabela = document.getElementById('tabela-orcamentos');
 const secaoForm = document.getElementById('secao-form-orcamento');
@@ -45,6 +46,21 @@ document.getElementById('orc-dest-input').addEventListener('combobox-select', as
   }
 });
 
+// Quando o cadastro nao tem CNPJ e o usuario digita um, confere na Receita
+// Federal o nome e a cidade do destinatario (campo vazio e preenchido direto,
+// diferente do que esta na tela pergunta antes de trocar).
+const buscaCnpj = ativarBuscaCnpj({
+  input: document.getElementById('orc-dest-cnpj'),
+  botao: document.getElementById('btn-buscar-cnpj-orc'),
+  aviso: document.getElementById('orc-dest-cnpj-busca'),
+  validar: () => (clienteDestSelecionado ? null : 'Selecione o destinatario antes de buscar o CNPJ.'),
+  camposDaReceita: (d) => [
+    { rotulo: 'Nome', input: document.getElementById('orc-dest-nome'), valor: d.razao_social },
+    { rotulo: 'Cidade', input: document.getElementById('orc-dest-cidade'), valor: d.cidade },
+    { rotulo: 'UF', input: document.getElementById('orc-dest-estado'), valor: d.estado }
+  ]
+});
+
 function aplicarEstadoCnpj() {
   const input = document.getElementById('orc-dest-cnpj');
   const aviso = document.getElementById('orc-dest-cnpj-aviso');
@@ -53,6 +69,9 @@ function aplicarEstadoCnpj() {
   input.readOnly = temCnpj;
   input.classList.toggle('opacity-60', temCnpj);
   aviso.classList.toggle('hidden', temCnpj);
+  // So faz sentido buscar quando o CNPJ esta editavel (cliente sem CNPJ no cadastro).
+  document.getElementById('btn-buscar-cnpj-orc').classList.toggle('hidden', temCnpj || !clienteDestSelecionado);
+  buscaCnpj.resetar();
 }
 
 // --- ITENS DE FRETE (repetivel) ---

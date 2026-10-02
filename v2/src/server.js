@@ -21,6 +21,7 @@ import { notasFiscaisRouter } from './routes/notasFiscais.routes.js';
 import { ordensColetaRouter } from './routes/ordensColeta.routes.js';
 import { ocorrenciasRouter } from './routes/ocorrencias.routes.js';
 import { orcamentosRouter } from './routes/orcamentos.routes.js';
+import { cnpjRouter } from './routes/cnpj.routes.js';
 import { registrarClienteSSE, removerClienteSSE } from './services/eventos.js';
 import { iniciarPollingGmail } from './services/gmailImport.service.js';
 
@@ -76,6 +77,7 @@ app.use(notasFiscaisRouter);
 app.use(ordensColetaRouter);
 app.use(ocorrenciasRouter);
 app.use(orcamentosRouter);
+app.use(cnpjRouter);
 app.use(pagesRouter);
 
 app.use((req, res) => {

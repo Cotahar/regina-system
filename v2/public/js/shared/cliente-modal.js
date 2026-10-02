@@ -2,6 +2,7 @@ import { apiGet, apiPost, apiPut } from './api.js';
 import { abrirModal, fecharModal } from './ui.js';
 import { escapeHtml } from './escape.js';
 import { criarComboboxMunicipio } from './municipio.js';
+import { ativarBuscaCnpj } from './cnpj.js';
 
 // Modal de criar/editar cliente, compartilhado entre a pagina de Clientes e o
 // modal de detalhes de carga - permite editar o cadastro do destinatario sem
@@ -19,6 +20,21 @@ export function criarModalEditarCliente({ onSalvo } = {}) {
   criarComboboxMunicipio({
     inputCidade: document.getElementById('cliente-cidade'),
     inputUf: document.getElementById('cliente-estado')
+  });
+
+  // Busca automatica dos dados cadastrais pelo CNPJ (Receita Federal): campo
+  // vazio e preenchido direto, campo ja preenchido e diferente pergunta antes.
+  const buscaCnpj = ativarBuscaCnpj({
+    input: document.getElementById('cliente-cnpj'),
+    botao: document.getElementById('btn-buscar-cnpj'),
+    aviso: document.getElementById('cliente-cnpj-aviso'),
+    camposDaReceita: (d) => [
+      { rotulo: 'Razao social', input: document.getElementById('cliente-razao'), valor: d.razao_social },
+      { rotulo: 'Cidade', input: document.getElementById('cliente-cidade'), valor: d.cidade },
+      { rotulo: 'UF', input: document.getElementById('cliente-estado'), valor: d.estado },
+      { rotulo: 'DDD', input: document.getElementById('cliente-ddd'), valor: d.ddd },
+      { rotulo: 'Telefone', input: document.getElementById('cliente-telefone'), valor: d.telefone }
+    ]
   });
 
   let formasPagamento = null;
@@ -52,6 +68,7 @@ export function criarModalEditarCliente({ onSalvo } = {}) {
     document.getElementById('cliente-tipo-pagamento').value = c?.padrao_tipo_pagamento || '';
     document.getElementById('modal-titulo').textContent = c ? 'Editar cliente' : 'Novo cliente';
     msgModal.classList.add('hidden');
+    buscaCnpj.resetar();
   }
 
   async function abrirCriacao() {

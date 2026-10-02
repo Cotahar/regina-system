@@ -44,8 +44,12 @@ export function renderOrcamentosPage() {
           </div>
           <div class="mb-2">
             <label class="label">CNPJ</label>
-            <input type="text" id="orc-dest-cnpj" class="input-field" placeholder="00.000.000/0000-00" maxlength="18">
+            <div class="flex gap-2">
+              <input type="text" id="orc-dest-cnpj" class="input-field" placeholder="00.000.000/0000-00" maxlength="18">
+              <button type="button" id="btn-buscar-cnpj-orc" class="btn-secondary btn-sm shrink-0 hidden">Buscar na Receita</button>
+            </div>
             <p id="orc-dest-cnpj-aviso" class="mt-1 hidden text-[11px] text-amber-400">Esse cliente ainda nao tem CNPJ cadastrado - informe pra gerar a proposta.</p>
+            <p id="orc-dest-cnpj-busca" class="mt-1 hidden text-[11px]"></p>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div class="relative">
