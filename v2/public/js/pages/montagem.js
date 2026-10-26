@@ -84,11 +84,15 @@ const gruposExpandidos = new Set();
 // Agrupa so para exibicao (mesmo destinatario + mesma cidade/UF) - nao tem
 // relacao com o agrupamento de faturamento (grupo_id). Ajuda a nao repetir
 // N linhas identicas quando ha varias notas pro mesmo lugar.
+function chaveGrupoVisual(e) {
+  return `${e.cliente_id}|${(e.cidade_entrega || '').trim().toUpperCase()}|${(e.estado_entrega || '').trim().toUpperCase()}`;
+}
+
 function agruparParaExibicao(entregas) {
   const mapa = new Map();
   const ordem = [];
   for (const e of entregas) {
-    const chave = `${e.cliente_id}|${(e.cidade_entrega || '').trim().toUpperCase()}|${(e.estado_entrega || '').trim().toUpperCase()}`;
+    const chave = chaveGrupoVisual(e);
     if (!mapa.has(chave)) { mapa.set(chave, []); ordem.push(chave); }
     mapa.get(chave).push(e);
   }
@@ -223,7 +227,10 @@ function renderizarTabela() {
       }
     });
     const entrega = linhasCombinadas().find((it) => it.id === id);
-    const itensMenu = [{ label: 'Editar', onClick: () => abrirEdicao(id) }];
+    const itensMenu = [
+      { label: 'Editar', onClick: () => abrirEdicao(id) },
+      { label: 'Duplicar', onClick: () => abrirDuplicacao(id) }
+    ];
     if (!entrega?.carga_id) itensMenu.push({ label: 'Excluir', perigo: true, onClick: () => excluirDisponivel(id) });
     criarMenuAcoes(tr.querySelector('.btn-menu-acoes'), itensMenu);
   });
@@ -382,6 +389,52 @@ async function excluirDisponivel(id) {
     alert(err.message);
   }
 }
+
+const modalDuplicar = document.getElementById('modal-duplicar');
+const dupQuantidade = document.getElementById('dup-quantidade');
+const dupMsg = document.getElementById('dup-msg');
+
+function abrirDuplicacao(id) {
+  const e = linhasCombinadas().find((it) => it.id === id);
+  if (!e) return;
+  document.getElementById('dup-id').value = id;
+  document.getElementById('dup-resumo').textContent = `${e.remetente_nome} -> ${e.destinatario_nome} (${e.cidade_entrega || ''}-${e.estado_entrega || ''})`;
+  dupQuantidade.value = 1;
+  dupMsg.classList.add('hidden');
+  abrirModal(modalDuplicar);
+  dupQuantidade.focus();
+  dupQuantidade.select();
+}
+
+document.getElementById('btn-cancelar-duplicar').addEventListener('click', () => fecharModal(modalDuplicar));
+
+// As copias caem em Disponiveis (sem nota fiscal). Como tem o mesmo
+// destinatario e cidade da original, o agrupamento visual as esconderia
+// dentro de um grupo recolhido - entao expande o grupo. Com uma copia so, ja
+// abre a edicao dela (e pra la que a pessoa vai: ajustar NF, peso, valor);
+// com varias, abrir a edicao de uma so nao faz sentido, entao so avisa.
+document.getElementById('form-duplicar').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const id = Number(document.getElementById('dup-id').value);
+  // min/max/required do campo ja barram valor invalido antes de chegar aqui;
+  // o servidor valida de novo.
+  const quantidade = Number(dupQuantidade.value);
+
+  try {
+    const resp = await apiPost(`/api/entregas/${id}/duplicar`, { quantidade });
+    fecharModal(modalDuplicar);
+    await carregarPool();
+    const primeiraCopia = poolDisponiveis.find((it) => it.id === resp.ids[0]);
+    if (primeiraCopia) {
+      gruposExpandidos.add(chaveGrupoVisual(primeiraCopia));
+      renderizarTabela();
+    }
+    if (resp.ids.length === 1) abrirEdicao(resp.ids[0]);
+    else exibirMensagem(document.getElementById('msg-nova'), resp.message, 'sucesso');
+  } catch (err) {
+    exibirMensagem(dupMsg, err.message, 'erro');
+  }
+});
 
 function abrirEdicao(id) {
   const e = linhasCombinadas().find((it) => it.id === id);

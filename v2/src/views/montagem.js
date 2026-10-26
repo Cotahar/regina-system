@@ -144,6 +144,22 @@ export function renderMontagemPage() {
       </div>
     </div>
 
+    <div id="modal-duplicar" class="fixed inset-0 z-20 hidden items-center justify-center bg-slate-900/50">
+      <form id="form-duplicar" class="card w-full max-w-sm">
+        <h3 class="mb-1 text-base font-semibold">Duplicar entrega</h3>
+        <p id="dup-resumo" class="mb-3 text-xs text-slate-400"></p>
+        <input type="hidden" id="dup-id">
+        <label class="label" for="dup-quantidade">Quantas copias?</label>
+        <input type="number" id="dup-quantidade" class="input-field" min="1" max="50" value="1" required>
+        <p class="mt-2 text-xs text-slate-400">As copias vao pra Disponiveis, sem nota fiscal.</p>
+        <p id="dup-msg" class="mt-2 hidden text-sm"></p>
+        <div class="mt-4 flex justify-end gap-2">
+          <button type="button" id="btn-cancelar-duplicar" class="btn-secondary">Cancelar</button>
+          <button type="submit" class="btn-success">Duplicar</button>
+        </div>
+      </form>
+    </div>
+
     <div id="modal-editar" class="fixed inset-0 z-20 hidden items-center justify-center bg-slate-900/50">
       <form id="form-editar" class="card w-full max-w-lg">
         <h3 class="mb-3 text-base font-semibold">Editar entrega</h3>

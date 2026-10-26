@@ -132,6 +132,50 @@ entregasRouter.post('/api/entregas/disponiveis', requireLogin, (req, res) => {
   res.status(201).json({ message: 'Entrega adicionada a lista de disponiveis!' });
 });
 
+// Duplicar uma entrega (Montagem): cria copias soltas em Disponiveis com os
+// mesmos dados de montagem - mesmo conjunto que "Duplicar carga" ja copia.
+// Fica de fora o que identifica ESSA nota ou depende de onde a original esta
+// (nota fiscal, carga, grupo de faturamento, ordem de coleta e os campos que
+// so existem depois de montada a carga), pra copia nascer limpa e a pessoa
+// so ajustar o que muda (tipicamente NF, peso e valor). "quantidade" cria
+// varias de uma vez (um destino com varias notas parecidas).
+const MAX_COPIAS_POR_VEZ = 50;
+
+entregasRouter.post('/api/entregas/:id/duplicar', requireLogin, (req, res) => {
+  const e = db.prepare('SELECT * FROM entregas WHERE id = ?').get(req.params.id);
+  if (!e) return res.status(404).json({ error: 'Entrega nao encontrada' });
+
+  const quantidade = req.body?.quantidade ?? 1;
+  if (!Number.isInteger(quantidade) || quantidade < 1 || quantidade > MAX_COPIAS_POR_VEZ) {
+    return res.status(400).json({ error: `Informe uma quantidade de copias entre 1 e ${MAX_COPIAS_POR_VEZ}.` });
+  }
+
+  const inserir = db.prepare(`
+    INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, peso_cubado, valor_tonelada, cidade_entrega, estado_entrega, local_coleta, local_coleta_cliente_id, is_cortesia)
+    VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const ids = [];
+  db.exec('BEGIN');
+  try {
+    for (let i = 0; i < quantidade; i++) {
+      const info = inserir.run(
+        e.cliente_id, e.remetente_id, e.peso_bruto, e.valor_frete, e.peso_cubado, e.valor_tonelada,
+        e.cidade_entrega, e.estado_entrega, e.local_coleta, e.local_coleta_cliente_id, e.is_cortesia
+      );
+      ids.push(Number(info.lastInsertRowid));
+    }
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+
+  const mensagem = quantidade === 1
+    ? 'Entrega duplicada! A copia esta em Disponiveis, sem nota fiscal.'
+    : `${quantidade} copias criadas em Disponiveis, sem nota fiscal.`;
+  res.status(201).json({ message: mensagem, ids });
+});
+
 entregasRouter.delete('/api/entregas/disponiveis/:id', requireLogin, (req, res) => {
   const entrega = db.prepare(`
     SELECT e.id, oc.status as ordem_coleta_status
