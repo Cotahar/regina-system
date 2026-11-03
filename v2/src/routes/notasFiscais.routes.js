@@ -60,12 +60,17 @@ const CAMPOS_SUGERIVEIS = [
   { campoCliente: 'telefone', campoNota: 'telefone_destinatario', rotulo: 'Telefone' }
 ];
 
-function calcularSugestoesComplemento(nota, clienteId, sugestoesMap) {
+// Do remetente (emitente) a NF-e so traz o CNPJ - nao tem cidade/UF/telefone.
+const CAMPOS_SUGERIVEIS_REMETENTE = [
+  { campoCliente: 'cnpj', campoNota: 'cnpj_emitente', rotulo: 'CNPJ' }
+];
+
+function calcularSugestoesComplemento(nota, clienteId, sugestoesMap, campos = CAMPOS_SUGERIVEIS) {
   if (!clienteId) return;
   const cliente = db.prepare('SELECT * FROM clientes WHERE id = ?').get(clienteId);
   if (!cliente) return;
 
-  const camposFaltando = CAMPOS_SUGERIVEIS.filter(
+  const camposFaltando = campos.filter(
     ({ campoCliente, campoNota }) => !cliente[campoCliente] && nota[campoNota]
   );
   if (!camposFaltando.length) return;
@@ -133,10 +138,13 @@ notasFiscaisRouter.post('/api/notas-fiscais/criar-disponivel', requireLogin, (re
 
   let criadas = 0;
   const ignoradas = [];
+  const sugestoesMap = new Map();
 
   db.exec('BEGIN');
   try {
-    for (const { nota_fiscal_email_id: notaId, cliente_id_override: clienteIdOverride } of itens) {
+    for (const {
+      nota_fiscal_email_id: notaId, cliente_id_override: clienteIdOverride, remetente_id_override: remetenteIdOverride
+    } of itens) {
       const nota = db.prepare('SELECT * FROM notas_fiscais_email WHERE id = ?').get(notaId);
       if (!nota) {
         ignoradas.push({ id: notaId, motivo: 'Nota nao encontrada.' });
@@ -149,14 +157,25 @@ notasFiscaisRouter.post('/api/notas-fiscais/criar-disponivel', requireLogin, (re
         continue;
       }
 
+      // Remetente escolhido na tela (quando o CNPJ do emitente nao casou com
+      // nenhum cadastro) vale mais que o casado na importacao; sem nenhum dos
+      // dois, a entrega nasce sem remetente, como sempre foi.
+      const remetenteId = remetenteIdOverride || nota.remetente_id || null;
+
       const info = db.prepare(`
         INSERT INTO entregas (carga_id, cliente_id, remetente_id, peso_bruto, valor_frete, nota_fiscal)
         VALUES (NULL, ?, ?, ?, NULL, ?)
-      `).run(clienteId, nota.remetente_id || null, nota.peso_bruto || null, nota.numero_nf || null);
+      `).run(clienteId, remetenteId, nota.peso_bruto || null, nota.numero_nf || null);
 
       db.prepare("UPDATE notas_fiscais_email SET status = 'entrega_criada', entrega_id = ? WHERE id = ?")
         .run(info.lastInsertRowid, notaId);
       criadas++;
+
+      // Quando o cliente foi escolhido na mao (CNPJ da nota nao casou com o
+      // cadastro), o cadastro provavelmente nao tem o CNPJ - sugere gravar,
+      // pra proxima nota desse cliente ja casar sozinha na importacao.
+      calcularSugestoesComplemento(nota, clienteId, sugestoesMap);
+      calcularSugestoesComplemento(nota, remetenteId, sugestoesMap, CAMPOS_SUGERIVEIS_REMETENTE);
     }
     db.exec('COMMIT');
   } catch (err) {
@@ -164,7 +183,12 @@ notasFiscaisRouter.post('/api/notas-fiscais/criar-disponivel', requireLogin, (re
     return res.status(400).json({ error: err.message });
   }
 
-  res.json({ message: `${criadas} entrega(s) disponivel(is) criada(s), ${ignoradas.length} ignorada(s).`, criadas, ignoradas });
+  res.json({
+    message: `${criadas} entrega(s) disponivel(is) criada(s), ${ignoradas.length} ignorada(s).`,
+    criadas,
+    ignoradas,
+    sugestoes_complemento: [...sugestoesMap.values()]
+  });
 });
 
 notasFiscaisRouter.put('/api/notas-fiscais/ignorar', requireLogin, (req, res) => {

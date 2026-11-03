@@ -123,10 +123,11 @@ document.getElementById('btn-nf-ignorar').addEventListener('click', async () => 
   }
 });
 
-// Depois de vincular, se a NF trouxe algum dado (CNPJ, cidade, UF, DDD,
-// telefone) que o cadastro do cliente ainda nao tinha, pergunta se quer
-// completar - nunca sobrescreve o que o cliente ja tinha preenchido (o
-// backend so calcula a sugestao pra campos vazios no cadastro).
+// Depois de vincular a uma carga ou de criar entregas disponiveis, se a NF
+// trouxe algum dado (CNPJ, cidade, UF, DDD, telefone) que o cadastro do
+// cliente ainda nao tinha, pergunta se quer completar - nunca sobrescreve o
+// que o cliente ja tinha preenchido (o backend so calcula a sugestao pra
+// campos vazios no cadastro).
 async function oferecerComplementoCadastro(sugestoes) {
   if (!Array.isArray(sugestoes) || !sugestoes.length) return;
   for (const s of sugestoes) {
@@ -251,32 +252,70 @@ const modalDisponivel = document.getElementById('modal-nf-disponivel');
 const msgDisponivel = document.getElementById('nf-disponivel-msg');
 let clientesCache = [];
 
+// Uma parte da nota (remetente = emitente, ou destinatario). Quando o CNPJ
+// casou com um cliente cadastrado, so mostra quem e. Quando nao casou, mostra
+// o que veio NA NOTA (nome, CNPJ, cidade/UF) - sem isso nao tinha como saber
+// de quem era a entrega na hora de escolher o cliente cadastrado certo.
+function blocoParteDisponivel({ rotulo, notaId, classeHidden, idCadastro, nomeCadastro, nomeNota, cnpj, local, opcional }) {
+  if (idCadastro) {
+    return `
+      <p class="text-xs text-slate-300">
+        <span class="text-slate-400">${rotulo}:</span> ${escapeHtml(nomeCadastro)}
+        <input type="hidden" class="${classeHidden}" data-nota-id="${notaId}" value="${idCadastro}">
+      </p>
+    `;
+  }
+  const dadosDaNota = [nomeNota, cnpj ? `CNPJ ${formatarCnpj(cnpj)}` : '', local]
+    .filter(Boolean).map(escapeHtml).join(' &middot; ') || 'sem dados na nota';
+  return `
+    <div class="rounded border border-amber-500/30 bg-amber-900/10 p-2">
+      <p class="text-xs text-amber-300">${rotulo} na nota: <span class="font-semibold">${dadosDaNota}</span></p>
+      <p class="mb-1 text-[11px] text-slate-400">Nao encontrado no cadastro pelo CNPJ - escolha o cliente cadastrado${opcional ? ' (opcional)' : ''}:</p>
+      <div class="relative">
+        <input class="input-field nf-disp-busca" placeholder="Buscar ${rotulo.toLowerCase()} cadastrado...">
+        <input type="hidden" class="${classeHidden}" data-nota-id="${notaId}">
+      </div>
+    </div>
+  `;
+}
+
 document.getElementById('btn-nf-criar-disponivel').addEventListener('click', async () => {
   clientesCache = await apiGet('/api/clientes');
   const notasSelecionadas = notas.filter((n) => selecionadas.has(n.id));
 
-  document.getElementById('nf-disponivel-linhas').innerHTML = notasSelecionadas.map((n) => {
-    if (n.cliente_id) {
-      return `
-        <div class="rounded border border-painel-border p-2 text-xs text-slate-300">
-          NF ${escapeHtml(n.numero_nf || '-')} - destinatario: ${escapeHtml(n.cliente_nome_cadastro)}
-          <input type="hidden" class="nf-disp-cliente" data-nota-id="${n.id}" value="${n.cliente_id}">
-        </div>
-      `;
-    }
-    return `
-      <div class="rounded border border-amber-500/30 bg-amber-900/10 p-2">
-        <p class="mb-1 text-xs text-amber-300">NF ${escapeHtml(n.numero_nf || '-')} - sem destinatario reconhecido, escolha o cliente:</p>
-        <div class="relative">
-          <input class="input-field nf-disp-cliente-input" placeholder="Buscar cliente...">
-          <input type="hidden" class="nf-disp-cliente" data-nota-id="${n.id}">
-        </div>
-      </div>
-    `;
-  }).join('');
+  document.getElementById('nf-disponivel-linhas').innerHTML = notasSelecionadas.map((n) => `
+    <div class="space-y-1.5 rounded border border-painel-border p-2">
+      <p class="text-xs font-semibold text-slate-200">
+        NF ${escapeHtml(n.numero_nf || '-')}
+        <span class="font-normal text-slate-400">&middot; ${n.peso_bruto ? formatarPeso(n.peso_bruto) : 'sem peso'}${n.data_emissao ? ` &middot; emitida em ${formatarData(n.data_emissao)}` : ''}</span>
+      </p>
+      ${blocoParteDisponivel({
+        rotulo: 'Remetente',
+        notaId: n.id,
+        classeHidden: 'nf-disp-remetente',
+        idCadastro: n.remetente_id,
+        nomeCadastro: n.remetente_nome_cadastro,
+        nomeNota: n.nome_emitente,
+        cnpj: n.cnpj_emitente,
+        local: '',
+        opcional: true
+      })}
+      ${blocoParteDisponivel({
+        rotulo: 'Destinatario',
+        notaId: n.id,
+        classeHidden: 'nf-disp-cliente',
+        idCadastro: n.cliente_id,
+        nomeCadastro: n.cliente_nome_cadastro,
+        nomeNota: n.nome_destinatario,
+        cnpj: n.cnpj_destinatario,
+        local: [n.cidade_destinatario, n.estado_destinatario].filter(Boolean).join('/'),
+        opcional: false
+      })}
+    </div>
+  `).join('');
 
-  document.querySelectorAll('#nf-disponivel-linhas .nf-disp-cliente-input').forEach((input) => {
-    const hidden = input.parentElement.querySelector('.nf-disp-cliente');
+  document.querySelectorAll('#nf-disponivel-linhas .nf-disp-busca').forEach((input) => {
+    const hidden = input.parentElement.querySelector('input[type="hidden"]');
     criarCombobox({ input, hidden, getItens: () => clientesCache });
   });
 
@@ -288,7 +327,8 @@ document.getElementById('btn-nf-disponivel-cancelar').addEventListener('click', 
 document.getElementById('btn-nf-disponivel-salvar').addEventListener('click', async () => {
   const itens = [...document.querySelectorAll('.nf-disp-cliente')].map((el) => ({
     nota_fiscal_email_id: Number(el.dataset.notaId),
-    cliente_id_override: el.value ? Number(el.value) : null
+    cliente_id_override: el.value ? Number(el.value) : null,
+    remetente_id_override: Number(document.querySelector(`.nf-disp-remetente[data-nota-id="${el.dataset.notaId}"]`)?.value) || null
   }));
 
   try {
@@ -297,6 +337,7 @@ document.getElementById('btn-nf-disponivel-salvar').addEventListener('click', as
     selecionadas.clear();
     await carregar();
     exibirMensagem(msg, resp.message, 'sucesso');
+    await oferecerComplementoCadastro(resp.sugestoes_complemento);
   } catch (err) {
     exibirMensagem(msgDisponivel, err.message, 'erro');
   }

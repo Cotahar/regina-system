@@ -87,7 +87,7 @@ export function renderNotasFiscaisPage() {
     <div id="modal-nf-disponivel" class="fixed inset-0 z-20 hidden items-start justify-center overflow-y-auto bg-slate-900/50 py-8">
       <div class="card w-full max-w-2xl">
         <h3 class="mb-3 text-base font-semibold">Criar entrega(s) disponivel(is)</h3>
-        <p class="mb-2 text-xs text-slate-400">Notas sem destinatario reconhecido precisam de um cliente escolhido manualmente:</p>
+        <p class="mb-2 text-xs text-slate-400">Quando o remetente ou o destinatario da nota nao e reconhecido pelo CNPJ, escolha o cliente cadastrado correspondente - os dados que vieram na nota aparecem em cada linha. O destinatario e obrigatorio; sem remetente escolhido, a entrega e criada sem remetente.</p>
         <div id="nf-disponivel-linhas" class="space-y-2"></div>
         <p id="nf-disponivel-msg" class="mt-2 hidden text-sm"></p>
         <div class="mt-4 flex justify-end gap-2">
