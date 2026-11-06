@@ -2,10 +2,37 @@ import { apiGet, apiPost, apiPut, apiDelete } from '../shared/api.js';
 import { escapeHtml } from '../shared/escape.js';
 import { exibirMensagem } from '../shared/ui.js';
 import { iconeMenuAcoes, criarMenuAcoes } from '../shared/menuAcoes.js';
+import { criarCombobox } from '../shared/combobox.js';
 
 let usuarios = [];
 let unidades = [];
 let tiposCte = [];
+let clientes = [];
+
+// Remetente so existe pro perfil Representante (parceiro que enxerga apenas as
+// notas fiscais daquele remetente) - o campo some nos outros perfis.
+const selectPermissao = document.getElementById('usuario-permissao');
+const blocoRemetente = document.getElementById('usuario-remetente-bloco');
+const inputRemetente = document.getElementById('usuario-remetente-input');
+const hiddenRemetente = document.getElementById('usuario-remetente-id');
+
+criarCombobox({ input: inputRemetente, hidden: hiddenRemetente, getItens: () => clientes });
+
+function atualizarCampoRemetente() {
+  blocoRemetente.classList.toggle('hidden', selectPermissao.value !== 'representante');
+}
+selectPermissao.addEventListener('change', atualizarCampoRemetente);
+
+function limparFormularioUsuario() {
+  document.getElementById('form-usuario').reset();
+  document.getElementById('usuario-id').value = '';
+  // Hidden input: form.reset() devolve o ultimo valor atribuido por JS, entao
+  // limpa na mao (e o texto do campo de busca junto).
+  hiddenRemetente.value = '';
+  inputRemetente.value = '';
+  atualizarCampoRemetente();
+  document.getElementById('btn-cancelar-edicao').classList.add('hidden');
+}
 
 // --- USUARIOS ---
 async function carregarUsuarios() {
@@ -14,7 +41,7 @@ async function carregarUsuarios() {
   tbody.innerHTML = usuarios.map((u) => `
     <tr class="border-t border-painel-border" data-id="${u.id}">
       <td class="py-2.5">${escapeHtml(u.nome_usuario)}${!u.senha_configurada ? ' <span class="rounded bg-amber-900/40 px-1.5 py-0.5 text-[10px] text-amber-300">aguardando 1o acesso</span>' : ''}</td>
-      <td class="py-2.5">${escapeHtml(u.permissao)}</td>
+      <td class="py-2.5">${escapeHtml(u.permissao)}${u.remetente_nome ? ` <span class="text-xs text-slate-400">&middot; ${escapeHtml(u.remetente_nome)}</span>` : ''}</td>
       <td class="py-2.5 text-right">${iconeMenuAcoes()}</td>
     </tr>
   `).join('');
@@ -33,6 +60,9 @@ async function carregarUsuarios() {
           document.getElementById('usuario-nome').value = u.nome_usuario;
           document.getElementById('usuario-senha').value = '';
           document.getElementById('usuario-permissao').value = u.permissao;
+          hiddenRemetente.value = u.remetente_id || '';
+          inputRemetente.value = u.remetente_nome || '';
+          atualizarCampoRemetente();
           document.getElementById('btn-cancelar-edicao').classList.remove('hidden');
         }
       });
@@ -70,11 +100,7 @@ async function carregarUsuarios() {
   });
 }
 
-document.getElementById('btn-cancelar-edicao').addEventListener('click', () => {
-  document.getElementById('form-usuario').reset();
-  document.getElementById('usuario-id').value = '';
-  document.getElementById('btn-cancelar-edicao').classList.add('hidden');
-});
+document.getElementById('btn-cancelar-edicao').addEventListener('click', limparFormularioUsuario);
 
 document.getElementById('form-usuario').addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -83,14 +109,13 @@ document.getElementById('form-usuario').addEventListener('submit', async (event)
   const payload = {
     nome_usuario: document.getElementById('usuario-nome').value.trim(),
     senha: document.getElementById('usuario-senha').value,
-    permissao: document.getElementById('usuario-permissao').value
+    permissao: selectPermissao.value,
+    remetente_id: selectPermissao.value === 'representante' && hiddenRemetente.value ? Number(hiddenRemetente.value) : null
   };
   try {
     if (id) await apiPut(`/api/usuarios/${id}`, payload);
     else await apiPost('/api/usuarios', payload);
-    document.getElementById('form-usuario').reset();
-    document.getElementById('usuario-id').value = '';
-    document.getElementById('btn-cancelar-edicao').classList.add('hidden');
+    limparFormularioUsuario();
     exibirMensagem(msg, 'Salvo com sucesso!', 'sucesso');
     await carregarUsuarios();
   } catch (err) {
@@ -216,3 +241,4 @@ document.getElementById('form-tipo-cte').addEventListener('submit', async (event
 carregarUsuarios();
 carregarUnidades();
 carregarTiposCte();
+apiGet('/api/clientes').then((lista) => { clientes = lista; });

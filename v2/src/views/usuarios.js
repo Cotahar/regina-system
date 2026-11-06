@@ -19,7 +19,13 @@ export function renderUsuariosPage() {
           <select id="usuario-permissao" class="input-field">
             <option value="usuario">Usuario</option>
             <option value="admin">Admin</option>
+            <option value="representante">Representante (so ve notas de 1 remetente)</option>
           </select>
+        </div>
+        <div id="usuario-remetente-bloco" class="relative hidden w-72">
+          <label class="label">Remetente do representante</label>
+          <input id="usuario-remetente-input" class="input-field" placeholder="Buscar cliente...">
+          <input type="hidden" id="usuario-remetente-id">
         </div>
         <button type="submit" class="btn-success">Salvar</button>
         <button type="button" id="btn-cancelar-edicao" class="btn-secondary hidden">Cancelar edicao</button>

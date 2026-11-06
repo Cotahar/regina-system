@@ -45,6 +45,24 @@ export function renderLayout({ title, bodyHtml, user, activeHref = '', extraHead
 
   const iniciais = (user?.userName || '?').charAt(0).toUpperCase();
 
+  // Representante (parceiro externo) nao tem menu: so a propria tela, sem
+  // nenhum link pro resto do sistema.
+  const semMenu = user?.permissao === 'representante';
+  const asideHtml = semMenu ? '' : `
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 -translate-x-full transform overflow-y-auto border-r border-gray-800 bg-brand-black p-3 transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0">
+      <div class="mb-4 flex flex-col gap-0 px-3 py-2">
+        <span class="text-lg font-bold leading-tight text-brand-yellow">Frottex</span>
+        <span class="text-xs leading-tight text-gray-400">B. Nunes &middot; Gestao de Cargas</span>
+      </div>
+      <nav>${navHtml}${adminHtml}</nav>
+    </aside>
+    <div id="sidebar-overlay" class="fixed inset-0 z-20 hidden bg-slate-900/40 lg:hidden"></div>`;
+  const botaoMenuHtml = semMenu
+    ? '<span class="text-lg font-bold leading-tight text-brand-yellow">Frottex <span class="text-xs font-normal text-gray-400">B. Nunes</span></span>'
+    : `<button type="button" id="btn-abrir-menu" class="rounded-lg p-2 text-slate-400 hover:bg-white/5 lg:hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>`;
+
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -56,19 +74,10 @@ export function renderLayout({ title, bodyHtml, user, activeHref = '', extraHead
 </head>
 <body>
   <div class="flex min-h-screen">
-    <aside id="sidebar" class="fixed inset-y-0 left-0 z-30 w-64 -translate-x-full transform overflow-y-auto border-r border-gray-800 bg-brand-black p-3 transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0">
-      <div class="mb-4 flex flex-col gap-0 px-3 py-2">
-        <span class="text-lg font-bold leading-tight text-brand-yellow">Frottex</span>
-        <span class="text-xs leading-tight text-gray-400">B. Nunes &middot; Gestao de Cargas</span>
-      </div>
-      <nav>${navHtml}${adminHtml}</nav>
-    </aside>
-    <div id="sidebar-overlay" class="fixed inset-0 z-20 hidden bg-slate-900/40 lg:hidden"></div>
+    ${asideHtml}
     <div class="flex min-h-screen min-w-0 flex-1 flex-col">
       <header class="sticky top-0 z-10 flex items-center justify-between border-b border-painel-border bg-painel-card px-4 py-3 shadow-lg shadow-black/20">
-        <button type="button" id="btn-abrir-menu" class="rounded-lg p-2 text-slate-400 hover:bg-white/5 lg:hidden">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-        </button>
+        ${botaoMenuHtml}
         <div class="ml-auto flex items-center gap-3">
           <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-black text-sm font-bold text-brand-yellow">${escapeHtml(iniciais)}</span>
           <div class="hidden text-right sm:block">

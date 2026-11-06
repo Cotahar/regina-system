@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { sessionMiddleware } from './middleware/session.js';
 import { requireLogin } from './middleware/auth.js';
+import { restringirRepresentante } from './middleware/representante.js';
 import { notificarAposMutacao } from './middleware/notificar.js';
 import { authRouter } from './routes/auth.routes.js';
 import { pagesRouter } from './routes/pages.routes.js';
@@ -22,6 +23,7 @@ import { ordensColetaRouter } from './routes/ordensColeta.routes.js';
 import { ocorrenciasRouter } from './routes/ocorrencias.routes.js';
 import { orcamentosRouter } from './routes/orcamentos.routes.js';
 import { cnpjRouter } from './routes/cnpj.routes.js';
+import { representanteRouter } from './routes/representante.routes.js';
 import { registrarClienteSSE, removerClienteSSE } from './services/eventos.js';
 import { iniciarPollingGmail } from './services/gmailImport.service.js';
 
@@ -36,6 +38,9 @@ app.use(notificarAposMutacao);
 const uploadsRoot = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
+// Tem que vir antes de /uploads e de qualquer rota: fecha tudo pro perfil
+// representante, exceto a lista de liberadas (ver middleware/representante.js).
+app.use(restringirRepresentante);
 app.use('/uploads', requireLogin, express.static(uploadsRoot));
 
 app.get('/api/eventos', requireLogin, (req, res) => {
@@ -78,6 +83,7 @@ app.use(ordensColetaRouter);
 app.use(ocorrenciasRouter);
 app.use(orcamentosRouter);
 app.use(cnpjRouter);
+app.use(representanteRouter);
 app.use(pagesRouter);
 
 app.use((req, res) => {

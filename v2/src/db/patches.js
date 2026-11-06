@@ -31,7 +31,8 @@ const colunasNovas = [
   ['notas_fiscais_email', 'ddd_destinatario', 'TEXT'],
   ['notas_fiscais_email', 'telefone_destinatario', 'TEXT'],
   ['entregas', 'local_coleta_cliente_id', 'INTEGER REFERENCES clientes(id) ON DELETE SET NULL'],
-  ['entregas', 'ordem_coleta_id', 'INTEGER REFERENCES ordens_coleta(id) ON DELETE SET NULL']
+  ['entregas', 'ordem_coleta_id', 'INTEGER REFERENCES ordens_coleta(id) ON DELETE SET NULL'],
+  ['usuarios', 'remetente_id', 'INTEGER REFERENCES clientes(id) ON DELETE SET NULL']
 ];
 
 // Padroniza data_emissao pra AAAA-MM-DD em linhas gravadas antes dessa

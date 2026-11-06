@@ -4,7 +4,10 @@ CREATE TABLE IF NOT EXISTS usuarios (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nome_usuario TEXT NOT NULL UNIQUE,
   senha_hash TEXT NOT NULL,
-  permissao TEXT NOT NULL DEFAULT 'usuario'
+  permissao TEXT NOT NULL DEFAULT 'usuario',
+  -- So usado pelo perfil 'representante' (parceiro que ve apenas as notas
+  -- fiscais de UM remetente especifico).
+  remetente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS motoristas (

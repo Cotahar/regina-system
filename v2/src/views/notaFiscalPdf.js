@@ -16,7 +16,9 @@ function formatarChaveAcesso(chave) {
 // exige o layout completo definido pela Receita, com codigo de barras
 // valido etc.) - e so uma conferencia rapida dos dados, deixada clara no
 // aviso no topo pra ninguem confundir com o documento fiscal de verdade.
-export function renderNotaFiscalPdf({ nota }) {
+// ocultarTransporte: usado na visao do representante (parceiro externo) - tira
+// placa e motorista, que sao dado operacional nosso e nao da nota em si.
+export function renderNotaFiscalPdf({ nota, ocultarTransporte = false }) {
   const contato = nota.ddd_destinatario && nota.telefone_destinatario
     ? `(${escapeHtml(nota.ddd_destinatario)}) ${escapeHtml(nota.telefone_destinatario)}`
     : (nota.telefone_destinatario ? escapeHtml(nota.telefone_destinatario) : '-');
@@ -81,8 +83,8 @@ export function renderNotaFiscalPdf({ nota }) {
       <div class="item"><div class="rotulo">Data de emissao</div><div class="valor">${nota.data_emissao ? formatarDataServidor(nota.data_emissao) : '-'}</div></div>
       <div class="item"><div class="rotulo">Valor total (NF)</div><div class="valor">${nota.valor_total ? formatarMoedaServidor(nota.valor_total) : '-'}</div></div>
       <div class="item"><div class="rotulo">Peso bruto</div><div class="valor">${nota.peso_bruto ? formatarPesoServidor(nota.peso_bruto) : '-'}</div></div>
-      <div class="item"><div class="rotulo">Placa do veiculo</div><div class="valor">${escapeHtml(nota.placa_veiculo || '-')}</div></div>
-      <div class="item"><div class="rotulo">Motorista</div><div class="valor">${escapeHtml(nota.nome_motorista || '-')}</div></div>
+      ${ocultarTransporte ? '' : `<div class="item"><div class="rotulo">Placa do veiculo</div><div class="valor">${escapeHtml(nota.placa_veiculo || '-')}</div></div>
+      <div class="item"><div class="rotulo">Motorista</div><div class="valor">${escapeHtml(nota.nome_motorista || '-')}</div></div>`}
       <div class="item chave" style="grid-column: span 3;"><div class="rotulo">Chave de acesso</div><div class="valor">${formatarChaveAcesso(nota.chave_acesso)}</div></div>
     </div>
 
