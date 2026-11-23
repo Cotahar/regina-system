@@ -24,8 +24,10 @@ import { ocorrenciasRouter } from './routes/ocorrencias.routes.js';
 import { orcamentosRouter } from './routes/orcamentos.routes.js';
 import { cnpjRouter } from './routes/cnpj.routes.js';
 import { representanteRouter } from './routes/representante.routes.js';
+import { romaneiosRouter } from './routes/romaneios.routes.js';
 import { registrarClienteSSE, removerClienteSSE } from './services/eventos.js';
 import { iniciarPollingGmail } from './services/gmailImport.service.js';
+import { iniciarPollingRomaneios } from './services/romaneioImport.service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -84,6 +86,7 @@ app.use(ocorrenciasRouter);
 app.use(orcamentosRouter);
 app.use(cnpjRouter);
 app.use(representanteRouter);
+app.use(romaneiosRouter);
 app.use(pagesRouter);
 
 app.use((req, res) => {
@@ -100,4 +103,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Frottex - B. Nunes (v2) rodando em http://localhost:${PORT}`);
   iniciarPollingGmail();
+  iniciarPollingRomaneios();
 });

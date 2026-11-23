@@ -15,6 +15,7 @@ export function renderOrdensColetaPage() {
               <th class="pb-2">Status</th>
               <th class="pb-2">Motorista / Veiculo</th>
               <th class="pb-2">Entregas</th>
+              <th class="pb-2">Coletadas (NF-e)</th>
               <th class="pb-2">Peso</th>
               <th class="pb-2">Local de coleta (baixa)</th>
               <th class="pb-2 text-right">Acoes</th>
@@ -62,6 +63,7 @@ export function renderOrdensColetaPage() {
               <th class="pb-2">Cidade/UF</th>
               <th class="pb-2">NF</th>
               <th class="pb-2">Peso</th>
+              <th class="pb-2">Carga da fabrica</th>
               <th class="pb-2">Origem</th>
             </tr>
           </thead>

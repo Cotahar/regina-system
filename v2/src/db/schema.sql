@@ -133,7 +133,11 @@ CREATE TABLE IF NOT EXISTS entregas (
   valor_combinado REAL,
   repasse_destinatario TEXT,
   data_agendamento_descarga TEXT,
-  ordem_coleta_id INTEGER REFERENCES ordens_coleta(id) ON DELETE SET NULL
+  ordem_coleta_id INTEGER REFERENCES ordens_coleta(id) ON DELETE SET NULL,
+  -- Carga da fabrica que originou a entrega (romaneio) e quando ela foi
+  -- coletada de fato (e-mail da NF-e = caminhao carregando), UTC.
+  carga_origem_id INTEGER REFERENCES cargas_origem(id) ON DELETE SET NULL,
+  data_coleta TEXT
 );
 
 CREATE TABLE IF NOT EXISTS avarias (
@@ -196,6 +200,10 @@ CREATE TABLE IF NOT EXISTS notas_fiscais_email (
   precisa_revisao INTEGER NOT NULL DEFAULT 0,
   entrega_id INTEGER REFERENCES entregas(id) ON DELETE SET NULL,
   observacoes TEXT,
+  -- "Carga:" e "Pedido:" das informacoes complementares da NF-e (fabrica):
+  -- a carga e a chave que liga a nota ao romaneio (cargas_origem).
+  carga_origem TEXT,
+  pedido_origem TEXT,
   criado_em TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
@@ -252,6 +260,80 @@ CREATE TABLE IF NOT EXISTS orcamento_itens (
   descarga_inclusa INTEGER NOT NULL DEFAULT 1
 );
 
+-- Cargas liberadas pela fabrica (e-mails "NOTIF TRANSPORTADOR", ate virarem
+-- NF-e de coleta ou serem canceladas pelos e-mails "NOTIFICACAO TRANSPORTADOR").
+-- Ciclo: disponivel (liberada pra agendar) -> coletada (chegou a NF-e: o
+-- caminhao esta carregando) | cancelada. A entrega correspondente fica em
+-- entregas.carga_origem_id; aqui fica o que a fabrica informou.
+CREATE TABLE IF NOT EXISTS cargas_origem (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  numero_carga TEXT NOT NULL UNIQUE,
+  tipo TEXT NOT NULL DEFAULT 'carga',
+  status TEXT NOT NULL DEFAULT 'disponivel',
+  filial_cnpj TEXT,
+  filial_nome TEXT,
+  local_coleta TEXT,
+  remetente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
+  cliente_id INTEGER REFERENCES clientes(id) ON DELETE SET NULL,
+  destinatario_nome TEXT,
+  destinatario_cnpj TEXT,
+  destinatario_cidade TEXT,
+  destinatario_uf TEXT,
+  endereco_entrega TEXT,
+  entrega_na_obra INTEGER NOT NULL DEFAULT 0,
+  cidade_entrega TEXT,
+  uf_entrega TEXT,
+  modalidade_frete TEXT,
+  tipo_venda TEXT,
+  vendedor TEXT,
+  transportadora TEXT,
+  cronograma TEXT,
+  peso_bruto REAL,
+  caixas INTEGER,
+  valor_mercadoria REAL,
+  observacoes_origem TEXT,
+  itens TEXT,
+  nfs_amostra TEXT,
+  regras TEXT,
+  prazo_embarque_dias INTEGER,
+  prazo_limite TEXT,
+  mensagem_numero INTEGER,
+  liberada_em TEXT,
+  coletada_em TEXT,
+  cancelada_em TEXT,
+  motivo_cancelamento TEXT,
+  nf_cancelada_numero TEXT,
+  nf_cancelada_em TEXT,
+  sem_romaneio INTEGER NOT NULL DEFAULT 0,
+  criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+  atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Um registro por e-mail da fabrica ja lido: evita reprocessar (a importacao
+-- NAO marca nada como lido na caixa - o controle e todo por aqui) e guarda o
+-- texto recebido pra conferir/reprocessar depois. tipo 'erro' = nao deu pra
+-- interpretar (fica visivel na tela de Romaneios).
+CREATE TABLE IF NOT EXISTS romaneio_mensagens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  gmail_message_id TEXT NOT NULL UNIQUE,
+  tipo TEXT NOT NULL,
+  assunto TEXT,
+  mensagem_numero INTEGER,
+  recebido_em TEXT NOT NULL,
+  cargas TEXT,
+  corpo_texto TEXT,
+  erro TEXT,
+  processado_em TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Ajustes da importacao de romaneios (ex.: 'inicio_importacao' = instante em que
+-- a leitura foi ativada; so e-mails recebidos depois dele sao importados).
+CREATE TABLE IF NOT EXISTS romaneio_config (
+  chave TEXT PRIMARY KEY,
+  valor TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_cargas_origem_status ON cargas_origem(status);
 CREATE INDEX IF NOT EXISTS idx_entregas_carga_id ON entregas(carga_id);
 CREATE INDEX IF NOT EXISTS idx_entregas_cliente_id ON entregas(cliente_id);
 CREATE INDEX IF NOT EXISTS idx_entregas_remetente_id ON entregas(remetente_id);

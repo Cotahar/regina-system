@@ -84,12 +84,16 @@ entregasRouter.get('/api/entregas/disponiveis', requireLogin, (req, res) => {
     SELECT e.*,
       rem.razao_social as remetente_razao_social, rem.estado as remetente_estado,
       cli.razao_social as cliente_razao_social, cli.cidade as cliente_cidade, cli.estado as cliente_estado,
-      lc.razao_social as local_coleta_cliente_nome
+      lc.razao_social as local_coleta_cliente_nome,
+      co.numero_carga as origem_numero, co.status as origem_status, co.modalidade_frete as origem_frete,
+      co.prazo_limite as origem_prazo_limite, co.motivo_cancelamento as origem_motivo
     FROM entregas e
     LEFT JOIN clientes rem ON rem.id = e.remetente_id
     LEFT JOIN clientes cli ON cli.id = e.cliente_id
     LEFT JOIN clientes lc ON lc.id = e.local_coleta_cliente_id
+    LEFT JOIN cargas_origem co ON co.id = e.carga_origem_id
     WHERE e.carga_id IS NULL
+      AND (co.id IS NULL OR co.status != 'cancelada' OR e.ordem_coleta_id IS NOT NULL)
     ORDER BY e.id DESC
   `).all();
 
@@ -114,6 +118,12 @@ entregasRouter.get('/api/entregas/disponiveis', requireLogin, (req, res) => {
     local_coleta: e.local_coleta,
     local_coleta_cliente_id: e.local_coleta_cliente_id,
     local_coleta_cliente_nome: e.local_coleta_cliente_nome,
+    origem_numero: e.origem_numero,
+    origem_status: e.origem_status,
+    origem_cif: e.origem_frete === 'CIF',
+    origem_prazo_limite: e.origem_prazo_limite,
+    origem_motivo: e.origem_motivo,
+    data_coleta: e.data_coleta,
     selecionada: false
   })));
 });

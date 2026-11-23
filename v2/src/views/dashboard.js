@@ -17,6 +17,8 @@ export function renderDashboardPage() {
       </form>
     </div>
 
+    <a id="alerta-romaneios" href="/romaneios.html" class="mt-3 hidden rounded-md border border-red-500/40 bg-red-900/20 px-3 py-2 text-sm text-red-300 hover:bg-red-900/30"></a>
+
     <div class="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
       ${COLUNAS.map((col) => `
         <div class="card border-t-4 ${col.borda}">

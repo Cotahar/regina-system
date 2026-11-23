@@ -15,9 +15,10 @@ const STATUS_ELEGIVEIS_CARGA = ['Rascunho', 'Pendente', 'Agendada'];
 function validarEntregasElegiveis(entregaIds, ordemIdAtual) {
   const placeholders = entregaIds.map(() => '?').join(',');
   const linhas = db.prepare(`
-    SELECT e.id, e.ordem_coleta_id, c.status as carga_status
+    SELECT e.id, e.ordem_coleta_id, e.data_coleta, c.status as carga_status, co.status as origem_status
     FROM entregas e
     LEFT JOIN cargas c ON c.id = e.carga_id
+    LEFT JOIN cargas_origem co ON co.id = e.carga_origem_id
     WHERE e.id IN (${placeholders})
   `).all(...entregaIds);
 
@@ -29,6 +30,16 @@ function validarEntregasElegiveis(entregaIds, ordemIdAtual) {
     }
     if (l.ordem_coleta_id && l.ordem_coleta_id !== ordemIdAtual) {
       return 'Uma das entregas selecionadas ja esta em outra ordem de coleta.';
+    }
+    // Entrega de carga cancelada pela fabrica nao tem mais o que coletar; e uma
+    // que ja foi coletada (chegou a NF-e) nao entra numa ordem nova. As que ja
+    // fazem parte DESTA ordem (edicao) seguem como estavam.
+    const jaNestaOrdem = ordemIdAtual != null && l.ordem_coleta_id === ordemIdAtual;
+    if (!jaNestaOrdem && l.origem_status === 'cancelada') {
+      return 'Uma das entregas selecionadas foi cancelada pela fabrica.';
+    }
+    if (!jaNestaOrdem && l.data_coleta) {
+      return 'Uma das entregas selecionadas ja foi coletada (a NF-e chegou).';
     }
   }
   return null;
@@ -48,19 +59,24 @@ function toDictOrdemResumo(o) {
     data_baixa: o.data_baixa,
     criado_em: o.criado_em,
     num_entregas: o.num_entregas,
-    peso_total: o.peso_total
+    peso_total: o.peso_total,
+    coletadas: o.coletadas || 0,
+    canceladas: o.canceladas || 0
   };
 }
 
 ordensColetaRouter.get('/api/ordens-coleta', requireLogin, (req, res) => {
   const ordens = db.prepare(`
     SELECT oc.*, m.nome as motorista_nome, v.placa as placa_veiculo, lc.razao_social as local_coleta_cliente_nome,
-      COUNT(e.id) as num_entregas, COALESCE(SUM(e.peso_bruto), 0) as peso_total
+      COUNT(e.id) as num_entregas, COALESCE(SUM(e.peso_bruto), 0) as peso_total,
+      COALESCE(SUM(e.data_coleta IS NOT NULL), 0) as coletadas,
+      COALESCE(SUM(co.status = 'cancelada'), 0) as canceladas
     FROM ordens_coleta oc
     LEFT JOIN motoristas m ON m.id = oc.motorista_id
     LEFT JOIN veiculos v ON v.id = oc.veiculo_id
     LEFT JOIN clientes lc ON lc.id = oc.local_coleta_cliente_id
     LEFT JOIN entregas e ON e.ordem_coleta_id = oc.id
+    LEFT JOIN cargas_origem co ON co.id = e.carga_origem_id
     GROUP BY oc.id
     ORDER BY (oc.status = 'pendente') DESC, oc.id DESC
   `).all();
@@ -78,15 +94,19 @@ ordensColetaRouter.get('/api/ordens-coleta/entregas-elegiveis', requireLogin, (r
     SELECT e.*,
       rem.razao_social as remetente_razao_social, rem.cidade as remetente_cidade, rem.estado as remetente_estado,
       cli.razao_social as cliente_razao_social, cli.cidade as cliente_cidade, cli.estado as cliente_estado,
-      c.codigo_carga as carga_codigo, c.status as carga_status
+      c.codigo_carga as carga_codigo, c.status as carga_status,
+      co.numero_carga as origem_numero, co.status as origem_status, co.modalidade_frete as origem_frete,
+      co.prazo_limite as origem_prazo_limite
     FROM entregas e
     LEFT JOIN clientes rem ON rem.id = e.remetente_id
     LEFT JOIN clientes cli ON cli.id = e.cliente_id
     LEFT JOIN cargas c ON c.id = e.carga_id
+    LEFT JOIN cargas_origem co ON co.id = e.carga_origem_id
     WHERE (e.carga_id IS NULL OR c.status IN ('Rascunho', 'Pendente', 'Agendada'))
       AND (e.ordem_coleta_id IS NULL OR e.ordem_coleta_id = ?)
+      AND (e.ordem_coleta_id = ? OR ((co.id IS NULL OR co.status != 'cancelada') AND e.data_coleta IS NULL))
     ORDER BY e.id DESC
-  `).all(ordemId);
+  `).all(ordemId, ordemId);
 
   res.json(entregas.map((e) => ({
     id: e.id,
@@ -102,7 +122,11 @@ ordensColetaRouter.get('/api/ordens-coleta/entregas-elegiveis', requireLogin, (r
     peso_bruto: e.peso_bruto,
     carga_codigo: e.carga_codigo,
     carga_status: e.carga_status,
-    origem_texto: e.carga_codigo ? `${e.carga_codigo} (${e.carga_status})` : 'Disponivel (Montagem)'
+    origem_texto: e.carga_codigo ? `${e.carga_codigo} (${e.carga_status})` : 'Disponivel (Montagem)',
+    origem_numero: e.origem_numero,
+    origem_status: e.origem_status,
+    origem_cif: e.origem_frete === 'CIF',
+    origem_prazo_limite: e.origem_prazo_limite
   })));
 });
 
@@ -121,11 +145,14 @@ function carregarOrdemDetalhe(id) {
     SELECT e.*,
       rem.razao_social as remetente_razao_social, rem.cidade as remetente_cidade, rem.estado as remetente_estado,
       cli.razao_social as cliente_razao_social, cli.cidade as cliente_cidade, cli.estado as cliente_estado,
-      c.codigo_carga as carga_codigo, c.status as carga_status
+      c.codigo_carga as carga_codigo, c.status as carga_status,
+      co.numero_carga as origem_numero, co.status as origem_status, co.modalidade_frete as origem_frete,
+      co.prazo_limite as origem_prazo_limite, co.regras as origem_regras, co.local_coleta as origem_local_coleta
     FROM entregas e
     LEFT JOIN clientes rem ON rem.id = e.remetente_id
     LEFT JOIN clientes cli ON cli.id = e.cliente_id
     LEFT JOIN cargas c ON c.id = e.carga_id
+    LEFT JOIN cargas_origem co ON co.id = e.carga_origem_id
     WHERE e.ordem_coleta_id = ?
     ORDER BY rem.razao_social, e.id
   `).all(id);
@@ -150,7 +177,12 @@ ordensColetaRouter.get('/api/ordens-coleta/:id', requireLogin, (req, res) => {
       peso_bruto: e.peso_bruto,
       carga_codigo: e.carga_codigo,
       carga_status: e.carga_status,
-      origem_texto: e.carga_codigo ? `${e.carga_codigo} (${e.carga_status})` : 'Disponivel (Montagem)'
+      origem_texto: e.carga_codigo ? `${e.carga_codigo} (${e.carga_status})` : 'Disponivel (Montagem)',
+      origem_numero: e.origem_numero,
+      origem_status: e.origem_status,
+      origem_cif: e.origem_frete === 'CIF',
+      origem_prazo_limite: e.origem_prazo_limite,
+      data_coleta: e.data_coleta
     }))
   });
 });

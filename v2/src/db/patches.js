@@ -1,5 +1,10 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { db } from './connection.js';
 import { encontrarMunicipio } from '../services/municipios.service.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Adiciona colunas novas em bancos ja existentes (deploys anteriores a essas
 // mudancas). CREATE TABLE ... IF NOT EXISTS do schema.sql nao altera tabelas
@@ -32,8 +37,38 @@ const colunasNovas = [
   ['notas_fiscais_email', 'telefone_destinatario', 'TEXT'],
   ['entregas', 'local_coleta_cliente_id', 'INTEGER REFERENCES clientes(id) ON DELETE SET NULL'],
   ['entregas', 'ordem_coleta_id', 'INTEGER REFERENCES ordens_coleta(id) ON DELETE SET NULL'],
-  ['usuarios', 'remetente_id', 'INTEGER REFERENCES clientes(id) ON DELETE SET NULL']
+  ['usuarios', 'remetente_id', 'INTEGER REFERENCES clientes(id) ON DELETE SET NULL'],
+  ['entregas', 'carga_origem_id', 'INTEGER REFERENCES cargas_origem(id) ON DELETE SET NULL'],
+  ['entregas', 'data_coleta', 'TEXT'],
+  ['notas_fiscais_email', 'carga_origem', 'TEXT'],
+  ['notas_fiscais_email', 'pedido_origem', 'TEXT']
 ];
+
+// Notas ja importadas antes do "Carga:" ser extraido: le o XML guardado e
+// preenche carga/pedido (so onde ainda esta vazio) - assim elas tambem ligam
+// com o romaneio quando ele chegar. Idempotente; nota sem XML guardado
+// (veio so em PDF) fica como esta.
+function preencherCargaOrigemNotasExistentes() {
+  const pasta = path.join(process.env.UPLOADS_DIR || path.join(__dirname, '..', '..', 'uploads'), 'notas-fiscais');
+  const notas = db.prepare("SELECT id, xml_arquivo FROM notas_fiscais_email WHERE carga_origem IS NULL AND xml_arquivo IS NOT NULL").all();
+  const atualizar = db.prepare('UPDATE notas_fiscais_email SET carga_origem = ?, pedido_origem = ? WHERE id = ?');
+  let preenchidas = 0;
+  for (const nota of notas) {
+    let xml;
+    try {
+      xml = fs.readFileSync(path.join(pasta, path.basename(nota.xml_arquivo)), 'utf-8');
+    } catch {
+      continue;
+    }
+    const infCpl = (xml.match(/<infCpl>([\s\S]*?)<\/infCpl>/) || [])[1] || '';
+    const carga = (infCpl.match(/Carga:\s*(\d+)/i) || [])[1] || null;
+    const pedido = (infCpl.match(/Pedido:\s*(\d+)/i) || [])[1] || null;
+    if (!carga) continue;
+    atualizar.run(carga, pedido, nota.id);
+    preenchidas++;
+  }
+  if (preenchidas) console.log(`Patch: ${preenchidas} nota(s) fiscal(is) com numero da carga da fabrica preenchido a partir do XML.`);
+}
 
 // Padroniza data_emissao pra AAAA-MM-DD em linhas gravadas antes dessa
 // mudanca (podiam vir com hora/fuso do XML ou "dd/mm/aaaa" do PDF). Idempotente
@@ -116,6 +151,9 @@ export function aplicarPatches() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_entregas_grupo_id ON entregas(grupo_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_clientes_cnpj ON clientes(cnpj)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_notas_fiscais_email_status ON notas_fiscais_email(status)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_entregas_carga_origem_id ON entregas(carga_origem_id)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_notas_fiscais_email_carga_origem ON notas_fiscais_email(carga_origem)');
+  preencherCargaOrigemNotasExistentes();
   normalizarDatasEmissaoExistentes();
   removerMotoristasSemNome();
   corrigirClientesSemFormaDeDescarga();

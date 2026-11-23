@@ -342,6 +342,17 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     return e.local_coleta_cliente_nome || e.local_coleta || null;
   }
 
+  // Carga liberada pela fabrica (romaneio): numero + situacao. CANCELADA em vermelho.
+  function chipFabrica(e) {
+    if (!e.origem_numero) return '';
+    let texto = `fabrica ${e.origem_numero}`;
+    let cor = 'bg-slate-700/40 text-slate-300';
+    if (e.origem_status === 'cancelada') { texto += ' - CANCELADA PELA FABRICA'; cor = 'bg-red-900/40 text-red-300'; }
+    else if (e.data_coleta) { texto += ' - coletada'; cor = 'bg-emerald-900/40 text-emerald-300'; }
+    const cif = e.origem_cif ? ' <span class="rounded bg-violet-900/40 px-1 text-[10px] text-violet-300" title="Frete CIF: enviar XML do CT-e e DACTE para a fabrica">CIF</span>' : '';
+    return `<br><span class="rounded px-1 text-[10px] ${cor}" title="${escapeHtml(e.origem_motivo || '')}">${escapeHtml(texto)}</span>${cif}`;
+  }
+
   function badgeColeta(e) {
     const nome = nomeColeta(e);
     return nome ? `<br><span class="rounded bg-sky-900/40 px-1 text-[10px] text-sky-300">coleta: ${escapeHtml(nome)}</span>` : '';
@@ -355,7 +366,7 @@ export function criarModalDetalhesCarga({ isAdmin, onMudanca }) {
     return `
       <tr class="border-t border-painel-border transition-colors ${classeGrupo} ${classeIndentada}" data-id="${e.id}" data-remetente="${e.remetente_id || ''}" data-cliente="${e.cliente_id || ''}" data-cortesia="${e.is_cortesia ? '1' : '0'}" data-grupo="${e.grupo_id || ''}">
         <td class="${py}"><input type="checkbox" class="chk-linha" ${selecionadas.has(e.id) ? 'checked' : ''}></td>
-        <td class="${py}">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}${badgeColeta(e)}</td>
+        <td class="${py}">${escapeHtml(e.remetente_nome)}${agrupada ? ' <span class="rounded bg-amber-900/40 px-1 text-[10px] text-amber-300">grupo</span>' : ''}${badgeColeta(e)}${chipFabrica(e)}</td>
         <td class="${py}">${escapeHtml(e.razao_social)}${linkEditarCliente(e.cliente_id)}${perfilClienteLinha(e)}</td>
         <td class="${py}">${formatarContato(e.ddd, e.telefone)}</td>
         <td class="${py}">${escapeHtml(e.cidade)}-${escapeHtml(e.estado)}</td>

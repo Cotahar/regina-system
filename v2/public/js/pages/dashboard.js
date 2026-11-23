@@ -141,9 +141,29 @@ function renderizarColunas() {
   });
 }
 
+// Faixa de aviso: cargas da fabrica (romaneios) que precisam de atencao - prazo
+// de embarque vencendo/vencido, cancelada ja em uso, NF cancelada. Falha aqui
+// nunca atrapalha o Painel.
+async function carregarAlertaRomaneios() {
+  const faixa = document.getElementById('alerta-romaneios');
+  try {
+    const r = await apiGet('/api/romaneios/resumo');
+    const partes = [];
+    if (r.prazo_vencido) partes.push(`${r.prazo_vencido} com prazo de embarque vencido`);
+    if (r.prazo_vencendo) partes.push(`${r.prazo_vencendo} vencendo`);
+    const outros = r.atencao - r.prazo_vencido - r.prazo_vencendo;
+    if (outros > 0) partes.push(`${outros} com outro alerta (cancelamento, NF cancelada...)`);
+    faixa.textContent = partes.length ? `Romaneios da fabrica: ${partes.join(', ')}. Clique para ver.` : '';
+    faixa.classList.toggle('hidden', !partes.length);
+  } catch {
+    faixa.classList.add('hidden');
+  }
+}
+
 async function carregar() {
   cargas = await apiGet('/api/cargas');
   renderizarColunas();
+  carregarAlertaRomaneios();
 }
 
 document.querySelectorAll('.filtro-coluna').forEach((input) => {

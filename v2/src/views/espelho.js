@@ -1,12 +1,6 @@
 import { escapeHtml } from '../utils/html.js';
 import { formatarPesoServidor, formatarDataServidor } from '../utils/formatters.js';
 
-function contatoTexto(perfil) {
-  if (perfil.ddd && perfil.telefone) return `(${escapeHtml(perfil.ddd)}) ${escapeHtml(perfil.telefone)}`;
-  if (perfil.telefone) return escapeHtml(perfil.telefone);
-  return '-';
-}
-
 // Resumo compacto do perfil de atendimento do cliente (mesmas flags do
 // cadastro) - pensado pra quem vai carregar/descarregar saber de antemao se
 // precisa agendar, se tem ajudante no local, etc, sem precisar ligar pra
@@ -29,25 +23,22 @@ export function renderEspelhoCarga({ carga, entregasAgrupadas, coletasPorRemeten
     <tr>
       <td><strong>${escapeHtml(e.cliente)}</strong>${perfilLinha(e.perfil)}</td>
       <td>${escapeHtml(e.cidadeUf)}</td>
-      <td>${contatoTexto(e.perfil)}</td>
       <td class="num">${formatarPesoServidor(e.peso)}</td>
     </tr>
   `).join('');
 
-  // Nos blocos de coleta so interessa localizar a entrega (cliente/cidade/
-  // contato) - o perfil de atendimento (agendamento, descarga, obs) so
+  // Nos blocos de coleta so interessa localizar a entrega (cliente/cidade) - o perfil de atendimento (agendamento, descarga, obs) so
   // aparece na Lista de Entregas, pra nao duplicar a mesma informacao.
   const blocosColeta = coletasPorRemetente.map(([remetente, dados]) => `
     <div class="coleta">
       <h3>Coleta: ${escapeHtml(remetente)} <span class="peso-coleta">(${formatarPesoServidor(dados.totalPeso)})</span></h3>
       <table>
-        <thead><tr><th>Cliente</th><th>Cidade/UF</th><th>Contato</th><th class="num">Peso</th></tr></thead>
+        <thead><tr><th>Cliente</th><th>Cidade/UF</th><th class="num">Peso</th></tr></thead>
         <tbody>
           ${dados.entregas.map((e) => `
             <tr>
               <td><strong>${escapeHtml(e.cliente)}</strong></td>
               <td>${escapeHtml(e.cidadeUf)}</td>
-              <td>${contatoTexto(e.perfil)}</td>
               <td class="num">${formatarPesoServidor(e.peso)}</td>
             </tr>
           `).join('')}
@@ -128,7 +119,7 @@ export function renderEspelhoCarga({ carga, entregasAgrupadas, coletasPorRemeten
 
     <h2>Lista de Entregas: <span class="peso-total">(peso total: ${formatarPesoServidor(pesoTotal)})</span></h2>
     <table>
-      <thead><tr><th>Cliente</th><th>Cidade/UF</th><th>Contato</th><th class="num">Peso</th></tr></thead>
+      <thead><tr><th>Cliente</th><th>Cidade/UF</th><th class="num">Peso</th></tr></thead>
       <tbody>${linhasEntregas}</tbody>
     </table>
 

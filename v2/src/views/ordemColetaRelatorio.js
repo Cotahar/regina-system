@@ -1,6 +1,8 @@
 import { escapeHtml } from '../utils/html.js';
 import { formatarPesoServidor, formatarDataServidor } from '../utils/formatters.js';
 
+const SEPARADOR_LINHAS = '\n';
+
 // Relatorio pro motorista que vai fazer a coleta - agrupado por remetente
 // (fabrica), que e a informacao que importa pra saber onde parar. Mesmo
 // estilo visual do Espelho de Carga, pra manter consistencia entre os
@@ -18,11 +20,30 @@ export function renderOrdemColetaRelatorio({ ordem, entregas }) {
 
   const pesoTotal = entregas.reduce((acc, e) => acc + (e.peso_bruto || 0), 0);
 
+  // Regras que a fabrica exige na retirada (vem junto do romaneio) - o motorista
+  // precisa levar/cumprir, entao saem no relatorio dele.
+  const doOrigem = entregas.filter((e) => e.origem_numero);
+  let regrasFabrica = [];
+  let avisoCif = [];
+  for (const e of doOrigem) {
+    try {
+      const r = JSON.parse(e.origem_regras || '{}');
+      if (!regrasFabrica.length && r.regras?.length) regrasFabrica = r.regras;
+      if (e.origem_frete === 'CIF' && r.aviso_cif?.length) avisoCif = r.aviso_cif;
+    } catch { /* regras ilegiveis: o relatorio sai sem elas */ }
+  }
+  const blocoRegras = doOrigem.length ? `
+    <div class="obs-carga">
+      <div class="rotulo">Regras da fabrica para a retirada</div>
+      <div class="texto">${regrasFabrica.length ? regrasFabrica.map((r) => `- ${escapeHtml(r)}`).join(SEPARADOR_LINHAS) : '- Apresentar este documento (ou copia) na retirada.'}</div>
+      ${avisoCif.length ? `<div class="rotulo" style="margin-top:8px">Carga CIF - enviar no carregamento</div><div class="texto">${avisoCif.map(escapeHtml).join(SEPARADOR_LINHAS)}</div>` : ''}
+    </div>` : '';
+
   const blocos = [...grupos.values()].map((g) => `
     <div class="fabrica">
       <h3>${escapeHtml(g.nome)} ${g.cidadeUf ? `<span class="cidade-uf">(${escapeHtml(g.cidadeUf)})</span>` : ''} <span class="peso-fabrica">${formatarPesoServidor(g.peso)}</span></h3>
       <table>
-        <thead><tr><th>NF</th><th>Destinatario</th><th>Cidade/UF</th><th class="num">Peso</th><th>Carga de origem</th></tr></thead>
+        <thead><tr><th>NF</th><th>Destinatario</th><th>Cidade/UF</th><th class="num">Peso</th><th>Carga da fabrica</th><th>Origem</th></tr></thead>
         <tbody>
           ${g.itens.map((e) => `
             <tr>
@@ -30,6 +51,7 @@ export function renderOrdemColetaRelatorio({ ordem, entregas }) {
               <td><strong>${escapeHtml(e.cliente_razao_social || 'N/A')}</strong></td>
               <td>${escapeHtml([e.cidade_entrega || e.cliente_cidade, e.estado_entrega || e.cliente_estado].filter(Boolean).join(' - ') || '-')}</td>
               <td class="num">${formatarPesoServidor(e.peso_bruto)}</td>
+              <td>${e.origem_numero ? `<strong>${escapeHtml(e.origem_numero)}</strong>${e.origem_frete === 'CIF' ? ' (CIF)' : ''}${e.origem_status === 'cancelada' ? ' <strong>CANCELADA</strong>' : ''}` : '-'}</td>
               <td>${e.carga_codigo ? `${escapeHtml(e.carga_codigo)} (${escapeHtml(e.carga_status)})` : 'Disponivel (Montagem)'}</td>
             </tr>
           `).join('')}
@@ -106,6 +128,8 @@ export function renderOrdemColetaRelatorio({ ordem, entregas }) {
 
     <h2>Fabricas a visitar</h2>
     ${blocos}
+
+    ${blocoRegras}
 
     ${ordem.observacoes ? `<div class="obs-carga"><div class="rotulo">Observacoes</div><div class="texto">${escapeHtml(ordem.observacoes)}</div></div>` : ''}
   </div>

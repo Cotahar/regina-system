@@ -5,6 +5,7 @@ import { google } from 'googleapis';
 import { db } from '../db/connection.js';
 import { notificarMudanca } from './eventos.js';
 import { parseNFeXml, extrairTextoPdf, extractFromPdfText } from './nfe.service.js';
+import { registrarColetaPelaNota } from './coleta.service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsRoot = process.env.UPLOADS_DIR || path.join(__dirname, '..', '..', 'uploads');
@@ -61,7 +62,7 @@ async function salvarAnexo(gmail, messageId, part, prefixoArquivo) {
   return { buffer, nomeArquivo };
 }
 
-function inserirNota(gmailIdParaLinha, mensagem, campos, extractionSource, xmlArquivo, pdfArquivo) {
+export function inserirNota(gmailIdParaLinha, mensagem, campos, extractionSource, xmlArquivo, pdfArquivo) {
   const cnpjEmitente = normalizarCnpj(campos.cnpjEmitente);
   const cnpjDestinatario = normalizarCnpj(campos.cnpjDestinatario);
 
@@ -79,8 +80,8 @@ function inserirNota(gmailIdParaLinha, mensagem, campos, extractionSource, xmlAr
       cnpj_destinatario, nome_destinatario, cidade_destinatario, estado_destinatario,
       ddd_destinatario, telefone_destinatario, peso_bruto, valor_total, data_emissao,
       placa_veiculo, nome_motorista, remetente_id, cliente_id, xml_arquivo, pdf_arquivo,
-      status, precisa_revisao
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', ?)
+      status, precisa_revisao, carga_origem, pedido_origem
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', ?, ?, ?)
   `).run(
     gmailIdParaLinha,
     mensagem.threadId || null,
@@ -107,8 +108,19 @@ function inserirNota(gmailIdParaLinha, mensagem, campos, extractionSource, xmlAr
     clienteMatch ? clienteMatch.id : null,
     xmlArquivo,
     pdfArquivo,
-    extractionSource === 'pdf' ? 1 : 0
+    extractionSource === 'pdf' ? 1 : 0,
+    campos.cargaOrigem || null,
+    campos.pedidoOrigem || null
   );
+}
+
+// A NF-e da fabrica chega quando o caminhao esta carregando: se ela cita uma
+// carga liberada por romaneio ("Carga:" nas informacoes complementares), liga a
+// nota a entrega, registra a coleta e baixa a Ordem de Coleta se completou.
+// So devolve a ligacao (nunca lanca) - a nota ja foi gravada de qualquer jeito.
+export function ligarNotaAoRomaneio(gmailIdParaLinha) {
+  const nota = db.prepare('SELECT id FROM notas_fiscais_email WHERE gmail_message_id = ?').get(gmailIdParaLinha);
+  return nota ? registrarColetaPelaNota(nota.id) : { ligada: false };
 }
 
 // Um e-mail pode trazer mais de uma NF-e junto (comum quando a fabrica manda
@@ -152,7 +164,9 @@ async function processarMensagem(gmail, messageId) {
       pdfArquivo = (await salvarAnexo(gmail, messageId, anexosPdf[0], prefixo)).nomeArquivo;
     }
     const campos = parseNFeXml(buffer.toString('utf-8'));
-    inserirNota(proximoGmailId(), mensagem, campos, 'xml', nomeArquivo, pdfArquivo);
+    const gmailIdDaNota = proximoGmailId();
+    inserirNota(gmailIdDaNota, mensagem, campos, 'xml', nomeArquivo, pdfArquivo);
+    ligarNotaAoRomaneio(gmailIdDaNota);
   }
 
   if (!parPerfeito) {
@@ -161,7 +175,9 @@ async function processarMensagem(gmail, messageId) {
       const { buffer, nomeArquivo } = await salvarAnexo(gmail, messageId, anexoPdf, prefixo);
       const texto = await extrairTextoPdf(buffer);
       const campos = extractFromPdfText(texto);
-      inserirNota(proximoGmailId(), mensagem, campos, 'pdf', null, nomeArquivo);
+      const gmailIdDaNota = proximoGmailId();
+      inserirNota(gmailIdDaNota, mensagem, campos, 'pdf', null, nomeArquivo);
+      ligarNotaAoRomaneio(gmailIdDaNota);
     }
   }
 

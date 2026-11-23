@@ -18,6 +18,7 @@ import { renderUsuariosPage } from '../views/usuarios.js';
 import { renderNotasFiscaisPage } from '../views/notasFiscais.js';
 import { renderOrdensColetaPage } from '../views/ordensColeta.js';
 import { renderOrcamentosPage } from '../views/orcamentos.js';
+import { renderRomaneiosPage } from '../views/romaneios.js';
 
 export const pagesRouter = Router();
 
@@ -105,6 +106,16 @@ pagesRouter.get('/ordens-coleta.html', requireLogin, (req, res) => {
     user: req.session,
     bodyHtml: renderOrdensColetaPage(),
     extraScripts: '<script type="module" src="/js/pages/ordens-coleta.js"></script>'
+  }));
+});
+
+pagesRouter.get('/romaneios.html', requireLogin, (req, res) => {
+  res.type('html').send(renderLayout({
+    title: 'Romaneios',
+    activeHref: '/romaneios.html',
+    user: req.session,
+    bodyHtml: renderRomaneiosPage(),
+    extraScripts: '<script type="module" src="/js/pages/romaneios.js"></script>'
   }));
 });
 

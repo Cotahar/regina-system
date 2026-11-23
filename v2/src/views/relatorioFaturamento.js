@@ -9,6 +9,30 @@ function nfComQuebra(notaFiscal) {
     .join('<br>');
 }
 
+// Mesma regra do Gerenciar Faturamento: o frete e cobrado pelo maior entre o
+// peso bruto e o cubado.
+function pesoConsiderado(e) {
+  if (e.peso_considerado != null) return e.peso_considerado;
+  const peso = e.peso_bruto || 0;
+  const cubado = e.peso_cubado || 0;
+  return cubado > peso ? cubado : peso;
+}
+
+// Valor por tonelada da linha: o informado no faturamento; quando nao foi
+// preenchido (ou a linha agrupa notas com valores diferentes), deriva do frete
+// cobrado. Cortesia e linhas sem peso/frete ficam sem valor.
+function valorPorTonelada(e) {
+  if (e.is_cortesia) return null;
+  if (e.valor_tonelada) return e.valor_tonelada;
+  const peso = pesoConsiderado(e);
+  return peso > 0 && e.valor_frete > 0 ? e.valor_frete / (peso / 1000) : null;
+}
+
+function celulaValorTonelada(e) {
+  const valor = valorPorTonelada(e);
+  return valor == null ? '-' : formatarMoedaServidor(valor);
+}
+
 // Entregas com o mesmo grupo_id saem em uma unica linha (mesmo CT-e): NFs
 // concatenadas, peso e frete somados - espelha o merge feito no Gerenciar
 // Faturamento.
@@ -26,11 +50,16 @@ function agruparEntregasPorGrupo(entregas) {
     if (jaProcessado.has(e.id)) return;
     const membros = e.grupo_id ? gruposMap.get(e.grupo_id) : null;
     if (membros && membros.length > 1) {
+      // Valor/ton do grupo: so mantem o valor cadastrado se todas as notas tem o
+      // mesmo; senao cai no calculo pela soma (frete / peso considerado).
+      const tonelagens = new Set(membros.map((m) => m.valor_tonelada || 0));
       resultado.push({
         ...membros[0],
         nota_fiscal: membros.map((m) => m.nota_fiscal).filter(Boolean).join(' / '),
         peso_bruto: membros.reduce((acc, m) => acc + (m.peso_bruto || 0), 0),
-        valor_frete: membros.reduce((acc, m) => acc + (m.valor_frete || 0), 0)
+        peso_considerado: membros.reduce((acc, m) => acc + pesoConsiderado(m), 0),
+        valor_frete: membros.reduce((acc, m) => acc + (m.valor_frete || 0), 0),
+        valor_tonelada: tonelagens.size === 1 ? membros[0].valor_tonelada : null
       });
       membros.forEach((m) => jaProcessado.add(m.id));
     } else {
@@ -43,11 +72,17 @@ function agruparEntregasPorGrupo(entregas) {
 
 export function renderRelatorioFaturamento({ carga, entregas, destinoPrincipal }) {
   let pesoTotal = 0;
+  let pesoConsideradoTotal = 0;
   let freteTotal = 0;
+  let freteTotalPago = 0; // media por tonelada: so entram linhas com frete (fora cortesia e linhas ainda sem valor)
 
   const linhas = agruparEntregasPorGrupo(entregas).map((e) => {
     pesoTotal += e.peso_bruto || 0;
     freteTotal += e.valor_frete || 0;
+    if (!e.is_cortesia && e.valor_frete > 0) {
+      pesoConsideradoTotal += pesoConsiderado(e);
+      freteTotalPago += e.valor_frete;
+    }
     return `
       <tr>
         <td>${escapeHtml(e.remetente_razao_social || 'N/A')}</td>
@@ -56,6 +91,7 @@ export function renderRelatorioFaturamento({ carga, entregas, destinoPrincipal }
         <td>${escapeHtml(e.tipo_cte_descricao || '')}</td>
         <td>${nfComQuebra(e.nota_fiscal)}</td>
         <td class="num">${formatarPesoServidor(e.peso_bruto)}</td>
+        <td class="num">${celulaValorTonelada(e)}</td>
         <td class="num">${e.is_cortesia ? '<span class="badge badge-cortesia">CORTESIA</span>' : formatarMoedaServidor(e.valor_frete)}</td>
         <td>${escapeHtml(e.forma_pagamento_descricao || '')}</td>
         <td>${escapeHtml(e.tipo_pagamento || '')}</td>
@@ -138,7 +174,7 @@ export function renderRelatorioFaturamento({ carga, entregas, destinoPrincipal }
       <thead>
         <tr>
           <th>Remetente</th><th>Destinatario</th><th>Unidade</th><th>Tipo CT-e</th><th>NF</th>
-          <th class="num">Peso</th><th class="num">Frete</th><th>Forma Pgto</th><th>Tipo Pgto</th>
+          <th class="num">Peso</th><th class="num">Valor/Ton</th><th class="num">Frete</th><th>Forma Pgto</th><th>Tipo Pgto</th>
         </tr>
       </thead>
       <tbody>${linhas}</tbody>
@@ -146,6 +182,7 @@ export function renderRelatorioFaturamento({ carga, entregas, destinoPrincipal }
         <tr>
           <td colspan="5" class="rotulo-total">Totais:</td>
           <td class="num">${formatarPesoServidor(pesoTotal)}</td>
+          <td class="num" title="Media: frete cobrado / toneladas">${pesoConsideradoTotal > 0 && freteTotalPago > 0 ? formatarMoedaServidor(freteTotalPago / (pesoConsideradoTotal / 1000)) : '-'}</td>
           <td class="num">${formatarMoedaServidor(freteTotal)}</td>
           <td colspan="2"></td>
         </tr>

@@ -1,6 +1,6 @@
 import { apiGet, apiPost, apiPut, apiDelete } from '../shared/api.js';
 import { escapeHtml } from '../shared/escape.js';
-import { formatarPeso } from '../shared/format.js';
+import { formatarPeso, getHojeFormatado } from '../shared/format.js';
 import { exibirMensagem, abrirModal, fecharModal } from '../shared/ui.js';
 import { criarCombobox } from '../shared/combobox.js';
 import { ouvirMudancas } from '../shared/live.js';
@@ -38,6 +38,33 @@ criarCombobox({
   getItens: () => clientes
 });
 
+// "2/3" coletadas = chegou a NF-e de 2 das 3 entregas da ordem. Quando todas
+// chegam, a ordem e baixada sozinha (so se for uma fabrica so); senao fica
+// pendente pra baixa manual.
+function celulaColetadas(o) {
+  if (!o.num_entregas) return '-';
+  const cor = o.coletadas === o.num_entregas ? 'text-emerald-300' : (o.coletadas ? 'text-amber-300' : 'text-slate-400');
+  const cancelada = o.canceladas ? ` <span class="rounded bg-red-900/40 px-1 text-[10px] text-red-300" title="Entrega(s) desta ordem foram canceladas pela fabrica">${o.canceladas} cancelada(s)</span>` : '';
+  return `<span class="${cor}">${o.coletadas}/${o.num_entregas}</span>${cancelada}`;
+}
+
+// Selo da carga liberada pela fabrica (numero, CIF, prazo, cancelada).
+function chipFabrica(e) {
+  if (!e.origem_numero) return '<span class="text-slate-500">-</span>';
+  let texto = e.origem_numero;
+  let cor = 'bg-slate-700/40 text-slate-300';
+  if (e.origem_status === 'cancelada') { texto += ' - CANCELADA'; cor = 'bg-red-900/40 text-red-300'; }
+  else if (e.data_coleta || e.origem_status === 'coletada') { texto += ' - coletada'; cor = 'bg-emerald-900/40 text-emerald-300'; }
+  else if (e.origem_prazo_limite) {
+    const dias = Math.round((Date.parse(`${e.origem_prazo_limite}T00:00:00Z`) - Date.parse(`${getHojeFormatado()}T00:00:00Z`)) / 86400000);
+    if (dias < 0) { texto += ` - prazo vencido ha ${-dias}d`; cor = 'bg-red-900/40 text-red-300'; }
+    else if (dias <= 2) { texto += ` - prazo ${dias}d`; cor = 'bg-amber-900/40 text-amber-300'; }
+    else { texto += ` - prazo ${dias}d`; cor = 'bg-sky-900/40 text-sky-300'; }
+  }
+  const cif = e.origem_cif ? ' <span class="rounded bg-violet-900/40 px-1 text-[10px] text-violet-300">CIF</span>' : '';
+  return `<span class="rounded px-1.5 py-0.5 text-[10px] ${cor}">${escapeHtml(texto)}</span>${cif}`;
+}
+
 function linhaOrdem(o) {
   const podeEditar = o.status === 'pendente';
   return `
@@ -46,6 +73,7 @@ function linhaOrdem(o) {
       <td class="py-1.5 px-1.5"><span class="rounded px-1.5 py-0.5 text-[10px] ${STATUS_COR[o.status] || ''}">${STATUS_LABEL[o.status] || o.status}</span></td>
       <td class="py-1.5 px-1.5">${escapeHtml(o.motorista_nome || 'N/A')}${o.placa_veiculo ? ' - ' + escapeHtml(o.placa_veiculo) : ''}</td>
       <td class="py-1.5 px-1.5">${o.num_entregas}</td>
+      <td class="py-1.5 px-1.5">${celulaColetadas(o)}</td>
       <td class="py-1.5 px-1.5">${formatarPeso(o.peso_total)}</td>
       <td class="py-1.5 px-1.5">${o.local_coleta_cliente_nome ? escapeHtml(o.local_coleta_cliente_nome) : '-'}</td>
       <td class="py-1.5 px-1.5 text-right space-x-2">
@@ -60,7 +88,7 @@ function linhaOrdem(o) {
 
 function renderizarTabelaOrdens() {
   tabelaOrdens.innerHTML = ordens.map(linhaOrdem).join('') ||
-    '<tr><td colspan="7" class="py-4 text-center text-slate-400">Nenhuma ordem de coleta ainda.</td></tr>';
+    '<tr><td colspan="8" class="py-4 text-center text-slate-400">Nenhuma ordem de coleta ainda.</td></tr>';
 
   tabelaOrdens.querySelectorAll('tr[data-id]').forEach((tr) => {
     const id = Number(tr.dataset.id);
@@ -95,9 +123,10 @@ function renderizarTabelaEntregas() {
       <td class="py-1.5">${escapeHtml(e.cidade_entrega || '')}-${escapeHtml(e.estado_entrega || '')}</td>
       <td class="py-1.5">${escapeHtml(e.nota_fiscal || '')}</td>
       <td class="py-1.5">${formatarPeso(e.peso_bruto)}</td>
+      <td class="py-1.5">${chipFabrica(e)}</td>
       <td class="py-1.5"><span class="rounded bg-painel-border px-1.5 py-0.5 text-[10px] text-slate-300">${escapeHtml(e.origem_texto)}</span></td>
     </tr>
-  `).join('') || '<tr><td colspan="7" class="py-3 text-center text-slate-400">Nenhuma entrega elegivel para coleta.</td></tr>';
+  `).join('') || '<tr><td colspan="8" class="py-3 text-center text-slate-400">Nenhuma entrega elegivel para coleta.</td></tr>';
 
   tabelaEntregas.querySelectorAll('tr[data-id]').forEach((tr) => {
     const id = Number(tr.dataset.id);

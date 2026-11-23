@@ -22,7 +22,9 @@ const CAMPOS_VAZIOS = {
   valorTotal: null,
   dataEmissao: null,
   placaVeiculo: null,
-  nomeMotorista: null
+  nomeMotorista: null,
+  cargaOrigem: null,
+  pedidoOrigem: null
 };
 
 function numeroOuNulo(valor) {
@@ -73,6 +75,17 @@ function extrairPlacaDeTexto(texto) {
   if (!texto) return null;
   const m = texto.match(/\b[A-Z]{3}[-\s]?\d[A-Z0-9]\d{2}\b/);
   return m ? m[0].replace(/[-\s]/g, '').toUpperCase() : null;
+}
+
+// A fabrica escreve nas informacoes complementares algo como
+// "#Pedido:5948797. Carga:691938." - a carga e a mesma do romaneio (e-mail
+// "NOTIF TRANSPORTADOR"), entao liga a nota a carga liberada.
+export function extrairCargaPedido(texto) {
+  const t = String(texto || '');
+  return {
+    cargaOrigem: (t.match(/\bCarga:\s*(\d+)/i) || [])[1] || null,
+    pedidoOrigem: (t.match(/\bPedido:\s*(\d+)/i) || [])[1] || null
+  };
 }
 
 // Extrai os dados da NF-e a partir do XML (schema padrao da Receita). Aceita
@@ -144,7 +157,8 @@ export function parseNFeXml(xmlText) {
     valorTotal,
     dataEmissao,
     placaVeiculo,
-    nomeMotorista
+    nomeMotorista,
+    ...extrairCargaPedido(infNFe?.infAdic?.infCpl)
   };
 }
 
@@ -197,6 +211,7 @@ export function extractFromPdfText(texto) {
     valorTotal: valorMatch ? decimalPtBr(valorMatch[1]) : null,
     dataEmissao: dataMatch ? normalizarData(dataMatch[1]) : null,
     placaVeiculo: extrairPlacaDeTexto(texto),
-    nomeMotorista: extrairMotoristaDeTexto(texto)
+    nomeMotorista: extrairMotoristaDeTexto(texto),
+    ...extrairCargaPedido(texto)
   };
 }

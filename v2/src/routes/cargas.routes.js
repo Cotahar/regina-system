@@ -149,11 +149,14 @@ cargasRouter.get('/api/cargas/:id', requireLogin, (req, res) => {
       cl.precisa_ajudantes as cliente_precisa_ajudantes, cl.descarga_paga_direto as cliente_descarga_paga_direto,
       cl.resolve_com_representante as cliente_resolve_com_representante, cl.contato_extra as cliente_contato_extra,
       rem.razao_social as remetente_razao_social, rem.cidade as remetente_cidade, rem.estado as remetente_estado,
-      lc.razao_social as local_coleta_cliente_nome
+      lc.razao_social as local_coleta_cliente_nome,
+      co.numero_carga as origem_numero, co.status as origem_status, co.modalidade_frete as origem_frete,
+      co.prazo_limite as origem_prazo_limite, co.motivo_cancelamento as origem_motivo
     FROM entregas e
     LEFT JOIN clientes cl ON cl.id = e.cliente_id
     LEFT JOIN clientes rem ON rem.id = e.remetente_id
     LEFT JOIN clientes lc ON lc.id = e.local_coleta_cliente_id
+    LEFT JOIN cargas_origem co ON co.id = e.carga_origem_id
     WHERE e.carga_id = ?
     ORDER BY e.id
   `).all(req.params.id);
@@ -204,7 +207,13 @@ cargasRouter.get('/api/cargas/:id', requireLogin, (req, res) => {
     local_coleta_cliente_nome: e.local_coleta_cliente_nome,
     valor_combinado: e.valor_combinado,
     repasse_destinatario: e.repasse_destinatario,
-    data_agendamento_descarga: e.data_agendamento_descarga
+    data_agendamento_descarga: e.data_agendamento_descarga,
+    origem_numero: e.origem_numero,
+    origem_status: e.origem_status,
+    origem_cif: e.origem_frete === 'CIF',
+    origem_prazo_limite: e.origem_prazo_limite,
+    origem_motivo: e.origem_motivo,
+    data_coleta: e.data_coleta
   }));
 
   res.json({ detalhes_carga: detalhesCarga, entregas: entregasData });
@@ -437,7 +446,7 @@ cargasRouter.get('/cargas/:id/espelho_impressao', requireLogin, (req, res) => {
 
   const entregas = db.prepare(`
     SELECT e.*, cl.razao_social as cliente_razao_social, cl.cidade as cliente_cidade, cl.estado as cliente_estado,
-      cl.ddd as cliente_ddd, cl.telefone as cliente_telefone, cl.observacoes as cliente_observacoes,
+      cl.observacoes as cliente_observacoes,
       cl.precisa_agendamento as cliente_precisa_agendamento, cl.autodescarga as cliente_autodescarga,
       cl.precisa_ajudantes as cliente_precisa_ajudantes, cl.descarga_paga_direto as cliente_descarga_paga_direto,
       cl.resolve_com_representante as cliente_resolve_com_representante, cl.contato_extra as cliente_contato_extra,
@@ -452,8 +461,6 @@ cargasRouter.get('/cargas/:id/espelho_impressao', requireLogin, (req, res) => {
 
   function perfilCliente(e) {
     return {
-      ddd: e.cliente_ddd || '',
-      telefone: e.cliente_telefone || '',
       observacoes: e.cliente_observacoes || '',
       precisaAgendamento: !!e.cliente_precisa_agendamento,
       autodescarga: !!e.cliente_autodescarga,
