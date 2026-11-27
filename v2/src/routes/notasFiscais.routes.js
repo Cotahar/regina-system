@@ -2,17 +2,17 @@ import { Router } from 'express';
 import { db } from '../db/connection.js';
 import { requireLogin } from '../middleware/auth.js';
 import { renderNotaFiscalPdf } from '../views/notaFiscalPdf.js';
+import { enviarPdfDaNota } from '../services/notaPdf.service.js';
 
 export const notasFiscaisRouter = Router();
 
-// Visualizacao "PDF" gerada a partir do XML, pra notas que chegaram sem o
-// PDF/DANFE em anexo - so os dados que ja temos extraidos, num layout
-// imprimivel (o proprio navegador salva como PDF via Ctrl+P / botao
-// Imprimir), sem precisar de nenhuma lib nova de geracao de PDF.
-notasFiscaisRouter.get('/notas-fiscais/:id/visualizar-pdf', requireLogin, (req, res) => {
+// PDF da nota: a DANFE original quando veio no e-mail; senao a DANFE gerada do
+// XML. Sem nenhum dos dois, o resumo em pagina com os dados ja extraidos.
+notasFiscaisRouter.get('/notas-fiscais/:id/visualizar-pdf', requireLogin, async (req, res) => {
   const nota = db.prepare('SELECT * FROM notas_fiscais_email WHERE id = ?').get(req.params.id);
   if (!nota) return res.status(404).send('Nota fiscal nao encontrada');
-  res.type('html').send(renderNotaFiscalPdf({ nota }));
+  if (await enviarPdfDaNota(res, nota)) return undefined;
+  return res.type('html').send(renderNotaFiscalPdf({ nota }));
 });
 
 notasFiscaisRouter.get('/api/notas-fiscais', requireLogin, (req, res) => {
@@ -28,15 +28,18 @@ notasFiscaisRouter.get('/api/notas-fiscais', requireLogin, (req, res) => {
   if (status) {
     sql += ' AND n.status = ?';
     params.push(status);
+  } else {
+    // o que nao e NF-e so aparece quando o filtro pede os descartados
+    sql += " AND n.status != 'descartada'";
   }
   if (origem) {
     sql += ' AND n.extraction_source = ?';
     params.push(origem);
   }
   if (q) {
-    sql += ' AND (n.numero_nf LIKE ? OR n.cnpj_emitente LIKE ? OR n.cnpj_destinatario LIKE ? OR n.nome_emitente LIKE ? OR n.nome_destinatario LIKE ?)';
+    sql += ' AND (n.numero_nf LIKE ? OR n.cnpj_emitente LIKE ? OR n.cnpj_destinatario LIKE ? OR n.nome_emitente LIKE ? OR n.nome_destinatario LIKE ? OR n.assunto LIKE ?)';
     const termo = `%${q}%`;
-    params.push(termo, termo, termo, termo, termo);
+    params.push(termo, termo, termo, termo, termo, termo);
   }
   sql += ' ORDER BY n.criado_em DESC';
 
@@ -106,6 +109,7 @@ notasFiscaisRouter.put('/api/notas-fiscais/vincular', requireLogin, (req, res) =
       const nota = db.prepare('SELECT * FROM notas_fiscais_email WHERE id = ?').get(notaId);
       const entrega = db.prepare('SELECT id, cliente_id FROM entregas WHERE id = ?').get(entregaId);
       if (!nota || !entrega) throw new Error(`Nota ou entrega nao encontrada (nota ${notaId}, entrega ${entregaId}).`);
+      if (nota.status === 'descartada') throw new Error('Arquivo descartado nao e nota fiscal - restaure antes de vincular.');
 
       if (sobrescreverPeso && nota.peso_bruto !== null) {
         db.prepare('UPDATE entregas SET nota_fiscal = ?, peso_bruto = ? WHERE id = ?')
@@ -146,7 +150,7 @@ notasFiscaisRouter.post('/api/notas-fiscais/criar-disponivel', requireLogin, (re
       nota_fiscal_email_id: notaId, cliente_id_override: clienteIdOverride, remetente_id_override: remetenteIdOverride
     } of itens) {
       const nota = db.prepare('SELECT * FROM notas_fiscais_email WHERE id = ?').get(notaId);
-      if (!nota) {
+      if (!nota || nota.status === 'descartada') {
         ignoradas.push({ id: notaId, motivo: 'Nota nao encontrada.' });
         continue;
       }
@@ -189,6 +193,17 @@ notasFiscaisRouter.post('/api/notas-fiscais/criar-disponivel', requireLogin, (re
     ignoradas,
     sugestoes_complemento: [...sugestoesMap.values()]
   });
+});
+
+// Volta pra lista um arquivo que o filtro descartou (ex.: DANFE escaneada).
+notasFiscaisRouter.put('/api/notas-fiscais/restaurar', requireLogin, (req, res) => {
+  const { nota_fiscal_email_ids: ids } = req.body || {};
+  if (!Array.isArray(ids) || !ids.length) {
+    return res.status(400).json({ error: 'Nenhuma nota selecionada.' });
+  }
+  const placeholders = ids.map(() => '?').join(',');
+  const info = db.prepare(`UPDATE notas_fiscais_email SET status = 'pendente', motivo_descarte = NULL, classificada = 1, precisa_revisao = 1 WHERE status = 'descartada' AND id IN (${placeholders})`).run(...ids);
+  res.json({ message: `${info.changes} arquivo(s) restaurado(s) para a lista.` });
 });
 
 notasFiscaisRouter.put('/api/notas-fiscais/ignorar', requireLogin, (req, res) => {

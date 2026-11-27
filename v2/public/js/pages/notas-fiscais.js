@@ -17,13 +17,15 @@ const STATUS_LABEL = {
   pendente: 'Pendente',
   vinculada: 'Vinculada',
   entrega_criada: 'Entrega Criada',
-  ignorada: 'Ignorada'
+  ignorada: 'Ignorada',
+  descartada: 'Descartado'
 };
 const STATUS_COR = {
   pendente: 'bg-amber-900/40 text-amber-300',
   vinculada: 'bg-blue-900/40 text-blue-300',
   entrega_criada: 'bg-emerald-900/40 text-emerald-300',
-  ignorada: 'bg-slate-700/40 text-slate-400'
+  ignorada: 'bg-slate-700/40 text-slate-400',
+  descartada: 'bg-slate-700/40 text-slate-400'
 };
 
 function formatarCnpj(cnpj) {
@@ -40,7 +42,26 @@ function celulaParte(nomeCadastro, cnpj, nomeXml) {
   return `${escapeHtml(nome)}${badge}<br><span class="text-slate-500">${escapeHtml(formatarCnpj(cnpj))}</span>`;
 }
 
+// Descartado nao tem dados de nota: mostra o motivo e de que e-mail veio.
+function linhaDescartada(n) {
+  const arquivo = n.pdf_url || n.xml_url;
+  return `
+    <tr class="border-t border-painel-border" data-id="${n.id}">
+      <td class="py-1.5 px-1.5"><input type="checkbox" class="nf-chk-linha" ${selecionadas.has(n.id) ? 'checked' : ''}></td>
+      <td class="py-1.5 px-1.5" colspan="6">
+        <span class="text-amber-300">${escapeHtml(n.motivo_descarte || 'Nao e NF-e')}</span><br>
+        <span class="text-slate-500">${escapeHtml(n.assunto || 'sem assunto')}</span>
+      </td>
+      <td class="py-1.5 px-1.5" colspan="2">Recebido em ${n.data_recebimento ? formatarData(n.data_recebimento.slice(0, 10)) : '-'}</td>
+      <td class="py-1.5 px-1.5"><span class="rounded bg-painel-border px-1.5 py-0.5 text-[10px] uppercase text-slate-300">${escapeHtml(n.extraction_source)}</span></td>
+      <td class="py-1.5 px-1.5"><span class="rounded px-1.5 py-0.5 text-[10px] ${STATUS_COR.descartada}">${STATUS_LABEL.descartada}</span></td>
+      <td class="py-1.5 px-1.5 text-right">${arquivo ? `<a href="${encodeURI(arquivo)}" target="_blank" rel="noopener" class="text-brand-yellow hover:underline">Abrir arquivo</a>` : ''}</td>
+    </tr>
+  `;
+}
+
 function linhaTabela(n) {
+  if (n.status === 'descartada') return linhaDescartada(n);
   return `
     <tr class="border-t border-painel-border" data-id="${n.id}">
       <td class="py-1.5 px-1.5"><input type="checkbox" class="nf-chk-linha" ${selecionadas.has(n.id) ? 'checked' : ''}></td>
@@ -61,7 +82,7 @@ function linhaTabela(n) {
         ${n.xml_url ? `<a href="${n.xml_url}" target="_blank" class="text-brand-yellow hover:underline">XML</a>` : ''}
         ${n.xml_url && n.pdf_url ? ' · ' : ''}
         ${n.pdf_url ? `<a href="${n.pdf_url}" target="_blank" class="text-brand-yellow hover:underline">PDF</a>` : ''}
-        ${n.xml_url && !n.pdf_url ? ` · <a href="/notas-fiscais/${n.id}/visualizar-pdf" target="_blank" class="text-brand-yellow hover:underline" title="Gerado a partir dos dados do XML - nao e o DANFE oficial">Ver PDF</a>` : ''}
+        ${n.xml_url && !n.pdf_url ? ` · <a href="/notas-fiscais/${n.id}/visualizar-pdf" target="_blank" class="text-brand-yellow hover:underline" title="DANFE gerada a partir do XML">Ver PDF</a>` : ''}
       </td>
     </tr>
   `;
@@ -85,6 +106,10 @@ function renderizarTabela() {
 function atualizarAcoesMassa() {
   acoesMassa.classList.toggle('hidden', selecionadas.size === 0);
   acoesMassa.classList.toggle('flex', selecionadas.size > 0);
+  // nos descartados so cabe restaurar
+  const descartados = document.getElementById('nf-filtro-status').value === 'descartada';
+  ['btn-nf-vincular', 'btn-nf-criar-disponivel', 'btn-nf-ignorar'].forEach((id) => document.getElementById(id).classList.toggle('hidden', descartados));
+  document.getElementById('btn-nf-restaurar').classList.toggle('hidden', !descartados);
 }
 
 async function carregar() {
@@ -103,7 +128,7 @@ async function carregar() {
 }
 
 document.getElementById('nf-busca').addEventListener('input', carregar);
-document.getElementById('nf-filtro-status').addEventListener('change', carregar);
+document.getElementById('nf-filtro-status').addEventListener('change', () => { selecionadas.clear(); carregar(); });
 document.getElementById('nf-filtro-origem').addEventListener('change', carregar);
 
 document.getElementById('nf-chk-todas').addEventListener('change', (e) => {
@@ -118,6 +143,17 @@ document.getElementById('btn-nf-ignorar').addEventListener('click', async () => 
     selecionadas.clear();
     await carregar();
     exibirMensagem(msg, 'Notas ignoradas.', 'sucesso');
+  } catch (err) {
+    exibirMensagem(msg, err.message, 'erro');
+  }
+});
+
+document.getElementById('btn-nf-restaurar').addEventListener('click', async () => {
+  try {
+    const resp = await apiPut('/api/notas-fiscais/restaurar', { nota_fiscal_email_ids: [...selecionadas] });
+    selecionadas.clear();
+    await carregar();
+    exibirMensagem(msg, resp.message, 'sucesso');
   } catch (err) {
     exibirMensagem(msg, err.message, 'erro');
   }

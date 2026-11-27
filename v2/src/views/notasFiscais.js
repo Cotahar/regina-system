@@ -13,6 +13,7 @@ export function renderNotasFiscaisPage() {
           <option value="vinculada">Vinculada</option>
           <option value="entrega_criada">Entrega Criada</option>
           <option value="ignorada">Ignorada</option>
+          <option value="descartada">Descartados</option>
         </select>
         <select id="nf-filtro-origem" class="input-field w-40">
           <option value="">Origem (todas)</option>
@@ -25,6 +26,7 @@ export function renderNotasFiscaisPage() {
         <button type="button" id="btn-nf-vincular" class="btn-primary btn-sm">Vincular a uma carga</button>
         <button type="button" id="btn-nf-criar-disponivel" class="btn-success btn-sm">Criar entrega(s) disponivel(is)</button>
         <button type="button" id="btn-nf-ignorar" class="btn-danger btn-sm">Ignorar</button>
+        <button type="button" id="btn-nf-restaurar" class="btn-primary btn-sm hidden">Restaurar para a lista</button>
       </div>
 
       <div class="overflow-x-auto">

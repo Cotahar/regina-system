@@ -28,6 +28,7 @@ import { romaneiosRouter } from './routes/romaneios.routes.js';
 import { registrarClienteSSE, removerClienteSSE } from './services/eventos.js';
 import { iniciarPollingGmail } from './services/gmailImport.service.js';
 import { iniciarPollingRomaneios } from './services/romaneioImport.service.js';
+import { reclassificarPendentes } from './services/filtroNotas.service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -104,4 +105,8 @@ app.listen(PORT, () => {
   console.log(`Frottex - B. Nunes (v2) rodando em http://localhost:${PORT}`);
   iniciarPollingGmail();
   iniciarPollingRomaneios();
+  // aplica o filtro de "so NF-e" no que ja estava na lista (cada linha uma unica vez)
+  reclassificarPendentes()
+    .then((r) => { if (r.analisadas) console.log('[notas-fiscais] filtro aplicado na lista existente: ' + r.analisadas + ' analisada(s), ' + r.descartadas + ' descartada(s).'); })
+    .catch((err) => console.error('[notas-fiscais] erro aplicando o filtro na lista existente:', err.message));
 });

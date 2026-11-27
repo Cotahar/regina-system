@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { google } from 'googleapis';
 import { db } from '../db/connection.js';
 import { notificarMudanca } from './eventos.js';
-import { parseNFeXml, extrairTextoPdf, extractFromPdfText } from './nfe.service.js';
+import { parseNFeXml, extractFromPdfText } from './nfe.service.js';
+import { classificarXml, classificarPdf, notaComChave, PDF_SEM_TEXTO } from './filtroNotas.service.js';
 import { registrarColetaPelaNota } from './coleta.service.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -50,19 +51,23 @@ function sanitizarNomeArquivo(nome) {
   return (nome || 'arquivo').replace(/[^a-zA-Z0-9._-]/g, '_');
 }
 
-async function salvarAnexo(gmail, messageId, part, prefixoArquivo) {
+async function baixarAnexo(gmail, messageId, part) {
   const resp = await gmail.users.messages.attachments.get({
     userId: 'me',
     messageId,
     id: part.body.attachmentId
   });
-  const buffer = Buffer.from(resp.data.data, 'base64url');
-  const nomeArquivo = `${prefixoArquivo}_${sanitizarNomeArquivo(part.filename)}`;
-  fs.writeFileSync(path.join(uploadsDir, nomeArquivo), buffer);
-  return { buffer, nomeArquivo };
+  return Buffer.from(resp.data.data, 'base64url');
 }
 
-export function inserirNota(gmailIdParaLinha, mensagem, campos, extractionSource, xmlArquivo, pdfArquivo) {
+function gravarAnexo(anexo, prefixoArquivo) {
+  const nomeArquivo = `${prefixoArquivo}_${sanitizarNomeArquivo(anexo.part.filename)}`;
+  fs.writeFileSync(path.join(uploadsDir, nomeArquivo), anexo.buffer);
+  return nomeArquivo;
+}
+
+// descarte: motivo de nao ser uma NF-e (a linha fica escondida na lista).
+export function inserirNota(gmailIdParaLinha, mensagem, campos, extractionSource, xmlArquivo, pdfArquivo, { descarte = null } = {}) {
   const cnpjEmitente = normalizarCnpj(campos.cnpjEmitente);
   const cnpjDestinatario = normalizarCnpj(campos.cnpjDestinatario);
 
@@ -80,8 +85,8 @@ export function inserirNota(gmailIdParaLinha, mensagem, campos, extractionSource
       cnpj_destinatario, nome_destinatario, cidade_destinatario, estado_destinatario,
       ddd_destinatario, telefone_destinatario, peso_bruto, valor_total, data_emissao,
       placa_veiculo, nome_motorista, remetente_id, cliente_id, xml_arquivo, pdf_arquivo,
-      status, precisa_revisao, carga_origem, pedido_origem
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pendente', ?, ?, ?)
+      status, precisa_revisao, carga_origem, pedido_origem, motivo_descarte, classificada
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
   `).run(
     gmailIdParaLinha,
     mensagem.threadId || null,
@@ -108,9 +113,11 @@ export function inserirNota(gmailIdParaLinha, mensagem, campos, extractionSource
     clienteMatch ? clienteMatch.id : null,
     xmlArquivo,
     pdfArquivo,
-    extractionSource === 'pdf' ? 1 : 0,
+    descarte ? 'descartada' : 'pendente',
+    extractionSource === 'pdf' && !descarte ? 1 : 0,
     campos.cargaOrigem || null,
-    campos.pedidoOrigem || null
+    campos.pedidoOrigem || null,
+    descarte
   );
 }
 
@@ -123,66 +130,118 @@ export function ligarNotaAoRomaneio(gmailIdParaLinha) {
   return nota ? registrarColetaPelaNota(nota.id) : { ligada: false };
 }
 
-// Um e-mail pode trazer mais de uma NF-e junto (comum quando a fabrica manda
-// varias notas no mesmo lote) - cada XML vira sua propria nota, pra nao
-// perder as extras. So pareia um PDF (DANFE) de bonus na mesma linha do XML
-// quando a correspondencia e inequivoca (exatamente 1 de cada no e-mail);
-// fora desse caso cada PDF tambem vira sua propria nota (fallback), em vez
-// de ser descartado silenciosamente.
-async function processarMensagem(gmail, messageId) {
+// So NF-e vira nota na lista. Um e-mail pode trazer varias: cada XML de NF-e e
+// uma nota; a DANFE em PDF e anexada a nota de mesma chave de acesso (nunca
+// duplica). O que nao for nota (boleto, orcamento, CT-e...) fica gravado como
+// 'descartada', com o motivo, escondido da lista e recuperavel pela tela.
+export async function processarMensagem(gmail, messageId) {
   const jaExiste = db.prepare('SELECT id FROM notas_fiscais_email WHERE gmail_message_id = ?').get(messageId);
   if (jaExiste) return false;
 
   const { data: mensagem } = await gmail.users.messages.get({ userId: 'me', id: messageId, format: 'full' });
   const anexos = coletarAnexos(mensagem.payload);
-  const anexosXml = anexos.filter((a) => a.filename.toLowerCase().endsWith('.xml'));
-  const anexosPdf = anexos.filter((a) => a.filename.toLowerCase().endsWith('.pdf'));
+  const partesXml = anexos.filter((a) => a.filename.toLowerCase().endsWith('.xml'));
+  const partesPdf = anexos.filter((a) => a.filename.toLowerCase().endsWith('.pdf'));
 
-  if (!anexosXml.length && !anexosPdf.length) {
+  if (!partesXml.length && !partesPdf.length) {
     // sem XML/PDF (ex: so imagem, ou email sem anexo relevante) - marca lido e ignora, sem gerar linha
     await marcarComoLido(gmail, messageId);
     return false;
   }
 
-  const parPerfeito = anexosXml.length === 1 && anexosPdf.length === 1;
+  // baixa e classifica tudo antes de gravar, pra poder parear XML e DANFE
+  const xmls = [];
+  for (const part of partesXml) {
+    const buffer = await baixarAnexo(gmail, messageId, part);
+    xmls.push({ part, buffer, ...classificarXml(buffer.toString('utf-8')) });
+  }
+  const pdfs = [];
+  for (const part of partesPdf) {
+    const buffer = await baixarAnexo(gmail, messageId, part);
+    pdfs.push({ part, buffer, ...(await classificarPdf(buffer)) });
+  }
+
+  const notasXml = xmls.filter((x) => x.nota);
+  for (const pdf of pdfs.filter((p) => p.nota)) {
+    const dona = notasXml.find((x) => x.chave === pdf.chave);
+    if (!dona) continue;
+    dona.pdf ||= pdf;
+    pdf.usado = true;
+  }
+  // DANFE escaneada (sem texto): so da pra saber de quem e quando ha uma unica nota e um unico PDF
+  if (notasXml.length === 1 && pdfs.length === 1 && !pdfs[0].usado && pdfs[0].motivo === PDF_SEM_TEXTO) {
+    notasXml[0].pdf = pdfs[0];
+    pdfs[0].usado = true;
+  }
+
   let indice = 0;
-  // A primeira nota extraida do e-mail usa o proprio messageId (mantendo
-  // compatibilidade com o dedup existente); as demais ganham um sufixo -
-  // messageId sozinho so pode bater com uma linha, entao o dedup no topo
-  // continua funcionando (se a primeira ja foi gravada, o email inteiro ja
-  // foi processado).
+  let mudou = false;
+  // A primeira linha do e-mail usa o proprio messageId (mantendo
+  // compatibilidade com o dedup existente); as demais ganham um sufixo.
   function proximoGmailId() {
     indice++;
     return indice === 1 ? messageId : `${messageId}#${indice}`;
   }
+  const prefixo = () => `${messageId}_${indice + 1}`;
 
-  for (const anexoXml of anexosXml) {
-    const prefixo = `${messageId}_${indice + 1}`;
-    const { buffer, nomeArquivo } = await salvarAnexo(gmail, messageId, anexoXml, prefixo);
-    let pdfArquivo = null;
-    if (parPerfeito) {
-      pdfArquivo = (await salvarAnexo(gmail, messageId, anexosPdf[0], prefixo)).nomeArquivo;
-    }
-    const campos = parseNFeXml(buffer.toString('utf-8'));
+  function gravar(campos, origem, xml, pdf, opcoes) {
+    const base = prefixo();
+    const xmlArquivo = xml ? gravarAnexo(xml, base) : null;
+    const pdfArquivo = pdf?.part ? gravarAnexo(pdf, base) : (pdf?.nomeArquivo || null);
     const gmailIdDaNota = proximoGmailId();
-    inserirNota(gmailIdDaNota, mensagem, campos, 'xml', nomeArquivo, pdfArquivo);
-    ligarNotaAoRomaneio(gmailIdDaNota);
+    inserirNota(gmailIdDaNota, mensagem, campos, origem, xmlArquivo, pdfArquivo, opcoes);
+    mudou = true;
+    if (!opcoes?.descarte) ligarNotaAoRomaneio(gmailIdDaNota);
   }
 
-  if (!parPerfeito) {
-    for (const anexoPdf of anexosPdf) {
-      const prefixo = `${messageId}_${indice + 1}`;
-      const { buffer, nomeArquivo } = await salvarAnexo(gmail, messageId, anexoPdf, prefixo);
-      const texto = await extrairTextoPdf(buffer);
-      const campos = extractFromPdfText(texto);
-      const gmailIdDaNota = proximoGmailId();
-      inserirNota(gmailIdDaNota, mensagem, campos, 'pdf', null, nomeArquivo);
-      ligarNotaAoRomaneio(gmailIdDaNota);
+  function anexarPdf(nota, pdf) {
+    if (nota.pdf_arquivo || !pdf) return;
+    db.prepare('UPDATE notas_fiscais_email SET pdf_arquivo = ? WHERE id = ?').run(gravarAnexo(pdf, `${messageId}_n${nota.id}`), nota.id);
+    mudou = true;
+  }
+
+  for (const xml of xmls) {
+    const campos = parseNFeXml(xml.buffer.toString('utf-8'));
+    if (!xml.nota) {
+      gravar(campos, 'xml', xml, null, { descarte: xml.motivo });
+      continue;
     }
+    const existente = notaComChave(xml.chave);
+    if (existente?.extraction_source === 'xml') {
+      // a mesma nota reenviada: no maximo completa com a DANFE
+      anexarPdf(existente, xml.pdf);
+      continue;
+    }
+    if (existente && existente.status !== 'pendente') {
+      // tinha entrado so pelo PDF e ja foi usada: guarda o XML nela
+      db.prepare('UPDATE notas_fiscais_email SET xml_arquivo = ? WHERE id = ?').run(gravarAnexo(xml, `${messageId}_n${existente.id}`), existente.id);
+      anexarPdf(existente, xml.pdf);
+      mudou = true;
+      continue;
+    }
+    if (existente) {
+      // o XML substitui a linha que tinha entrado so pelo PDF
+      db.prepare("UPDATE notas_fiscais_email SET status = 'descartada', motivo_descarte = 'Substituida pelo XML da mesma nota' WHERE id = ?").run(existente.id);
+    }
+    gravar(campos, 'xml', xml, xml.pdf || (existente?.pdf_arquivo ? { nomeArquivo: existente.pdf_arquivo } : null));
+  }
+
+  for (const pdf of pdfs) {
+    if (pdf.usado) continue;
+    if (!pdf.nota) {
+      gravar(extractFromPdfText(''), 'pdf', null, pdf, { descarte: pdf.motivo });
+      continue;
+    }
+    const existente = notaComChave(pdf.chave);
+    if (existente) {
+      anexarPdf(existente, pdf);
+      continue;
+    }
+    gravar({ ...extractFromPdfText(pdf.texto), chaveAcesso: pdf.chave }, 'pdf', null, pdf);
   }
 
   await marcarComoLido(gmail, messageId);
-  return true;
+  return mudou;
 }
 
 async function marcarComoLido(gmail, messageId) {

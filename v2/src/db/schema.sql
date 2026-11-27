@@ -204,6 +204,10 @@ CREATE TABLE IF NOT EXISTS notas_fiscais_email (
   -- a carga e a chave que liga a nota ao romaneio (cargas_origem).
   carga_origem TEXT,
   pedido_origem TEXT,
+  -- So NF-e aparece na lista: o resto fica com status 'descartada' e o motivo
+  -- aqui. classificada = 1 quando a regra ja foi aplicada na linha.
+  motivo_descarte TEXT,
+  classificada INTEGER NOT NULL DEFAULT 0,
   criado_em TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

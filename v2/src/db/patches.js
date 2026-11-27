@@ -41,7 +41,9 @@ const colunasNovas = [
   ['entregas', 'carga_origem_id', 'INTEGER REFERENCES cargas_origem(id) ON DELETE SET NULL'],
   ['entregas', 'data_coleta', 'TEXT'],
   ['notas_fiscais_email', 'carga_origem', 'TEXT'],
-  ['notas_fiscais_email', 'pedido_origem', 'TEXT']
+  ['notas_fiscais_email', 'pedido_origem', 'TEXT'],
+  ['notas_fiscais_email', 'motivo_descarte', 'TEXT'],
+  ['notas_fiscais_email', 'classificada', 'INTEGER NOT NULL DEFAULT 0']
 ];
 
 // Notas ja importadas antes do "Carga:" ser extraido: le o XML guardado e
@@ -153,6 +155,7 @@ export function aplicarPatches() {
   db.exec('CREATE INDEX IF NOT EXISTS idx_notas_fiscais_email_status ON notas_fiscais_email(status)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_entregas_carga_origem_id ON entregas(carga_origem_id)');
   db.exec('CREATE INDEX IF NOT EXISTS idx_notas_fiscais_email_carga_origem ON notas_fiscais_email(carga_origem)');
+  db.exec('CREATE INDEX IF NOT EXISTS idx_notas_fiscais_email_chave ON notas_fiscais_email(chave_acesso)');
   preencherCargaOrigemNotasExistentes();
   normalizarDatasEmissaoExistentes();
   removerMotoristasSemNome();
